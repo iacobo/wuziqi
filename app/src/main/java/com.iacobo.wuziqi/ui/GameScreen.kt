@@ -117,72 +117,52 @@ fun GameBoard(
     
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(gridLineWidth / 2)
+            .aspectRatio(1f)
+            .padding(2.dp)
+            .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
     ) {
-        // Game board layout - horizontal lines
+        // Draw the board with grid lines
+        // We'll calculate spacing between lines based on the available space
+        
+        // Game board layout
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            repeat(boardSize) {
+            // Draw the horizontal grid lines
+            for (i in 0 until boardSize) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(gridLineWidth)
                         .background(gridLineColor)
                 )
+                
+                if (i < boardSize - 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
         
-        // Game board layout - vertical lines
+        // Draw the vertical grid lines
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            repeat(boardSize) {
+            // Draw the vertical grid lines
+            for (i in 0 until boardSize) {
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(gridLineWidth)
                         .background(gridLineColor)
                 )
-            }
-        }
-        
-        // Add star points (hoshi)
-        val starPoints = listOf(
-            Pair(3, 3), Pair(3, 11),
-            Pair(7, 7),
-            Pair(11, 3), Pair(11, 11)
-        )
-        
-        // To place stars we need to calculate the cell size
-        val cellWidth = (1f / (boardSize - 1f)) * 100f
-        
-        BoxWithConstraints {
-            val maxWidth = constraints.maxWidth
-            val maxHeight = constraints.maxHeight
-            
-            starPoints.forEach { (row, col) ->
-                // Calculate positions as percentages of available space
-                val xPercent = col.toFloat() / (boardSize - 1).toFloat()
-                val yPercent = row.toFloat() / (boardSize - 1).toFloat()
                 
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .offset(
-                            x = (xPercent * maxWidth).dp - 3.dp,
-                            y = (yPercent * maxHeight).dp - 3.dp
-                        )
-                        .clip(CircleShape)
-                        .background(gridLineColor)
-                )
+                if (i < boardSize - 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
-    }
-}
         
         // Tiles and pieces - we place them at the intersections
         Column(
