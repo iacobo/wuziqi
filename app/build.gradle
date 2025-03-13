@@ -41,6 +41,7 @@ repositories {
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0' // Latest stable version
     implementation 'androidx.compose.material:material:1.7.8' // Latest stable version
+    implementation 'com.google.android.material:material:1.12.0'
 
     // Jetpack Compose dependencies
     implementation 'androidx.compose.ui:ui:1.7.8' // Latest stable version
