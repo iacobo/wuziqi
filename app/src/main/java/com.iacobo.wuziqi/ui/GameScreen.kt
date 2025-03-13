@@ -116,42 +116,73 @@ fun GameBoard(
     val boardSize = GameState.BOARD_SIZE
     
     Box(
-    modifier = Modifier
-        .aspectRatio(1f)
-        .padding(8.dp)
-        .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
-) {
-    BoxWithConstraints(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(gridLineWidth / 2)
     ) {
-        val maxWidthPx = constraints.maxWidth
-        val maxHeightPx = constraints.maxHeight
-        val cellSize = maxWidthPx / (boardSize - 1)
-        
-        // Draw horizontal grid lines
-        for (i in 0 until boardSize) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(gridLineWidth)
-                    .align(Alignment.TopStart)
-                    .offset(y = (i * cellSize).dp)
-                    .background(gridLineColor)
-            )
+        // Game board layout - horizontal lines
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            repeat(boardSize) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(gridLineWidth)
+                        .background(gridLineColor)
+                )
+            }
         }
         
-        // Draw vertical grid lines
-        for (i in 0 until boardSize) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(gridLineWidth)
-                    .align(Alignment.TopStart)
-                    .offset(x = (i * cellSize).dp)
-                    .background(gridLineColor)
-            )
+        // Game board layout - vertical lines
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            repeat(boardSize) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(gridLineWidth)
+                        .background(gridLineColor)
+                )
+            }
+        }
+        
+        // Add star points (hoshi)
+        val starPoints = listOf(
+            Pair(3, 3), Pair(3, 11),
+            Pair(7, 7),
+            Pair(11, 3), Pair(11, 11)
+        )
+        
+        // To place stars we need to calculate the cell size
+        val cellWidth = (1f / (boardSize - 1f)) * 100f
+        
+        BoxWithConstraints {
+            val maxWidth = constraints.maxWidth
+            val maxHeight = constraints.maxHeight
+            
+            starPoints.forEach { (row, col) ->
+                // Calculate positions as percentages of available space
+                val xPercent = col.toFloat() / (boardSize - 1).toFloat()
+                val yPercent = row.toFloat() / (boardSize - 1).toFloat()
+                
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .offset(
+                            x = (xPercent * maxWidth).dp - 3.dp,
+                            y = (yPercent * maxHeight).dp - 3.dp
+                        )
+                        .clip(CircleShape)
+                        .background(gridLineColor)
+                )
+            }
         }
     }
+}
         
         // Tiles and pieces - we place them at the intersections
         Column(
