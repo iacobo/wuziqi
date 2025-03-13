@@ -29,13 +29,7 @@ fun GameScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "Wuziqi",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
+        // Removed the "Wuziqi" title from here
         
         // Player turn indicator
         Text(

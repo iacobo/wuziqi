@@ -1,23 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Base application theme -->
-    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+    <style name="AppTheme" parent="Theme.Material3.DayNight">
     </style>
     
     <!-- Splash screen theme -->
     <style name="Theme.App.SplashScreen" parent="Theme.SplashScreen">
-        <!-- Use the background color that adapts to light/dark mode -->
         <item name="windowSplashScreenBackground">?android:attr/colorBackground</item>
-        
-        <!-- Set the app icon for the splash screen -->
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        
-        <!-- Optional: control the splash screen animation duration -->
         <item name="windowSplashScreenAnimationDuration">200</item>
-        
-        <!-- Theme to transition to after splash is done -->
         <item name="postSplashScreenTheme">@style/AppTheme</item>
     </style>
 </resources>
