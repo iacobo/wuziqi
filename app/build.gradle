@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "com.iacobo.wuziqi" // Change to your package name
-        minSdkVersion 21
+        minSdkVersion 26
         targetSdkVersion 35 // Use the latest stable version
         versionCode 1
         versionName "1.0"
