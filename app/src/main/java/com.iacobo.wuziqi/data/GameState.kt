@@ -15,6 +15,7 @@ class GameState {
     fun placeTile(row: Int, col: Int) {
         if (isTileEmpty(row, col)) {
             board[row][col] = currentPlayer
+            // Switch to the other player
             currentPlayer = if (currentPlayer == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
         }
     }
@@ -31,33 +32,33 @@ class GameState {
     }
 
     // Function to check for a win condition
-    fun checkWin(row: Int, col: Int): Boolean {
-        return checkDirection(row, col, 1, 0) || // Horizontal
-               checkDirection(row, col, 0, 1) || // Vertical
-               checkDirection(row, col, 1, 1) || // Diagonal \
-               checkDirection(row, col, 1, -1)   // Diagonal /
+    fun checkWin(row: Int, col: Int, playerValue: Int): Boolean {
+        return checkDirection(row, col, 1, 0, playerValue) || // Horizontal
+               checkDirection(row, col, 0, 1, playerValue) || // Vertical
+               checkDirection(row, col, 1, 1, playerValue) || // Diagonal \
+               checkDirection(row, col, 1, -1, playerValue)   // Diagonal /
     }
 
     // Function to check a specific direction for a win
-    private fun checkDirection(row: Int, col: Int, deltaRow: Int, deltaCol: Int): Boolean {
+    private fun checkDirection(row: Int, col: Int, deltaRow: Int, deltaCol: Int, playerValue: Int): Boolean {
         var count = 1
 
         // Check in the positive direction
-        count += countInDirection(row, col, deltaRow, deltaCol)
+        count += countInDirection(row, col, deltaRow, deltaCol, playerValue)
 
         // Check in the negative direction
-        count += countInDirection(row, col, -deltaRow, -deltaCol)
+        count += countInDirection(row, col, -deltaRow, -deltaCol, playerValue)
 
         return count >= 5 // Win if there are 5 in a row
     }
 
     // Helper function to count tiles in a specific direction
-    private fun countInDirection(row: Int, col: Int, deltaRow: Int, deltaCol: Int): Int {
+    private fun countInDirection(row: Int, col: Int, deltaRow: Int, deltaCol: Int, playerValue: Int): Int {
         var count = 0
         var r = row + deltaRow
         var c = col + deltaCol
 
-        while (r in 0 until BOARD_SIZE && c in 0 until BOARD_SIZE && board[r][c] == currentPlayer) {
+        while (r in 0 until BOARD_SIZE && c in 0 until BOARD_SIZE && board[r][c] == playerValue) {
             count++
             r += deltaRow
             c += deltaCol

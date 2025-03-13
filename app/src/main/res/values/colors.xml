@@ -1,29 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary colors -->
-    <color name="md_theme_primary">#6200EE</color>
-    <color name="md_theme_onPrimary">#FFFFFF</color>
-    <color name="md_theme_primaryContainer">#EAE3FF</color>
-    <color name="md_theme_onPrimaryContainer">#1E1A78</color>
-
-    <!-- Secondary colors -->
-    <color name="md_theme_secondary">#03DAC5</color>
-    <color name="md_theme_onSecondary">#000000</color>
-    <color name="md_theme_secondaryContainer">#B2E8E0</color>
-    <color name="md_theme_onSecondaryContainer">#003D3B</color>
-
-    <!-- Background colors -->
-    <color name="md_theme_background">#FFFFFF</color>
-    <color name="md_theme_onBackground">#000000</color>
-
-    <!-- Surface colors -->
-    <color name="md_theme_surface">#FFFFFF</color>
-    <color name="md_theme_onSurface">#000000</color>
-
-    <!-- Error colors -->
-    <color name="md_theme_error">#B00020</color>
-    <color name="md_theme_onError">#FFFFFF</color>
-
-    <!-- Dynamic colors -->
-    <color name="md_theme_dynamicColorPrimary">?attr/colorPrimary</color>
-    <color name="md_theme_dynamicColorSecondary">?attr/colorSecondary</color>
+    <color name="seed">#6200EE</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
 </resources>

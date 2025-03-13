@@ -1,16 +1,15 @@
 package com.iacobo.wuziqi.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.* // Import Material 3 components
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
@@ -19,78 +18,148 @@ import com.iacobo.wuziqi.data.GameState
 fun GameScreen() {
     var gameState by remember { mutableStateOf(GameState()) }
     var winner by remember { mutableStateOf<Int?>(null) }
+    var lastPlacedPosition by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Wuziqi", style = MaterialTheme.typography.headlineLarge)
+        Text(
+            text = "Wuziqi",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Player turn indicator
+        Text(
+            text = "Player ${gameState.currentPlayer}'s Turn",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                MaterialTheme.colorScheme.primary 
+            else 
+                MaterialTheme.colorScheme.secondary
+        )
+        
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Display winner dialog if there is a winner
-        winner?.let { winnerId ->
-            WinnerDialog(winner = winnerId) { rematch ->
-                if (rematch) {
-                    gameState.reset()
-                    winner = null
-                } else {
-                    winner = null
+        if (winner != null) {
+            AlertDialog(
+                onDismissRequest = { },
+                title = { Text("Game Over") },
+                text = { Text("Player ${if (winner == GameState.PLAYER_ONE) 1 else 2} won!") },
+                confirmButton = {
+                    Button(onClick = { 
+                        gameState.reset()
+                        winner = null
+                        lastPlacedPosition = null
+                    }) {
+                        Text("Rematch")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { winner = null }) {
+                        Text("Close")
+                    }
                 }
-            }
-        } ?: run {
-            // Game Board
-            GameBoard(gameState) { row: Int, col: Int ->
-                if (gameState.isTileEmpty(row, col)) {
+            )
+        }
+        
+        // Game Board
+        GameBoard(
+            gameState = gameState,
+            lastPlacedPosition = lastPlacedPosition,
+            onTileClick = { row, col ->
+                if (winner == null && gameState.isTileEmpty(row, col)) {
+                    val currentPlayer = gameState.currentPlayer
                     gameState.placeTile(row, col)
-                    if (gameState.checkWin(row, col)) {
-                        winner = gameState.currentPlayer
+                    lastPlacedPosition = Pair(row, col)
+                    // We need to check if the previous player won (the one who just placed the piece)
+                    val playerToCheck = if (currentPlayer == GameState.PLAYER_ONE) GameState.PLAYER_ONE else GameState.PLAYER_TWO
+                    if (gameState.checkWin(row, col, playerToCheck)) {
+                        winner = playerToCheck
                     }
                 }
             }
+        )
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-            // Reset Button
-            Button(onClick = { gameState.reset(); winner = null }) {
-                Text("Reset Game")
-            }
+        // Reset Button
+        Button(
+            onClick = { 
+                gameState.reset()
+                winner = null
+                lastPlacedPosition = null
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        ) {
+            Text("Reset Game")
         }
     }
 }
 
 @Composable
-fun WinnerDialog(winner: Int, onDismiss: (Boolean) -> Unit) {
-    AlertDialog(
-        onDismissRequest = { onDismiss(false) },
-        title = { Text("Game Over") },
-        text = { Text("Player $winner won!") },
-        confirmButton = {
-            Button(onClick = { onDismiss(true) }) {
-                Text("Rematch")
-            }
-        },
-        dismissButton = {
-            Button(onClick = { onDismiss(false) }) {
-                Text("Quit")
-            }
-        }
-    )
-}
-
-@Composable
-fun GameBoard(gameState: GameState, onTileClick: (Int, Int) -> Unit) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(5),
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp)
+fun GameBoard(
+    gameState: GameState, 
+    lastPlacedPosition: Pair<Int, Int>?,
+    onTileClick: (Int, Int) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(8.dp)
     ) {
-        items(gameState.board.size) { row: Int ->
-            Row {
-                for (col in gameState.board[row].indices) {
-                    Tile(
-                        state = gameState.board[row][col],
-                        onClick = { onTileClick(row, col) }
-                    )
+        // Board grid lines
+        for (i in 0 until GameState.BOARD_SIZE) {
+            // Horizontal lines
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
+                    .align(Alignment.TopStart)
+                    .offset(y = ((i * (1f / (GameState.BOARD_SIZE - 1)) * 100).dp))
+            )
+            
+            // Vertical lines
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
+                    .align(Alignment.TopStart)
+                    .offset(x = ((i * (1f / (GameState.BOARD_SIZE - 1)) * 100).dp))
+            )
+        }
+        
+        // Tiles and pieces
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            for (row in 0 until GameState.BOARD_SIZE) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    for (col in 0 until GameState.BOARD_SIZE) {
+                        Tile(
+                            state = gameState.board[row][col],
+                            isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onTileClick(row, col) }
+                        )
+                    }
                 }
             }
         }
@@ -98,18 +167,36 @@ fun GameBoard(gameState: GameState, onTileClick: (Int, Int) -> Unit) {
 }
 
 @Composable
-fun Tile(state: Int, onClick: () -> Unit) {
-    val color = when (state) {
-        1 -> MaterialTheme.colorScheme.primary // Use primary color for player 1
-        2 -> MaterialTheme.colorScheme.secondary // Use secondary color for player 2
-        else -> Color.Transparent
-    }
-
+fun Tile(
+    state: Int,
+    isLastPlaced: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Box(
-        modifier = Modifier
-            .size(60.dp)
-            .clickable(onClick = onClick)
-            .background(color, CircleShape),
+        modifier = modifier
+            .aspectRatio(1f)
+            .padding(2.dp)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
-    )
+    ) {
+        if (state != GameState.EMPTY) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(
+                        when (state) {
+                            GameState.PLAYER_ONE -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.secondary
+                        }
+                    )
+                    .border(
+                        width = if (isLastPlaced) 2.dp else 0.dp,
+                        color = if (isLastPlaced) MaterialTheme.colorScheme.tertiary else Color.Transparent,
+                        shape = CircleShape
+                    )
+            )
+        }
+    }
 }
