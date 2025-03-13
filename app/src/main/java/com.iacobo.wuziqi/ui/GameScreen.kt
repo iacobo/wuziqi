@@ -126,29 +126,38 @@ fun GameBoard(
             .padding(8.dp)
     ) {
         // Board grid lines
+        // These are drawn as full lines spanning the entire board
+        
+        // Calculate the cell size
+        val cellSize = 100f / (GameState.BOARD_SIZE - 1)
+        
+        // Horizontal grid lines
         for (i in 0 until GameState.BOARD_SIZE) {
-            // Horizontal lines
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(gridLineWidth)
                     .background(gridLineColor)
                     .align(Alignment.TopStart)
-                    .offset(y = ((i * (1f / (GameState.BOARD_SIZE - 1)) * 100).dp))
+                    .offset(y = (i * cellSize).dp)
             )
-            
-            // Vertical lines
+        }
+        
+        // Vertical grid lines
+        for (i in 0 until GameState.BOARD_SIZE) {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(gridLineWidth)
                     .background(gridLineColor)
                     .align(Alignment.TopStart)
-                    .offset(x = ((i * (1f / (GameState.BOARD_SIZE - 1)) * 100).dp))
+                    .offset(x = (i * cellSize).dp)
             )
         }
         
-        // Tiles and pieces
+        // Tiles and pieces - we place them at the intersections
+        // We will have (BOARD_SIZE - 1) x (BOARD_SIZE - 1) tiles because
+        // pieces are placed at intersections of the grid lines
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -163,7 +172,6 @@ fun GameBoard(
                             state = gameState.board[row][col],
                             isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
                             modifier = Modifier.weight(1f),
-                            isDarkTheme = isDarkTheme,
                             onClick = { onTileClick(row, col) }
                         )
                     }
@@ -177,14 +185,10 @@ fun GameBoard(
 fun Tile(
     state: Int,
     isLastPlaced: Boolean,
-    isDarkTheme: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    // Define darker blue for player pieces
-    val playerOneColor = MaterialTheme.colorScheme.primary
-    val playerTwoColor = if (isDarkTheme) Color(0xFF191970) else Color(0xFF000080) // Dark navy blue
-    
+    // Use the original stone colors
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -199,8 +203,8 @@ fun Tile(
                     .clip(CircleShape)
                     .background(
                         when (state) {
-                            GameState.PLAYER_ONE -> playerOneColor
-                            else -> playerTwoColor
+                            GameState.PLAYER_ONE -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.secondary
                         }
                     )
                     .border(
