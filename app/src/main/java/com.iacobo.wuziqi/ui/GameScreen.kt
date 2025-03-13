@@ -113,86 +113,57 @@ fun GameBoard(
 ) {
     val gridLineColor = if (isDarkTheme) Color(0xDDCCCCCC) else Color(0xDD333333)
     val gridLineWidth = 1.dp
-    val boardBackground = if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A)
+    val boardSize = GameState.BOARD_SIZE
     
     Box(
-        modifier = Modifier
-            .aspectRatio(1f)
-            .padding(8.dp)
-            .background(boardBackground)
+    modifier = Modifier
+        .aspectRatio(1f)
+        .padding(8.dp)
+        .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
+) {
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize()
     ) {
-        // Board grid lines
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val maxWidthPx = constraints.maxWidth
-            val cellSize = maxWidthPx / (GameState.BOARD_SIZE - 1)
-            
-            // Horizontal grid lines
-            for (i in 0 until GameState.BOARD_SIZE) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(gridLineWidth)
-                        .background(gridLineColor)
-                        .align(Alignment.TopStart)
-                        .offset(y = (i * cellSize).dp)
-                )
-            }
-            
-            // Vertical grid lines
-            for (i in 0 until GameState.BOARD_SIZE) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(gridLineWidth)
-                        .background(gridLineColor)
-                        .align(Alignment.TopStart)
-                        .offset(x = (i * cellSize).dp)
-                )
-            }
+        val maxWidthPx = constraints.maxWidth
+        val maxHeightPx = constraints.maxHeight
+        val cellSize = maxWidthPx / (boardSize - 1)
+        
+        // Draw horizontal grid lines
+        for (i in 0 until boardSize) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(gridLineWidth)
+                    .align(Alignment.TopStart)
+                    .offset(y = (i * cellSize).dp)
+                    .background(gridLineColor)
+            )
         }
         
-        // Add star points (hoshi)
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            val maxWidthPx = constraints.maxWidth
-            val cellSize = maxWidthPx / (GameState.BOARD_SIZE - 1)
-            
-            // Draw star points at traditional positions
-            val starPoints = listOf(
-                Pair(3, 3), Pair(3, 11),
-                Pair(7, 7),
-                Pair(11, 3), Pair(11, 11)
+        // Draw vertical grid lines
+        for (i in 0 until boardSize) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(gridLineWidth)
+                    .align(Alignment.TopStart)
+                    .offset(x = (i * cellSize).dp)
+                    .background(gridLineColor)
             )
-            
-            starPoints.forEach { (row, col) ->
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(gridLineColor)
-                        .align(Alignment.TopStart)
-                        .offset(
-                            x = (col * cellSize).dp - 3.dp,
-                            y = (row * cellSize).dp - 3.dp
-                        )
-                )
-            }
         }
+    }
         
         // Tiles and pieces - we place them at the intersections
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            for (row in 0 until GameState.BOARD_SIZE) {
+            for (row in 0 until boardSize) {
                 Row(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
-                    for (col in 0 until GameState.BOARD_SIZE) {
+                    for (col in 0 until boardSize) {
                         Tile(
                             state = gameState.board[row][col],
                             isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
@@ -213,7 +184,6 @@ fun Tile(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    // Use the original stone colors
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -224,7 +194,7 @@ fun Tile(
         if (state != GameState.EMPTY) {
             Box(
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(24.dp)
                     .clip(CircleShape)
                     .background(
                         when (state) {
@@ -234,7 +204,7 @@ fun Tile(
                     )
                     .border(
                         width = if (isLastPlaced) 2.dp else 0.dp,
-                        color = if (isLastPlaced) Color.Red else Color.Transparent,
+                        color = if (isLastPlaced) MaterialTheme.colorScheme.tertiary else Color.Transparent,
                         shape = CircleShape
                     )
             )
