@@ -1,6 +1,5 @@
 package com.iacobo.wuziqi.ui
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,7 +10,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
@@ -31,6 +29,8 @@ fun GameScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Removed the "Wuziqi" title from here
+        
         // Player turn indicator
         Text(
             text = "Player ${gameState.currentPlayer}'s Turn",
@@ -112,84 +112,113 @@ fun GameBoard(
     onTileClick: (Int, Int) -> Unit
 ) {
     val gridLineColor = if (isDarkTheme) Color(0xDDCCCCCC) else Color(0xDD333333)
-    val gridLineWidth = 2.dp
+    val gridLineWidth = 1.dp
+    val boardSize = GameState.BOARD_SIZE
     
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(8.dp)
+            .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
     ) {
-        // We need to properly calculate positions for a 15x15 grid
-        val boardSize = GameState.BOARD_SIZE.toFloat()
-
-        // Draw the grid lines with absolute positioning
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val canvasWidth = size.width
-            val canvasHeight = size.height
-            val cellWidth = canvasWidth / (boardSize - 1f)
-            val cellHeight = canvasHeight / (boardSize - 1f)
-            
-            // Draw horizontal lines
-            for (i in 0 until GameState.BOARD_SIZE) {
-                drawLine(
-                    color = gridLineColor,
-                    start = Offset(0f, i * cellHeight),
-                    end = Offset(canvasWidth, i * cellHeight),
-                    strokeWidth = gridLineWidth.toPx()
+        // Draw the board with grid lines
+        // We'll calculate spacing between lines based on the available space
+        
+        // Game board layout
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Draw the horizontal grid lines
+            for (i in 0 until boardSize) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(gridLineWidth)
+                        .background(gridLineColor)
                 )
-            }
-            
-            // Draw vertical lines
-            for (i in 0 until GameState.BOARD_SIZE) {
-                drawLine(
-                    color = gridLineColor,
-                    start = Offset(i * cellWidth, 0f),
-                    end = Offset(i * cellWidth, canvasHeight),
-                    strokeWidth = gridLineWidth.toPx()
-                )
+                
+                if (i < boardSize - 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             }
         }
         
-        // Overlay the tiles and pieces
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val boxWidth = maxWidth
-            val cellWidth = boxWidth / (boardSize - 1f)
-            
-            // Place pieces at grid intersections
-            for (row in 0 until GameState.BOARD_SIZE) {
-                for (col in 0 until GameState.BOARD_SIZE) {
-                    if (gameState.board[row][col] != GameState.EMPTY) {
-                        val xPos = col * cellWidth
-                        val yPos = row * cellWidth
-                        
-                        Box(
-                            modifier = Modifier
-                                .offset(x = xPos - 10.dp, y = yPos - 10.dp)
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    when (gameState.board[row][col]) {
-                                        GameState.PLAYER_ONE -> MaterialTheme.colorScheme.primary
-                                        else -> MaterialTheme.colorScheme.secondary
-                                    }
-                                )
-                                .border(
-                                    width = if (lastPlacedPosition?.let { it.first == row && it.second == col } ?: false) 2.dp else 0.dp,
-                                    color = if (lastPlacedPosition?.let { it.first == row && it.second == col } ?: false) MaterialTheme.colorScheme.tertiary else Color.Transparent,
-                                    shape = CircleShape
-                                )
-                        )
-                    }
-                    
-                    // Clickable area for placing stones
-                    Box(
-                        modifier = Modifier
-                            .offset(x = col * cellWidth - 20.dp, y = row * cellWidth - 20.dp)
-                            .size(40.dp)
-                            .clickable { onTileClick(row, col) }
-                    )
+        // Draw the vertical grid lines
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Draw the vertical grid lines
+            for (i in 0 until boardSize) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(gridLineWidth)
+                        .background(gridLineColor)
+                )
+                
+                if (i < boardSize - 1) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
+        }
+        
+        // Tiles and pieces - we place them at the intersections
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            for (row in 0 until boardSize) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    for (col in 0 until boardSize) {
+                        Tile(
+                            state = gameState.board[row][col],
+                            isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onTileClick(row, col) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Tile(
+    state: Int,
+    isLastPlaced: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .padding(2.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (state != GameState.EMPTY) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(
+                        when (state) {
+                            GameState.PLAYER_ONE -> Color.Black
+                            else -> Color.White
+                        }
+                    )
+                    .border(
+                        width = if (isLastPlaced) 2.dp else 0.dp,
+                        color = if (isLastPlaced) MaterialTheme.colorScheme.tertiary else Color.Transparent,
+                        shape = CircleShape
+                    )
+            )
         }
     }
 }
