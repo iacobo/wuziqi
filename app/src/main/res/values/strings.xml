@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Wuziqi</string>
+    <string name="reset_game">Reset Game</string>
+    <string name="mute_sounds">Mute Sounds</string>
+    <string name="game_over">Game Over</string>
+    <string name="player_won">Player %1$d won!</string>
+    <string name="rematch">Rematch</string>
+    <string name="quit">Quit</string>
+</resources>

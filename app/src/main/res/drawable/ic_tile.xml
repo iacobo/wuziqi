@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- Background Circle -->
+    <!-- Use a Material color for the background -->
+    <path
+        android:fillColor="@color/background_color" 
+        android:pathData="M 100,0 A 100,100 0 1,0 100,200 A 100,100 0 1,0 100,0 Z" />
+
+    <!-- Black Stone -->
+    <!-- Use Material Black color -->
+    <path
+        android:fillColor="@color/black" 
+        android:pathData="M 55,60 A 40,40 0 1,0 55,140 A 40,40 0 1,0 55,60 Z" />
+
+    <!-- White Stone -->
+    <!-- Use Material White color -->
+    <!-- Use Material Black color for stroke -->
+    <path
+        android:fillColor="@color/white" 
+        android:strokeColor="@color/black" 
+        android:strokeWidth="2"
+        android:pathData="M 145,60 A 40,40 0 1,0 145,140 A 40,40 0 1,0 145,60 Z" />
+</vector>

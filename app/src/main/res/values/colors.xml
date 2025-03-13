@@ -1,0 +1,17 @@
+<resources>
+    <color name="colorPrimary">#6200EE</color> <!-- Purple -->
+    <color name="colorPrimaryVariant">#3700B3</color> <!-- Dark Purple -->
+    <color name="colorOnPrimary">#FFFFFF</color> <!-- White -->
+    <color name="colorSecondary">#03DAC5</color> <!-- Teal -->
+    <color name="colorOnSecondary">#000000</color> <!-- Black -->
+    <color name="colorBackground">#FFFFFF</color> <!-- White -->
+    <color name="colorOnBackground">#000000</color>
+    <color name="colorSurface">#FFFFFF</color> <!-- White -->
+    <color name="colorOnSurface">#000000</color> <!-- Black -->
+    <color name="colorError">#B00020</color> <!-- Red -->
+    <color name="colorOnError">#FFFFFF</color> <!-- White -->
+
+    <color name="background_color">#F5F5F5</color> <!-- Light Grey -->
+    <color name="black">#000000</color> <!-- Black -->
+    <color name="white">#FFFFFF</color> <!-- White -->
+</resources>
