@@ -114,109 +114,165 @@ fun GameBoard(
     val gridLineColor = if (isDarkTheme) Color(0xDDCCCCCC) else Color(0xDD333333)
     val gridLineWidth = 1.dp
     val boardSize = GameState.BOARD_SIZE
-    val boardColor = if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A)
     
-    // The main container with board background
     BoxWithConstraints(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(8.dp)
-            .background(boardColor)
+            .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
     ) {
         val maxWidth = constraints.maxWidth
         val maxHeight = constraints.maxHeight
         
-        // Calculate cell size - we do this once
-        val cellWidth = maxWidth.toFloat() / (boardSize - 1)
-        val cellHeight = maxHeight.toFloat() / (boardSize - 1)
+        // We need to calculate the tile size to determine half-tile padding
+        val tileWidth = maxWidth / boardSize
+        val tileHeight = maxHeight / boardSize
         
-        // Draw grid lines
-        for (i in 0 until boardSize) {
-            // Horizontal lines
-            Box(
-                modifier = Modifier
-                    .width(maxWidth.dp)
-                    .height(gridLineWidth)
-                    .offset(
-                        x = 0.dp,
-                        y = (i * cellHeight).dp
-                    )
-                    .background(gridLineColor)
-            )
-            
-            // Vertical lines
-            Box(
-                modifier = Modifier
-                    .width(gridLineWidth)
-                    .height(maxHeight.dp)
-                    .offset(
-                        x = (i * cellWidth).dp,
-                        y = 0.dp
-                    )
-                    .background(gridLineColor)
-            )
-        }
-        
-        // Add star points (hoshi)
-        val starPoints = listOf(
-            Pair(3, 3), Pair(3, 11),
-            Pair(7, 7),
-            Pair(11, 3), Pair(11, 11)
-        )
-        
-        starPoints.forEach { (row, col) ->
-            // Only draw star if there's no stone
-            if (gameState.board[row][col] == GameState.EMPTY) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .offset(
-                            x = (col * cellWidth).dp - 3.dp,
-                            y = (row * cellHeight).dp - 3.dp
-                        )
-                        .clip(CircleShape)
-                        .background(gridLineColor)
+        // This will hold our grid lines
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = tileWidth.dp / 2,
+                    end = tileWidth.dp / 2,
+                    top = tileHeight.dp / 2,
+                    bottom = tileHeight.dp / 2
                 )
-            }
-        }
-        
-        // Draw stones at grid intersections
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.board[row][col] != GameState.EMPTY) {
+        ) {
+            // Draw the board with grid lines
+            // We'll calculate spacing between lines based on the available space
+            
+            // Game board layout
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Draw the horizontal grid lines
+                for (i in 0 until boardSize) {
                     Box(
                         modifier = Modifier
-                            .size(24.dp)
-                            .offset(
-                                x = (col * cellWidth).dp - 12.dp,
-                                y = (row * cellHeight).dp - 12.dp
-                            )
-                            .clip(CircleShape)
-                            .background(
-                                when (gameState.board[row][col]) {
-                                    GameState.PLAYER_ONE -> Color.Black
-                                    else -> Color.White
-                                }
-                            )
-                            .border(
-                                width = if (lastPlacedPosition?.first == row && lastPlacedPosition.second == col) 2.dp else 0.dp,
-                                color = if (lastPlacedPosition?.first == row && lastPlacedPosition.second == col) Color.Red else Color.Transparent,
-                                shape = CircleShape
-                            )
+                            .fillMaxWidth()
+                            .height(gridLineWidth)
+                            .background(gridLineColor)
                     )
+                    
+                    if (i < boardSize - 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
-                
-                // Add clickable area for each intersection
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .offset(
-                            x = (col * cellWidth).dp - 12.dp,
-                            y = (row * cellHeight).dp - 12.dp
-                        )
-                        .clickable { onTileClick(row, col) }
-                )
             }
+            
+            // Draw the vertical grid lines
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Draw the vertical grid lines
+                for (i in 0 until boardSize) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(gridLineWidth)
+                            .background(gridLineColor)
+                    )
+                    
+                    if (i < boardSize - 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+            
+            // Add star points (hoshi)
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                val maxInnerWidth = constraints.maxWidth
+                val maxInnerHeight = constraints.maxHeight
+                
+                val starPoints = listOf(
+                    Pair(3, 3), Pair(3, 11),
+                    Pair(7, 7),
+                    Pair(11, 3), Pair(11, 11)
+                )
+                
+                starPoints.forEach { (row, col) ->
+                    // Only draw star if there's no stone
+                    if (gameState.board[row][col] == GameState.EMPTY) {
+                        // Calculate position based on cell indices
+                        val xPosition = col.toFloat() / (boardSize - 1).toFloat()
+                        val yPosition = row.toFloat() / (boardSize - 1).toFloat()
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .align(Alignment.TopStart)
+                                .offset(
+                                    x = (xPosition * maxInnerWidth).dp - 3.dp,
+                                    y = (yPosition * maxInnerHeight).dp - 3.dp
+                                )
+                                .clip(CircleShape)
+                                .background(gridLineColor)
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Tiles and pieces - we place them at the intersections
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            for (row in 0 until boardSize) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    for (col in 0 until boardSize) {
+                        Tile(
+                            state = gameState.board[row][col],
+                            isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onTileClick(row, col) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun Tile(
+    state: Int,
+    isLastPlaced: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .padding(2.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (state != GameState.EMPTY) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(
+                        when (state) {
+                            GameState.PLAYER_ONE -> Color.Black
+                            else -> Color.White
+                        }
+                    )
+                    .border(
+                        width = if (isLastPlaced) 2.dp else 0.dp,
+                        color = if (isLastPlaced) Color.Red else Color.Transparent,
+                        shape = CircleShape
+                    )
+            )
         }
     }
 }
