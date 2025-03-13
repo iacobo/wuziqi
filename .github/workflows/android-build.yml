@@ -30,6 +30,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew  # Add this step to change permissions
+
       - name: Download Dependencies
         run: ./gradlew dependencies
 
