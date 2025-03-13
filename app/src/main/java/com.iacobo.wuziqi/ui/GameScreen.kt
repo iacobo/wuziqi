@@ -4,15 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyVerticalGrid
-import androidx.compose.foundation.lazy.GridCells
+import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.* // Import Material 3 components
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.google.android.material.*
 import com.iacobo.wuziqi.data.GameState
 
 @Composable
@@ -25,7 +25,7 @@ fun GameScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("wuziqi", style = MaterialTheme.typography.h4)
+        Text("wuziqi", style = MaterialTheme.typography.headlineLarge)
 
         // Display winner dialog if there is a winner
         winner?.let { winnerId ->
@@ -39,7 +39,7 @@ fun GameScreen() {
             }
         } ?: run {
             // Game Board
-            GameBoard(gameState) { row: Int, col: Int -> // Explicit types for parameters
+            GameBoard(gameState) { row: Int, col: Int ->
                 if (gameState.isTileEmpty(row, col)) {
                     gameState.placeTile(row, col)
                     if (gameState.checkWin(row, col)) {
@@ -80,7 +80,7 @@ fun WinnerDialog(winner: Int, onDismiss: (Boolean) -> Unit) {
 @Composable
 fun GameBoard(gameState: GameState, onTileClick: (Int, Int) -> Unit) {
     LazyVerticalGrid(
-        cells = GridCells.Fixed(5),
+        columns = GridCells.Fixed(5),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp)
     ) {
