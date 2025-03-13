@@ -14,12 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
-import com.iacobo.wuziqi.utils.SoundManager
 
 @Composable
 fun GameScreen() {
     var gameState by remember { mutableStateOf(GameState()) }
-    var isMuted by remember { mutableStateOf(false) }
     var winner by remember { mutableStateOf<Int?>(null) }
 
     Column(
@@ -44,7 +42,6 @@ fun GameScreen() {
             GameBoard(gameState) { row: Int, col: Int -> // Explicit types for parameters
                 if (gameState.isTileEmpty(row, col)) {
                     gameState.placeTile(row, col)
-                    if (!isMuted) SoundManager.playTileSound()
                     if (gameState.checkWin(row, col)) {
                         winner = gameState.currentPlayer
                     }
@@ -56,12 +53,6 @@ fun GameScreen() {
             // Reset Button
             Button(onClick = { gameState.reset(); winner = null }) {
                 Text("Reset Game")
-            }
-
-            // Mute Toggle
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Mute Sounds")
-                Switch(checked = isMuted, onCheckedChange = { isMuted = it })
             }
         }
     }
