@@ -19,4 +19,4 @@ if [ ! -f "$DIR/gradle/wrapper/gradle-wrapper.jar" ]; then
 fi
 
 # Execute Gradle
-exec "$DIR/gradle/wrapper/gradle" "$@"
+exec "$DIR/gradle/wrapper/gradle-8.11.1/bin/gradle" "$@"
