@@ -13,12 +13,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
+import androidx.compose.ui.isSystemInDarkTheme
 
 @Composable
 fun GameScreen() {
     var gameState by remember { mutableStateOf(GameState()) }
     var winner by remember { mutableStateOf<Int?>(null) }
     var lastPlacedPosition by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    val isDarkTheme = isSystemInDarkTheme()
 
     Column(
         modifier = Modifier
@@ -74,6 +76,7 @@ fun GameScreen() {
         GameBoard(
             gameState = gameState,
             lastPlacedPosition = lastPlacedPosition,
+            isDarkTheme = isDarkTheme,
             onTileClick = { row, col ->
                 if (winner == null && gameState.isTileEmpty(row, col)) {
                     val currentPlayer = gameState.currentPlayer
@@ -111,12 +114,15 @@ fun GameScreen() {
 fun GameBoard(
     gameState: GameState, 
     lastPlacedPosition: Pair<Int, Int>?,
+    isDarkTheme: Boolean,
     onTileClick: (Int, Int) -> Unit
 ) {
+    val gridLineColor = if (isDarkTheme) Color(0xDDCCCCCC) else Color(0xDD333333)
+    val gridLineWidth = 2.dp
+    
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(8.dp)
     ) {
         // Board grid lines
@@ -125,8 +131,8 @@ fun GameBoard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(1.dp)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
+                    .height(gridLineWidth)
+                    .background(gridLineColor)
                     .align(Alignment.TopStart)
                     .offset(y = ((i * (1f / (GameState.BOARD_SIZE - 1)) * 100).dp))
             )
@@ -135,8 +141,8 @@ fun GameBoard(
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.7f))
+                    .width(gridLineWidth)
+                    .background(gridLineColor)
                     .align(Alignment.TopStart)
                     .offset(x = ((i * (1f / (GameState.BOARD_SIZE - 1)) * 100).dp))
             )
@@ -157,6 +163,7 @@ fun GameBoard(
                             state = gameState.board[row][col],
                             isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
                             modifier = Modifier.weight(1f),
+                            isDarkTheme = isDarkTheme,
                             onClick = { onTileClick(row, col) }
                         )
                     }
@@ -170,9 +177,14 @@ fun GameBoard(
 fun Tile(
     state: Int,
     isLastPlaced: Boolean,
+    isDarkTheme: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    // Define darker blue for player pieces
+    val playerOneColor = MaterialTheme.colorScheme.primary
+    val playerTwoColor = if (isDarkTheme) Color(0xFF191970) else Color(0xFF000080) // Dark navy blue
+    
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -187,8 +199,8 @@ fun Tile(
                     .clip(CircleShape)
                     .background(
                         when (state) {
-                            GameState.PLAYER_ONE -> MaterialTheme.colorScheme.primary
-                            else -> MaterialTheme.colorScheme.secondary
+                            GameState.PLAYER_ONE -> playerOneColor
+                            else -> playerTwoColor
                         }
                     )
                     .border(
