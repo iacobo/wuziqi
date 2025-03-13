@@ -153,15 +153,14 @@ fun GameBoard(
         // Overlay the tiles and pieces
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val boxWidth = maxWidth
-            val boxHeight = maxHeight
-            val cellSize = boxWidth / (boardSize - 1f)
+            val cellWidth = boxWidth / (boardSize - 1f)
             
             // Place pieces at grid intersections
             for (row in 0 until GameState.BOARD_SIZE) {
                 for (col in 0 until GameState.BOARD_SIZE) {
                     if (gameState.board[row][col] != GameState.EMPTY) {
-                        val xPos = col * cellSize 
-                        val yPos = row * cellSize
+                        val xPos = col * cellWidth
+                        val yPos = row * cellWidth
                         
                         Box(
                             modifier = Modifier
@@ -185,7 +184,7 @@ fun GameBoard(
                     // Clickable area for placing stones
                     Box(
                         modifier = Modifier
-                            .offset(x = col * cellSize - 20.dp, y = row * cellSize - 20.dp)
+                            .offset(x = col * cellWidth - 20.dp, y = row * cellWidth - 20.dp)
                             .size(40.dp)
                             .clickable { onTileClick(row, col) }
                     )
