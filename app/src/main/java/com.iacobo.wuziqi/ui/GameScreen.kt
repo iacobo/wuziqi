@@ -25,7 +25,7 @@ fun GameScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("wuziqi", style = MaterialTheme.typography.headlineLarge)
+        Text("Wuziqi", style = MaterialTheme.typography.headlineLarge)
 
         // Display winner dialog if there is a winner
         winner?.let { winnerId ->
@@ -100,8 +100,8 @@ fun GameBoard(gameState: GameState, onTileClick: (Int, Int) -> Unit) {
 @Composable
 fun Tile(state: Int, onClick: () -> Unit) {
     val color = when (state) {
-        1 -> Color.Black
-        2 -> Color.White
+        1 -> MaterialTheme.colorScheme.primary // Use primary color for player 1
+        2 -> MaterialTheme.colorScheme.secondary // Use secondary color for player 2
         else -> Color.Transparent
     }
 
