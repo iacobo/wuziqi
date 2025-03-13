@@ -19,7 +19,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          java-version: '17'   # Use JDK 17
+          java-version: '17'
           distribution: 'adopt'
 
       - name: Cache Gradle packages
@@ -31,13 +31,13 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Make gradlew executable
-        run: chmod +x ./gradlew  # Add this step to change permissions
+        run: chmod +x ./gradlew
 
       - name: Download Dependencies
-        run: ./gradlew dependencies -Dorg.gradle.wrapper.disable=true # Disable wrapper prompts
+        run: ./gradlew dependencies
 
       - name: Build APK
-        run: ./gradlew assembleDebug -Dorg.gradle.wrapper.disable=true # Disable wrapper prompts
+        run: echo "y" | ./gradlew assembleDebug # Automatically respond "yes" to prompts
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
