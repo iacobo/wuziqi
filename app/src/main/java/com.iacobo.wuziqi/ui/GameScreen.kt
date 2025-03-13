@@ -115,110 +115,13 @@ fun GameBoard(
     val gridLineWidth = 1.dp
     val boardSize = GameState.BOARD_SIZE
     
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(8.dp)
             .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
     ) {
-        val maxWidth = constraints.maxWidth
-        val maxHeight = constraints.maxHeight
-        
-        // We need to calculate the tile size to determine half-tile padding
-        val tileWidth = maxWidth / boardSize
-        val tileHeight = maxHeight / boardSize
-        
-        // This will hold our grid lines
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = tileWidth.dp / 2,
-                    end = tileWidth.dp / 2,
-                    top = tileHeight.dp / 2,
-                    bottom = tileHeight.dp / 2
-                )
-        ) {
-            // Draw the board with grid lines
-            // We'll calculate spacing between lines based on the available space
-            
-            // Game board layout
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Draw the horizontal grid lines
-                for (i in 0 until boardSize) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(gridLineWidth)
-                            .background(gridLineColor)
-                    )
-                    
-                    if (i < boardSize - 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-            
-            // Draw the vertical grid lines
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Draw the vertical grid lines
-                for (i in 0 until boardSize) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(gridLineWidth)
-                            .background(gridLineColor)
-                    )
-                    
-                    if (i < boardSize - 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-            
-            // Add star points (hoshi)
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                val maxInnerWidth = constraints.maxWidth
-                val maxInnerHeight = constraints.maxHeight
-                
-                val starPoints = listOf(
-                    Pair(3, 3), Pair(3, 11),
-                    Pair(7, 7),
-                    Pair(11, 3), Pair(11, 11)
-                )
-                
-                starPoints.forEach { (row, col) ->
-                    // Only draw star if there's no stone
-                    if (gameState.board[row][col] == GameState.EMPTY) {
-                        // Calculate position based on cell indices
-                        val xPosition = col.toFloat() / (boardSize - 1).toFloat()
-                        val yPosition = row.toFloat() / (boardSize - 1).toFloat()
-                        
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .align(Alignment.TopStart)
-                                .offset(
-                                    x = (xPosition * maxInnerWidth).dp - 3.dp,
-                                    y = (yPosition * maxInnerHeight).dp - 3.dp
-                                )
-                                .clip(CircleShape)
-                                .background(gridLineColor)
-                        )
-                    }
-                }
-            }
-        }
-        
-        // Tiles and pieces - we place them at the intersections
+        // Game board layout with pieces
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -237,6 +140,43 @@ fun GameBoard(
                         )
                     }
                 }
+            }
+        }
+        
+        // Draw grid lines to match the piece placement
+        // Instead of going edge to edge, we'll offset the grid lines to match the centers of the tile positions
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Calculate the size of each cell
+            val cellSize = 1f / boardSize
+            
+            // Draw horizontal grid lines
+            for (i in 0 until boardSize) {
+                // Position at the center of the cell row
+                val yPosition = (i + 0.5f) * cellSize
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(gridLineWidth)
+                        .align(Alignment.TopStart)
+                        .offset(y = (yPosition * 100).dp) // Convert from percentage to dp
+                        .background(gridLineColor)
+                )
+            }
+            
+            // Draw vertical grid lines
+            for (i in 0 until boardSize) {
+                // Position at the center of the cell column
+                val xPosition = (i + 0.5f) * cellSize
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(gridLineWidth)
+                        .align(Alignment.TopStart)
+                        .offset(x = (xPosition * 100).dp) // Convert from percentage to dp
+                        .background(gridLineColor)
+                )
             }
         }
     }
@@ -269,7 +209,7 @@ fun Tile(
                     )
                     .border(
                         width = if (isLastPlaced) 2.dp else 0.dp,
-                        color = if (isLastPlaced) Color.Red else Color.Transparent,
+                        color = if (isLastPlaced) MaterialTheme.colorScheme.tertiary else Color.Transparent,
                         shape = CircleShape
                     )
             )
