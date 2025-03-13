@@ -1,5 +1,6 @@
 // Wuziqi/app/build.gradle
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android' // Add this line to apply the Kotlin plugin
 
 android {
     compileSdkVersion 35 // Use the latest stable version
