@@ -32,6 +32,12 @@ android {
     }
 }
 
+// Add the repositories section here
+repositories {
+    google()
+    mavenCentral()
+}
+
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.+' // Latest version
     implementation 'com.google.android.material:material:1.+' // Latest version
