@@ -33,14 +33,11 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew  # Add this step to change permissions
 
-      - name: Clear Gradle Wrapper Directory
-        run: rm -rf gradle/wrapper/gradle-8.11.1
-
       - name: Download Dependencies
-        run: ./gradlew dependencies --no-daemon
+        run: ./gradlew dependencies -Dorg.gradle.wrapper.disable=true # Disable wrapper prompts
 
       - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug -Dorg.gradle.wrapper.disable=true # Disable wrapper prompts
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
