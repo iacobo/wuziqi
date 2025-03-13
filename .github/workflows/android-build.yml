@@ -27,6 +27,9 @@ jobs:
         with:
           gradle-version: '8.11.1'  # Specify the Gradle version you want to use
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew  # Change permissions to make gradlew executable
+
       - name: Build APK
         run: ./gradlew assembleDebug # Use the Gradle wrapper to build the APK
 
