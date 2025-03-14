@@ -14,12 +14,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Undo
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun GameScreen() {
-    var gameState by remember { mutableStateOf(GameState()) }
-    var winner by remember { mutableStateOf<Int?>(null) }
-    var lastPlacedPosition by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    // Create a persistent game state using rememberSaveable instead of remember
+    var gameState by rememberSaveable { mutableStateOf(GameState()) }
+    var winner by rememberSaveable { mutableStateOf<Int?>(null) }
+    var lastPlacedPosition by rememberSaveable { mutableStateOf<Pair<Int, Int>?>(null) }
+    var moveHistory by rememberSaveable { mutableStateOf(listOf<Triple<Int, Int, Int>>()) }
     val isDarkTheme = isSystemInDarkTheme()
 
     Column(
@@ -29,11 +35,9 @@ fun GameScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Removed the "Wuziqi" title from here
-        
-        // Player turn indicator
+        // Player turn indicator with black/white text instead of player numbers
         Text(
-            text = "Player ${gameState.currentPlayer}'s Turn",
+            text = "${if (gameState.currentPlayer == GameState.PLAYER_ONE) "Black" else "White"}'s Turn",
             style = MaterialTheme.typography.titleMedium,
             color = if (gameState.currentPlayer == GameState.PLAYER_ONE) 
                 MaterialTheme.colorScheme.primary 
@@ -48,12 +52,13 @@ fun GameScreen() {
             AlertDialog(
                 onDismissRequest = { },
                 title = { Text("Game Over") },
-                text = { Text("Player ${if (winner == GameState.PLAYER_ONE) 1 else 2} won!") },
+                text = { Text("${if (winner == GameState.PLAYER_ONE) "Black" else "White"} won!") },
                 confirmButton = {
                     Button(onClick = { 
                         gameState.reset()
                         winner = null
                         lastPlacedPosition = null
+                        moveHistory = listOf()
                     }) {
                         Text("Rematch")
                     }
@@ -71,12 +76,17 @@ fun GameScreen() {
             gameState = gameState,
             lastPlacedPosition = lastPlacedPosition,
             isDarkTheme = isDarkTheme,
+            isGameFrozen = winner != null,
             onTileClick = { row, col ->
                 if (winner == null && gameState.isTileEmpty(row, col)) {
                     val currentPlayer = gameState.currentPlayer
+                    // Save the move to history before making it
+                    moveHistory = moveHistory + Triple(row, col, currentPlayer)
+                    
                     gameState.placeTile(row, col)
                     lastPlacedPosition = Pair(row, col)
-                    // We need to check if the previous player won (the one who just placed the piece)
+                    
+                    // Check for win
                     val playerToCheck = if (currentPlayer == GameState.PLAYER_ONE) GameState.PLAYER_ONE else GameState.PLAYER_TWO
                     if (gameState.checkWin(row, col, playerToCheck)) {
                         winner = playerToCheck
@@ -86,20 +96,77 @@ fun GameScreen() {
         )
 
         Spacer(modifier = Modifier.height(24.dp))
-
-        // Reset Button
-        Button(
-            onClick = { 
-                gameState.reset()
-                winner = null
-                lastPlacedPosition = null
-            },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+        
+        // Button Row with Undo and Reset
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Text("Reset Game")
+            // Undo Button
+            GameButton(
+                text = "Undo",
+                icon = Icons.Default.Undo,
+                onClick = {
+                    if (moveHistory.isNotEmpty() && winner == null) {
+                        // Get last move
+                        val lastMove = moveHistory.last()
+                        // Remove it from board
+                        gameState.board[lastMove.first][lastMove.second] = GameState.EMPTY
+                        // Update current player to the one who made the last move
+                        gameState.currentPlayer = lastMove.third
+                        // Update last placed position
+                        lastPlacedPosition = if (moveHistory.size > 1) {
+                            val previousMove = moveHistory[moveHistory.size - 2]
+                            Pair(previousMove.first, previousMove.second)
+                        } else {
+                            null
+                        }
+                        // Remove the move from history
+                        moveHistory = moveHistory.dropLast(1)
+                    }
+                },
+                enabled = moveHistory.isNotEmpty() && winner == null
+            )
+            
+            // Reset Button
+            GameButton(
+                text = "Reset",
+                icon = Icons.Default.Refresh,
+                onClick = { 
+                    gameState.reset()
+                    winner = null
+                    lastPlacedPosition = null
+                    moveHistory = listOf()
+                },
+                enabled = true
+            )
+        }
+    }
+}
+
+@Composable
+fun GameButton(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    enabled: Boolean = true
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(imageVector = icon, contentDescription = text)
+            Text(text)
         }
     }
 }
@@ -109,6 +176,7 @@ fun GameBoard(
     gameState: GameState, 
     lastPlacedPosition: Pair<Int, Int>?,
     isDarkTheme: Boolean,
+    isGameFrozen: Boolean,
     onTileClick: (Int, Int) -> Unit
 ) {
     val gridLineColor = if (isDarkTheme) Color(0xDDCCCCCC) else Color(0xDD333333)
@@ -189,7 +257,11 @@ fun GameBoard(
                             state = gameState.board[row][col],
                             isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
                             modifier = Modifier.weight(1f),
-                            onClick = { onTileClick(row, col) }
+                            onClick = { 
+                                if (!isGameFrozen) {
+                                    onTileClick(row, col) 
+                                }
+                            }
                         )
                     }
                 }
@@ -209,6 +281,7 @@ fun Tile(
         modifier = modifier
             .aspectRatio(1f)
             .padding(2.dp)
+            .clip(CircleShape) // Clip the clickable area to a circle
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
