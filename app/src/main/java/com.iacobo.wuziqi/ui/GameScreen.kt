@@ -16,7 +16,7 @@ import com.iacobo.wuziqi.data.GameState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -106,7 +106,7 @@ fun GameScreen() {
             // Undo Button
             GameButton(
                 text = "Undo",
-                icon = Icons.Default.Undo,
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
                 onClick = {
                     if (moveHistory.isNotEmpty() && winner == null) {
                         // Get last move
