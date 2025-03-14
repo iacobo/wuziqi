@@ -17,6 +17,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Undo
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
@@ -25,7 +26,7 @@ fun GameScreen() {
     var gameState by rememberSaveable { mutableStateOf(GameState()) }
     var winner by rememberSaveable { mutableStateOf<Int?>(null) }
     var lastPlacedPosition by rememberSaveable { mutableStateOf<Pair<Int, Int>?>(null) }
-    var moveHistory by rememberSaveable { mutableStateOf(listOf<Triple<Int, Int, Int>>()) }
+    var moveHistory by rememberSaveable { mutableStateOf(listOf<Move>()) }
     val isDarkTheme = isSystemInDarkTheme()
 
     Column(
@@ -81,13 +82,13 @@ fun GameScreen() {
                 if (winner == null && gameState.isTileEmpty(row, col)) {
                     val currentPlayer = gameState.currentPlayer
                     // Save the move to history before making it
-                    moveHistory = moveHistory + Triple(row, col, currentPlayer)
+                    moveHistory = moveHistory + Move(row, col, currentPlayer)
                     
                     gameState.placeTile(row, col)
                     lastPlacedPosition = Pair(row, col)
                     
                     // Check for win
-                    val playerToCheck = if (currentPlayer == GameState.PLAYER_ONE) GameState.PLAYER_ONE else GameState.PLAYER_TWO
+                    val playerToCheck = currentPlayer
                     if (gameState.checkWin(row, col, playerToCheck)) {
                         winner = playerToCheck
                     }
@@ -111,13 +112,13 @@ fun GameScreen() {
                         // Get last move
                         val lastMove = moveHistory.last()
                         // Remove it from board
-                        gameState.board[lastMove.first][lastMove.second] = GameState.EMPTY
+                        gameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
                         // Update current player to the one who made the last move
-                        gameState.currentPlayer = lastMove.third
+                        gameState.currentPlayer = lastMove.player
                         // Update last placed position
                         lastPlacedPosition = if (moveHistory.size > 1) {
                             val previousMove = moveHistory[moveHistory.size - 2]
-                            Pair(previousMove.first, previousMove.second)
+                            Pair(previousMove.row, previousMove.col)
                         } else {
                             null
                         }
@@ -143,6 +144,9 @@ fun GameScreen() {
         }
     }
 }
+
+// Simple data class to store move information
+data class Move(val row: Int, val col: Int, val player: Int)
 
 @Composable
 fun GameButton(
