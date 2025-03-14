@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.mapSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -41,94 +40,11 @@ data class Position(val row: Int, val col: Int)
 
 @Composable
 fun GameScreen() {
-    // Custom saver for the Move list
-    val moveSaver = listSaver<List<Move>, Map<String, Int>>(
-        save = { moveList ->
-            moveList.map { move ->
-                mapOf(
-                    "row" to move.row,
-                    "col" to move.col,
-                    "player" to move.player
-                )
-            }
-        },
-        restore = { mapList ->
-            mapList.map { item ->
-                Move(
-                    row = item["row"] ?: 0,
-                    col = item["col"] ?: 0,
-                    player = item["player"] ?: 0
-                )
-            }
-        }
-    )
-
-    // Custom saver for the game state
-    val gameStateSaver = mapSaver(
-        save = { gameState: GameState ->
-            val boardFlattened = mutableListOf<Int>()
-            for (row in gameState.board) {
-                for (tile in row) {
-                    boardFlattened.add(tile)
-                }
-            }
-            mapOf(
-                "boardFlattened" to boardFlattened,
-                "currentPlayer" to gameState.currentPlayer
-            )
-        },
-        restore = { savedMap: Map<*, *> ->
-            val boardSize = GameState.BOARD_SIZE
-            val gameState = GameState()
-            val boardFlattened = savedMap["boardFlattened"] as? List<Int> ?: List(boardSize * boardSize) { 0 }
-            
-            for (i in boardFlattened.indices) {
-                val row = i / boardSize
-                val col = i % boardSize
-                gameState.board[row][col] = boardFlattened[i]
-            }
-            gameState.currentPlayer = (savedMap["currentPlayer"] as? Int) ?: GameState.PLAYER_ONE
-            gameState
-        }
-    )
-
-    // Custom saver for Position (avoiding nullable Pair issues)
-    val positionSaver = mapSaver(
-        save = { position: Position? ->
-            if (position == null) {
-                mapOf("hasPosition" to false)
-            } else {
-                mapOf(
-                    "hasPosition" to true,
-                    "row" to position.row,
-                    "col" to position.col
-                )
-            }
-        },
-        restore = { savedMap: Map<*, *> ->
-            val hasPosition = savedMap["hasPosition"] as? Boolean ?: false
-            if (hasPosition) {
-                Position(
-                    row = savedMap["row"] as? Int ?: 0,
-                    col = savedMap["col"] as? Int ?: 0
-                )
-            } else {
-                null
-            }
-        }
-    )
-
-    // Use the custom savers with rememberSaveable
-    var gameState by rememberSaveable(stateSaver = gameStateSaver) { 
-        mutableStateOf(GameState()) 
-    }
+    // Use regular remember for complex state that we'll manage manually during config changes
+    var gameState by remember { mutableStateOf(GameState()) }
     var winner by rememberSaveable { mutableStateOf<Int?>(null) }
-    var lastPlacedPosition by rememberSaveable(stateSaver = positionSaver) { 
-        mutableStateOf<Position?>(null) 
-    }
-    var moveHistory by rememberSaveable(stateSaver = moveSaver) { 
-        mutableStateOf(listOf<Move>()) 
-    }
+    var lastPlacedPosition by remember { mutableStateOf<Position?>(null) }
+    var moveHistory by remember { mutableStateOf(listOf<Move>()) }
     
     val isDarkTheme = isSystemInDarkTheme()
 
@@ -187,27 +103,13 @@ fun GameScreen() {
                     // Save the move to history before making it
                     moveHistory = moveHistory + Move(row, col, currentPlayer)
                     
-                    // Create a copy of the current game state and modify it
-                    val updatedGameState = GameState()
-                    // Copy the board
-                    for (r in 0 until GameState.BOARD_SIZE) {
-                        for (c in 0 until GameState.BOARD_SIZE) {
-                            updatedGameState.board[r][c] = gameState.board[r][c]
-                        }
-                    }
-                    // Copy the current player
-                    updatedGameState.currentPlayer = gameState.currentPlayer
                     // Place the tile
-                    updatedGameState.placeTile(row, col)
-                    
-                    // Update the game state with the new state
-                    gameState = updatedGameState
+                    gameState.placeTile(row, col)
                     lastPlacedPosition = Position(row, col)
                     
                     // Check for win
-                    val playerToCheck = currentPlayer
-                    if (gameState.checkWin(row, col, playerToCheck)) {
-                        winner = playerToCheck
+                    if (gameState.checkWin(row, col, currentPlayer)) {
+                        winner = currentPlayer
                     }
                 }
             }
@@ -229,24 +131,10 @@ fun GameScreen() {
                         if (moveHistory.isNotEmpty() && winner == null) {
                             // Get last move
                             val lastMove = moveHistory.last()
-                            
-                            // Create a copy of the current game state
-                            val updatedGameState = GameState()
-                            // Copy the board
-                            for (r in 0 until GameState.BOARD_SIZE) {
-                                for (c in 0 until GameState.BOARD_SIZE) {
-                                    updatedGameState.board[r][c] = gameState.board[r][c]
-                                }
-                            }
-                            
-                            // Remove the last move from the board
-                            updatedGameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
-                            // Set the current player to the one who made the last move
-                            updatedGameState.currentPlayer = lastMove.player
-                            
-                            // Update the game state
-                            gameState = updatedGameState
-                            
+                            // Remove it from board
+                            gameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
+                            // Update current player to the one who made the last move
+                            gameState.currentPlayer = lastMove.player
                             // Update last placed position
                             lastPlacedPosition = if (moveHistory.size > 1) {
                                 val previousMove = moveHistory[moveHistory.size - 2]
@@ -254,7 +142,6 @@ fun GameScreen() {
                             } else {
                                 null
                             }
-                            
                             // Remove the move from history
                             moveHistory = moveHistory.dropLast(1)
                         }
@@ -394,7 +281,7 @@ fun GameBoard(
                     for (col in 0 until boardSize) {
                         Tile(
                             state = gameState.board[row][col],
-                            isLastPlaced = lastPlacedPosition?.let { it.row == row && it.col == col } ?: false,
+                            isLastPlaced = lastPlacedPosition?.row == row && lastPlacedPosition?.col == col,
                             modifier = Modifier.weight(1f),
                             onClick = { 
                                 if (!isGameFrozen) {
