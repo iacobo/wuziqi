@@ -12,39 +12,30 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.mapSaver
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.iacobo.wuziqi.data.GameState
-
-// Simple data class to store move information
-data class Move(val row: Int, val col: Int, val player: Int)
-
-// Simple data class to represent position
-data class Position(val row: Int, val col: Int)
+import com.iacobo.wuziqi.viewmodel.GameViewModel
+import com.iacobo.wuziqi.viewmodel.Position
 
 @Composable
 fun GameScreen() {
-    // Use regular remember for complex state that we'll manage manually during config changes
-    var gameState by remember { mutableStateOf(GameState()) }
-    var winner by rememberSaveable { mutableStateOf<Int?>(null) }
-    var lastPlacedPosition by remember { mutableStateOf<Position?>(null) }
-    var moveHistory by remember { mutableStateOf(listOf<Move>()) }
+    // Use the ViewModel approach for state persistence
+    val viewModel: GameViewModel = viewModel()
+    val gameState = viewModel.gameState
+    val winner = viewModel.winner
+    val lastPlacedPosition = viewModel.lastPlacedPosition
+    val moveHistory = viewModel.moveHistory
     
     val isDarkTheme = isSystemInDarkTheme()
 
@@ -74,17 +65,12 @@ fun GameScreen() {
                 title = { Text("Game Over") },
                 text = { Text("${if (winner == GameState.PLAYER_ONE) "Black" else "White"} won!") },
                 confirmButton = {
-                    Button(onClick = { 
-                        gameState = GameState()
-                        winner = null
-                        lastPlacedPosition = null
-                        moveHistory = listOf()
-                    }) {
+                    Button(onClick = { viewModel.resetGame() }) {
                         Text("Rematch")
                     }
                 },
                 dismissButton = {
-                    Button(onClick = { winner = null }) {
+                    Button(onClick = { viewModel.dismissWinnerDialog() }) {
                         Text("Close")
                     }
                 }
@@ -97,22 +83,7 @@ fun GameScreen() {
             lastPlacedPosition = lastPlacedPosition,
             isDarkTheme = isDarkTheme,
             isGameFrozen = winner != null,
-            onTileClick = { row, col ->
-                if (winner == null && gameState.isTileEmpty(row, col)) {
-                    val currentPlayer = gameState.currentPlayer
-                    // Save the move to history before making it
-                    moveHistory = moveHistory + Move(row, col, currentPlayer)
-                    
-                    // Place the tile
-                    gameState.placeTile(row, col)
-                    lastPlacedPosition = Position(row, col)
-                    
-                    // Check for win
-                    if (gameState.checkWin(row, col, currentPlayer)) {
-                        winner = currentPlayer
-                    }
-                }
-            }
+            onTileClick = { row, col -> viewModel.placeTile(row, col) }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -127,25 +98,7 @@ fun GameScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 FilledIconButton(
-                    onClick = {
-                        if (moveHistory.isNotEmpty() && winner == null) {
-                            // Get last move
-                            val lastMove = moveHistory.last()
-                            // Remove it from board
-                            gameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
-                            // Update current player to the one who made the last move
-                            gameState.currentPlayer = lastMove.player
-                            // Update last placed position
-                            lastPlacedPosition = if (moveHistory.size > 1) {
-                                val previousMove = moveHistory[moveHistory.size - 2]
-                                Position(previousMove.row, previousMove.col)
-                            } else {
-                                null
-                            }
-                            // Remove the move from history
-                            moveHistory = moveHistory.dropLast(1)
-                        }
-                    },
+                    onClick = { viewModel.undoMove() },
                     enabled = moveHistory.isNotEmpty() && winner == null,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -171,12 +124,7 @@ fun GameScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 FilledIconButton(
-                    onClick = { 
-                        gameState = GameState()
-                        winner = null
-                        lastPlacedPosition = null
-                        moveHistory = listOf()
-                    },
+                    onClick = { viewModel.resetGame() },
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
