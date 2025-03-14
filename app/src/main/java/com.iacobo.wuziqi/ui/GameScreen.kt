@@ -115,6 +115,7 @@ fun GameBoard(
     val gridLineWidth = 1.dp
     val boardSize = GameState.BOARD_SIZE
     
+    // Draw board
     Box(
         modifier = Modifier
             .aspectRatio(1f)
@@ -122,10 +123,11 @@ fun GameBoard(
             .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
     ) {
 
+        // Draw gridlines half a tile width inwards
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
-                .padding(8.dp)
+                .padding(12.dp)
         ) {
             
             // Draw the board with grid lines
@@ -170,25 +172,25 @@ fun GameBoard(
                     }
                 }
             }
+        }
             
-            // Tiles and pieces - we place them at the intersections
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                for (row in 0 until boardSize) {
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                    ) {
-                        for (col in 0 until boardSize) {
-                            Tile(
-                                state = gameState.board[row][col],
-                                isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onTileClick(row, col) }
-                            )
-                        }
+        // Tiles and pieces - we place them at the intersections
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            for (row in 0 until boardSize) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    for (col in 0 until boardSize) {
+                        Tile(
+                            state = gameState.board[row][col],
+                            isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
+                            modifier = Modifier.weight(1f),
+                            onClick = { onTileClick(row, col) }
+                        )
                     }
                 }
             }
