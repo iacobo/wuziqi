@@ -121,62 +121,76 @@ fun GameBoard(
             .padding(8.dp)
             .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
     ) {
-        // Game board layout with pieces
-        Column(
-            modifier = Modifier.fillMaxSize()
+
+        Box(
+            modifier = Modifier
+                .aspectRatio(1f)
+                .padding(8.dp)
         ) {
-            for (row in 0 until boardSize) {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    for (col in 0 until boardSize) {
-                        Tile(
-                            state = gameState.board[row][col],
-                            isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onTileClick(row, col) }
-                        )
+            
+            // Draw the board with grid lines
+            // We'll calculate spacing between lines based on the available space
+            
+            // Game board layout
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Draw the horizontal grid lines
+                for (i in 0 until boardSize) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(gridLineWidth)
+                            .background(gridLineColor)
+                    )
+                    
+                    if (i < boardSize - 1) {
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
-        }
-        
-        // Draw grid lines to match the piece placement
-        // Instead of going edge to edge, we'll offset the grid lines to match the centers of the tile positions
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Calculate the size of each cell
-            val cellSize = 1f / boardSize
             
-            // Draw horizontal grid lines
-            for (i in 0 until boardSize) {
-                // Position at the center of the cell row
-                val yPosition = (i + 0.5f) * cellSize
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(gridLineWidth)
-                        .align(Alignment.TopStart)
-                        .offset(y = (yPosition * 100).dp) // Convert from percentage to dp
-                        .background(gridLineColor)
-                )
+            // Draw the vertical grid lines
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Draw the vertical grid lines
+                for (i in 0 until boardSize) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(gridLineWidth)
+                            .background(gridLineColor)
+                    )
+                    
+                    if (i < boardSize - 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
             
-            // Draw vertical grid lines
-            for (i in 0 until boardSize) {
-                // Position at the center of the cell column
-                val xPosition = (i + 0.5f) * cellSize
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(gridLineWidth)
-                        .align(Alignment.TopStart)
-                        .offset(x = (xPosition * 100).dp) // Convert from percentage to dp
-                        .background(gridLineColor)
-                )
+            // Tiles and pieces - we place them at the intersections
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                for (row in 0 until boardSize) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        for (col in 0 until boardSize) {
+                            Tile(
+                                state = gameState.board[row][col],
+                                isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
+                                modifier = Modifier.weight(1f),
+                                onClick = { onTileClick(row, col) }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
