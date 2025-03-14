@@ -23,6 +23,10 @@ jobs:
           distribution: temurin
           java-version: '17'
           
+      # Make gradlew executable - critical step!
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+          
       # Using the approach that worked before
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
