@@ -5,29 +5,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,10 +35,11 @@ data class Move(val row: Int, val col: Int, val player: Int)
 
 @Composable
 fun GameScreen() {
-    var gameState by remember { mutableStateOf(GameState()) }
-    var winner by remember { mutableStateOf<Int?>(null) }
-    var lastPlacedPosition by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var moveHistory by remember { mutableStateOf(listOf<Move>()) }
+    // Use rememberSaveable instead of remember to persist state during config changes
+    var gameState by rememberSaveable { mutableStateOf(GameState()) }
+    var winner by rememberSaveable { mutableStateOf<Int?>(null) }
+    var lastPlacedPosition by rememberSaveable { mutableStateOf<Pair<Int, Int>?>(null) }
+    var moveHistory by rememberSaveable { mutableStateOf(listOf<Move>()) }
     val isDarkTheme = isSystemInDarkTheme()
 
     Column(
@@ -116,57 +111,81 @@ fun GameScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
         
-        // Button Row with Undo and Reset
+        // Button Row with Undo and Reset using Material3 IconButtons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // Undo Button (no icon)
-            Button(
-                onClick = {
-                    if (moveHistory.isNotEmpty() && winner == null) {
-                        // Get last move
-                        val lastMove = moveHistory.last()
-                        // Remove it from board
-                        gameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
-                        // Update current player to the one who made the last move
-                        gameState.currentPlayer = lastMove.player
-                        // Update last placed position
-                        lastPlacedPosition = if (moveHistory.size > 1) {
-                            val previousMove = moveHistory[moveHistory.size - 2]
-                            Pair(previousMove.row, previousMove.col)
-                        } else {
-                            null
-                        }
-                        // Remove the move from history
-                        moveHistory = moveHistory.dropLast(1)
-                    }
-                },
-                enabled = moveHistory.isNotEmpty() && winner == null,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            // Undo Button with arrow back icon
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Undo")
+                FilledIconButton(
+                    onClick = {
+                        if (moveHistory.isNotEmpty() && winner == null) {
+                            // Get last move
+                            val lastMove = moveHistory.last()
+                            // Remove it from board
+                            gameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
+                            // Update current player to the one who made the last move
+                            gameState.currentPlayer = lastMove.player
+                            // Update last placed position
+                            lastPlacedPosition = if (moveHistory.size > 1) {
+                                val previousMove = moveHistory[moveHistory.size - 2]
+                                Pair(previousMove.row, previousMove.col)
+                            } else {
+                                null
+                            }
+                            // Remove the move from history
+                            moveHistory = moveHistory.dropLast(1)
+                        }
+                    },
+                    enabled = moveHistory.isNotEmpty() && winner == null,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = "Undo move"
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Undo",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
             
-            // Reset Button (no icon)
-            Button(
-                onClick = { 
-                    gameState.reset()
-                    winner = null
-                    lastPlacedPosition = null
-                    moveHistory = listOf()
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            // Reset Button with refresh icon
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Reset Game")
+                FilledIconButton(
+                    onClick = { 
+                        gameState.reset()
+                        winner = null
+                        lastPlacedPosition = null
+                        moveHistory = listOf()
+                    },
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "Reset game"
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Reset",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
     }
