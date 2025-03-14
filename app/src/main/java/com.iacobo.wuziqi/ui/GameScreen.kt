@@ -36,6 +36,9 @@ import com.iacobo.wuziqi.data.GameState
 // Simple data class to store move information
 data class Move(val row: Int, val col: Int, val player: Int)
 
+// Simple data class to represent position
+data class Position(val row: Int, val col: Int)
+
 @Composable
 fun GameScreen() {
     // Custom saver for the Move list
@@ -61,72 +64,67 @@ fun GameScreen() {
     )
 
     // Custom saver for the game state
-    val gameStateSaver = run {
-        val key = "GameState"
-        mapSaver(
-            save = { gameState ->
-                val boardFlattened = mutableListOf<Int>()
-                for (row in gameState.board) {
-                    for (tile in row) {
-                        boardFlattened.add(tile)
-                    }
+    val gameStateSaver = mapSaver(
+        save = { gameState: GameState ->
+            val boardFlattened = mutableListOf<Int>()
+            for (row in gameState.board) {
+                for (tile in row) {
+                    boardFlattened.add(tile)
                 }
-                mapOf(
-                    "boardFlattened" to boardFlattened,
-                    "currentPlayer" to gameState.currentPlayer
-                )
-            },
-            restore = { savedMap ->
-                val boardSize = GameState.BOARD_SIZE
-                val gameState = GameState()
-                val boardFlattened = savedMap["boardFlattened"] as? List<Int> ?: List(boardSize * boardSize) { 0 }
-                
-                for (i in boardFlattened.indices) {
-                    val row = i / boardSize
-                    val col = i % boardSize
-                    gameState.board[row][col] = boardFlattened[i]
-                }
-                gameState.currentPlayer = (savedMap["currentPlayer"] as? Int) ?: GameState.PLAYER_ONE
-                gameState
             }
-        )
-    }
+            mapOf(
+                "boardFlattened" to boardFlattened,
+                "currentPlayer" to gameState.currentPlayer
+            )
+        },
+        restore = { savedMap: Map<*, *> ->
+            val boardSize = GameState.BOARD_SIZE
+            val gameState = GameState()
+            val boardFlattened = savedMap["boardFlattened"] as? List<Int> ?: List(boardSize * boardSize) { 0 }
+            
+            for (i in boardFlattened.indices) {
+                val row = i / boardSize
+                val col = i % boardSize
+                gameState.board[row][col] = boardFlattened[i]
+            }
+            gameState.currentPlayer = (savedMap["currentPlayer"] as? Int) ?: GameState.PLAYER_ONE
+            gameState
+        }
+    )
 
-    // Custom saver for Pair<Int, Int>?
-    val pairSaver = run {
-        mapSaver(
-            save = { pair: Pair<Int, Int>? ->
-                if (pair == null) {
-                    mapOf("isNull" to true)
-                } else {
-                    mapOf(
-                        "isNull" to false,
-                        "first" to pair.first,
-                        "second" to pair.second
-                    )
-                }
-            },
-            restore = { savedMap ->
-                val isNull = savedMap["isNull"] as? Boolean ?: true
-                if (isNull) {
-                    null
-                } else {
-                    Pair(
-                        savedMap["first"] as? Int ?: 0,
-                        savedMap["second"] as? Int ?: 0
-                    )
-                }
+    // Custom saver for Position (avoiding nullable Pair issues)
+    val positionSaver = mapSaver(
+        save = { position: Position? ->
+            if (position == null) {
+                mapOf("hasPosition" to false)
+            } else {
+                mapOf(
+                    "hasPosition" to true,
+                    "row" to position.row,
+                    "col" to position.col
+                )
             }
-        )
-    }
+        },
+        restore = { savedMap: Map<*, *> ->
+            val hasPosition = savedMap["hasPosition"] as? Boolean ?: false
+            if (hasPosition) {
+                Position(
+                    row = savedMap["row"] as? Int ?: 0,
+                    col = savedMap["col"] as? Int ?: 0
+                )
+            } else {
+                null
+            }
+        }
+    )
 
     // Use the custom savers with rememberSaveable
     var gameState by rememberSaveable(stateSaver = gameStateSaver) { 
         mutableStateOf(GameState()) 
     }
     var winner by rememberSaveable { mutableStateOf<Int?>(null) }
-    var lastPlacedPosition by rememberSaveable(stateSaver = pairSaver) { 
-        mutableStateOf<Pair<Int, Int>?>(null) 
+    var lastPlacedPosition by rememberSaveable(stateSaver = positionSaver) { 
+        mutableStateOf<Position?>(null) 
     }
     var moveHistory by rememberSaveable(stateSaver = moveSaver) { 
         mutableStateOf(listOf<Move>()) 
@@ -204,7 +202,7 @@ fun GameScreen() {
                     
                     // Update the game state with the new state
                     gameState = updatedGameState
-                    lastPlacedPosition = Pair(row, col)
+                    lastPlacedPosition = Position(row, col)
                     
                     // Check for win
                     val playerToCheck = currentPlayer
@@ -252,7 +250,7 @@ fun GameScreen() {
                             // Update last placed position
                             lastPlacedPosition = if (moveHistory.size > 1) {
                                 val previousMove = moveHistory[moveHistory.size - 2]
-                                Pair(previousMove.row, previousMove.col)
+                                Position(previousMove.row, previousMove.col)
                             } else {
                                 null
                             }
@@ -315,7 +313,7 @@ fun GameScreen() {
 @Composable
 fun GameBoard(
     gameState: GameState, 
-    lastPlacedPosition: Pair<Int, Int>?,
+    lastPlacedPosition: Position?,
     isDarkTheme: Boolean,
     isGameFrozen: Boolean,
     onTileClick: (Int, Int) -> Unit
@@ -396,7 +394,7 @@ fun GameBoard(
                     for (col in 0 until boardSize) {
                         Tile(
                             state = gameState.board[row][col],
-                            isLastPlaced = lastPlacedPosition?.let { it.first == row && it.second == col } ?: false,
+                            isLastPlaced = lastPlacedPosition?.let { it.row == row && it.col == col } ?: false,
                             modifier = Modifier.weight(1f),
                             onClick = { 
                                 if (!isGameFrozen) {
