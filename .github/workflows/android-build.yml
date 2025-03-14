@@ -24,14 +24,11 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.11.1'
-
+      # Use the Gradle wrapper from your repository instead of specifying a Gradle version
       - name: Make gradlew executable
         run: chmod +x ./gradlew
-        
+
+      # Run Gradle with the wrapper
       - name: Run tests
         run: ./gradlew testDebug
 
@@ -80,14 +77,3 @@ jobs:
           files: app/build/outputs/apk/release/app-release.apk
           draft: false
           prerelease: false
-          
-      # Optional: Upload to Google Play
-      # - name: Upload to Google Play
-      #   if: startsWith(github.ref, 'refs/tags/v')
-      #   uses: r0adkll/upload-google-play@v1
-      #   with:
-      #     serviceAccountJsonPlainText: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-      #     packageName: com.your.package.name
-      #     releaseFiles: app/build/outputs/bundle/release/app-release.aab
-      #     track: production
-      #     status: completed
