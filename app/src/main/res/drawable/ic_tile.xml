@@ -4,25 +4,58 @@
     android:height="200dp"
     android:viewportWidth="200"
     android:viewportHeight="200">
-
-    <!-- Background Circle -->
-    <!-- Use a Material color for the background -->
+    
+    <!-- Background Circle with Material 3 Light Blue -->
     <path
-        android:fillColor="@color/background_color" 
-        android:pathData="M 100,0 A 100,100 0 1,0 100,200 A 100,100 0 1,0 100,0 Z" />
-
-    <!-- Black Stone -->
-    <!-- Use Material Black color -->
+        android:fillColor="#B3E5FC"
+        android:pathData="M100,0C44.77,0 0,44.77 0,100C0,155.23 44.77,200 100,200C155.23,200 200,155.23 200,100C200,44.77 155.23,0 100,0Z" />
+    
+    <!-- Subtle 3x3 Grid Lines -->
     <path
-        android:fillColor="@color/black" 
-        android:pathData="M 55,60 A 40,40 0 1,0 55,140 A 40,40 0 1,0 55,60 Z" />
-
-    <!-- White Stone -->
-    <!-- Use Material White color -->
-    <!-- Use Material Black color for stroke -->
+        android:strokeColor="#78909C"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.5"
+        android:pathData="M140,20L140,180" />
     <path
-        android:fillColor="@color/white" 
-        android:strokeColor="@color/black" 
-        android:strokeWidth="2"
-        android:pathData="M 145,60 A 40,40 0 1,0 145,140 A 40,40 0 1,0 145,60 Z" />
+        android:strokeColor="#78909C"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.5"
+        android:pathData="M60,20L60,180" />
+    <path
+        android:strokeColor="#78909C"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.5"
+        android:pathData="M20,60L180,60" />
+    <path
+        android:strokeColor="#78909C"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.5"
+        android:pathData="M20,140L180,140" />
+    
+    <!-- White Stone in Bottom Left with subtle shadow -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0.08"
+        android:pathData="M60,110C76.57,110 90,123.43 90,140C90,156.57 76.57,170 60,170C43.43,170 30,156.57 30,140C30,123.43 43.43,110 60,110Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,111C75.46,111 89,124.54 89,140C89,155.46 75.46,169 60,169C44.54,169 31,155.46 31,140C31,124.54 44.54,111 60,111Z" />
+    
+    <!-- Black Stone in Bottom Right with subtle elevation -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0.9"
+        android:pathData="M140,110C156.57,110 170,123.43 170,140C170,156.57 156.57,170 140,170C123.43,170 110,156.57 110,140C110,123.43 123.43,110 140,110Z" />
+    <path
+        android:fillColor="#212121"
+        android:pathData="M140,112C155.46,112 168,124.54 168,140C168,155.46 155.46,168 140,168C124.54,168 112,155.46 112,140C112,124.54 124.54,112 140,112Z" />
+    
+    <!-- Black Stone in Top Left with subtle elevation -->
+    <path
+        android:fillColor="#000000"
+        android:fillAlpha="0.9"
+        android:pathData="M60,30C76.57,30 90,43.43 90,60C90,76.57 76.57,90 60,90C43.43,90 30,76.57 30,60C30,43.43 43.43,30 60,30Z" />
+    <path
+        android:fillColor="#212121"
+        android:pathData="M60,32C75.46,32 88,44.54 88,60C88,75.46 75.46,88 60,88C44.54,88 32,75.46 32,60C32,44.54 44.54,32 60,32Z" />
 </vector>
