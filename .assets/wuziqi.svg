@@ -9,15 +9,15 @@
   <line x1="20" y1="140" x2="180" y2="140" stroke="#78909C" stroke-width="1.5" stroke-opacity="0.5"/>
 
   <!-- White Stone in Bottom Left with subtle shadow -->
-  <circle cx="60" cy="140" r="30" fill="white"/>
-  <circle cx="60" cy="140" r="30" fill="#000000" fill-opacity="0.08"/>
-  <circle cx="60" cy="140" r="29" fill="white"/>
+  <circle cx="60" cy="140" r="36" fill="white"/>
+  <circle cx="60" cy="140" r="36" fill="#000000" fill-opacity="0.08"/>
+  <circle cx="60" cy="140" r="33" fill="white"/>
   
   <!-- Black Stone in Bottom Right with subtle elevation -->
-  <circle cx="140" cy="140" r="30" fill="#000000" fill-opacity="0.9"/>
-  <circle cx="140" cy="140" r="28" fill="#212121"/>
+  <circle cx="140" cy="140" r="36" fill="#000000" fill-opacity="0.9"/>
+  <circle cx="140" cy="140" r="33" fill="#212121"/>
   
   <!-- Black Stone in Top Left with subtle elevation -->
-  <circle cx="60" cy="60" r="30" fill="#000000" fill-opacity="0.9"/>
-  <circle cx="60" cy="60" r="28" fill="#212121"/>
+  <circle cx="60" cy="60" r="36" fill="#000000" fill-opacity="0.9"/>
+  <circle cx="60" cy="60" r="33" fill="#212121"/>
 </svg>
