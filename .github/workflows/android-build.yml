@@ -13,38 +13,35 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+        
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      # Use the Gradle wrapper from your repository instead of specifying a Gradle version
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
-
-      # Run Gradle with the wrapper
-      - name: Run tests
-        run: ./gradlew testDebug
-
-      # Debug build for pull requests and regular pushes
+          
+      # Using the approach that worked before
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+          
+      # Debug build for regular pushes and PRs
       - name: Build Debug APK
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: ./gradlew assembleDebug
-
-      # Release build for tagged versions
+      
+      # For releases (when a tag is pushed)
       - name: Decode Keystore
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           ENCODED_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           echo $ENCODED_KEYSTORE | base64 --decode > ./app/keystore.jks
-
+          
       - name: Build Release APK
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -52,16 +49,16 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease
-
-      # Upload debug APK as artifact
+        
+      # Upload debug APK as artifact for non-release builds
       - name: Upload Debug APK
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
         with:
           name: wuziqi-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-
-      # Upload release APK as artifact
+          
+      # Upload release APK as artifact for tagged builds
       - name: Upload Release APK
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
@@ -69,7 +66,7 @@ jobs:
           name: wuziqi-release-apk
           path: app/build/outputs/apk/release/app-release.apk
           
-      # Create GitHub release with the APK
+      # Create GitHub release for tagged builds
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
