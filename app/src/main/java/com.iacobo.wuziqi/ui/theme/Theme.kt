@@ -15,23 +15,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+// Color schemes based on Material Design guidelines
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = GameDarkPrimary,
+    secondary = GameDarkSecondary,
+    tertiary = GameDarkAccent,
+    background = GameDarkBackground
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = GameLightPrimary,
+    secondary = GameLightSecondary,
+    tertiary = GameLightAccent,
+    background = GameLightBackground
 )
 
+/**
+ * Theme for the Wuziqi app.
+ * Applies appropriate color schemes based on system settings and dynamic colors.
+ */
 @Composable
 fun WuziqiTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = true, // Use dynamic colors on Android 12+
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -42,10 +48,13 @@ fun WuziqiTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
+    
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            
+            // Set status bar colors and appearance
             window.statusBarColor = colorScheme.primary.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }

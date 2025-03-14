@@ -2,12 +2,20 @@ package com.iacobo.wuziqi.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Light Theme Colors
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Light theme colors
+val GameLightPrimary = Color(0xFF3F51B5) // Indigo
+val GameLightSecondary = Color(0xFF673AB7) // Deep Purple
+val GameLightAccent = Color(0xFFE91E63) // Pink
+val GameLightBackground = Color(0xFFF5F5F5) // Light Gray
 
-// Dark Theme Colors
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Dark theme colors
+val GameDarkPrimary = Color(0xFF9FA8DA) // Light Indigo
+val GameDarkSecondary = Color(0xFFB39DDB) // Light Deep Purple
+val GameDarkAccent = Color(0xFFF48FB1) // Light Pink
+val GameDarkBackground = Color(0xFF121212) // Dark Gray
+
+// Game board colors
+val BoardLightColor = Color(0xFFE6C47A) // Wood-like color
+val BoardDarkColor = Color(0xFF2A2A2A) // Dark board color
+val GridLightColor = Color(0xDD333333) // Dark lines for light theme
+val GridDarkColor = Color(0xDDCCCCCC) // Light lines for dark theme

@@ -1,9 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wuziqi</string>
-    <string name="reset_game">Reset Game</string>
-    <string name="mute_sounds">Mute Sounds</string>
+    
+    <!-- Game UI -->
+    <string name="player_turn_format">%s\'s Turn</string>
+    <string name="player_black">Black</string>
+    <string name="player_white">White</string>
+    
+    <!-- Game controls -->
+    <string name="undo">Undo</string>
+    <string name="reset">Reset</string>
+    
+    <!-- Dialogs -->
     <string name="game_over">Game Over</string>
-    <string name="player_won">Player %1$d won!</string>
+    <string name="winner_format">%s won!</string>
     <string name="rematch">Rematch</string>
-    <string name="quit">Quit</string>
+    <string name="close">Close</string>
+    
+    <!-- Content descriptions -->
+    <string name="cd_undo_move">Undo move</string>
+    <string name="cd_reset_game">Reset game</string>
 </resources>

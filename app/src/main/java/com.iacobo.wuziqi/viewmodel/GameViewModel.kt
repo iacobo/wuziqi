@@ -6,12 +6,20 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.iacobo.wuziqi.data.GameState
 
-// Data class for storing move information
+/**
+ * Represents a move in the game with position and player information.
+ */
 data class Move(val row: Int, val col: Int, val player: Int)
 
-// Data class for storing position
+/**
+ * Represents a position on the board.
+ */
 data class Position(val row: Int, val col: Int)
 
+/**
+ * ViewModel that manages the game state and provides actions and state for the UI.
+ * Handles move history and state persistence across configuration changes.
+ */
 class GameViewModel : ViewModel() {
     // Game state
     var gameState by mutableStateOf(GameState())
@@ -26,10 +34,13 @@ class GameViewModel : ViewModel() {
         private set
     
     // Move history for undo functionality
-    var moveHistory by mutableStateOf(listOf<Move>())
+    var moveHistory by mutableStateOf(emptyList<Move>())
         private set
 
-    // Place a tile at the specified position
+    /**
+     * Places a tile at the specified position if valid.
+     * Updates state and checks for win condition.
+     */
     fun placeTile(row: Int, col: Int) {
         if (winner != null || !gameState.isTileEmpty(row, col)) {
             return
@@ -50,7 +61,9 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    // Undo the last move
+    /**
+     * Undoes the last move if possible.
+     */
     fun undoMove() {
         if (moveHistory.isEmpty() || winner != null) {
             return
@@ -77,15 +90,19 @@ class GameViewModel : ViewModel() {
         moveHistory = moveHistory.dropLast(1)
     }
 
-    // Reset the game
+    /**
+     * Resets the game to initial state.
+     */
     fun resetGame() {
         gameState = GameState()
         winner = null
         lastPlacedPosition = null
-        moveHistory = listOf()
+        moveHistory = emptyList()
     }
 
-    // Dismiss winner dialog but keep the board state
+    /**
+     * Dismisses the winner dialog without resetting the game.
+     */
     fun dismissWinnerDialog() {
         winner = null
     }

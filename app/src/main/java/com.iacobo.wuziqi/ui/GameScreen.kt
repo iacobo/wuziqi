@@ -1,6 +1,5 @@
 package com.iacobo.wuziqi.ui
 
-// Core Compose imports only
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,15 +21,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 import com.iacobo.wuziqi.viewmodel.Position
 
+/**
+ * Main game screen composable.
+ * Displays the game board, status, and controls.
+ */
 @Composable
 fun GameScreen() {
-    // Use the ViewModel approach for state persistence
     val viewModel: GameViewModel = viewModel()
     val gameState = viewModel.gameState
     val winner = viewModel.winner
@@ -46,34 +50,17 @@ fun GameScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Player turn indicator with black/white text instead of player numbers
-        Text(
-            text = "${if (gameState.currentPlayer == GameState.PLAYER_ONE) "Black" else "White"}'s Turn",
-            style = MaterialTheme.typography.titleMedium,
-            color = if (gameState.currentPlayer == GameState.PLAYER_ONE) 
-                MaterialTheme.colorScheme.primary 
-            else 
-                MaterialTheme.colorScheme.secondary
-        )
+        // Player turn indicator
+        PlayerTurnIndicator(gameState.currentPlayer)
         
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Display winner dialog if there is a winner
+        // Winner dialog
         if (winner != null) {
-            AlertDialog(
-                onDismissRequest = { },
-                title = { Text("Game Over") },
-                text = { Text("${if (winner == GameState.PLAYER_ONE) "Black" else "White"} won!") },
-                confirmButton = {
-                    Button(onClick = { viewModel.resetGame() }) {
-                        Text("Rematch")
-                    }
-                },
-                dismissButton = {
-                    Button(onClick = { viewModel.dismissWinnerDialog() }) {
-                        Text("Close")
-                    }
-                }
+            WinnerDialog(
+                winner = winner,
+                onRematch = { viewModel.resetGame() },
+                onDismiss = { viewModel.dismissWinnerDialog() }
             )
         }
         
@@ -88,63 +75,130 @@ fun GameScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
         
-        // Button Row with Undo and Reset using Material3 IconButtons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            // Undo Button with arrow back icon
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                FilledIconButton(
-                    onClick = { viewModel.undoMove() },
-                    enabled = moveHistory.isNotEmpty() && winner == null,
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Undo move"
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Undo",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            
-            // Reset Button with refresh icon
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                FilledIconButton(
-                    onClick = { viewModel.resetGame() },
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Refresh,
-                        contentDescription = "Reset game"
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Reset",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
+        // Control buttons
+        GameControls(
+            canUndo = moveHistory.isNotEmpty() && winner == null,
+            onUndo = { viewModel.undoMove() },
+            onReset = { viewModel.resetGame() }
+        )
     }
 }
 
+/**
+ * Displays the current player's turn.
+ */
+@Composable
+private fun PlayerTurnIndicator(currentPlayer: Int) {
+    val playerName = if (currentPlayer == GameState.PLAYER_ONE) "Black" else "White"
+    val playerColor = if (currentPlayer == GameState.PLAYER_ONE) 
+        MaterialTheme.colorScheme.primary 
+    else 
+        MaterialTheme.colorScheme.secondary
+    
+    Text(
+        text = "$playerName's Turn",
+        style = MaterialTheme.typography.titleMedium,
+        color = playerColor
+    )
+}
+
+/**
+ * Dialog shown when a player wins.
+ */
+@Composable
+private fun WinnerDialog(
+    winner: Int,
+    onRematch: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { },
+        title = { Text("Game Over") },
+        text = { Text("${if (winner == GameState.PLAYER_ONE) "Black" else "White"} won!") },
+        confirmButton = {
+            Button(onClick = onRematch) {
+                Text("Rematch")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
+}
+
+/**
+ * Game control buttons (Undo, Reset).
+ */
+@Composable
+private fun GameControls(
+    canUndo: Boolean,
+    onUndo: () -> Unit,
+    onReset: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        // Undo Button
+        ControlButton(
+            icon = Icons.AutoMirrored.Filled.ArrowBack,
+            label = "Undo",
+            onClick = onUndo,
+            enabled = canUndo
+        )
+        
+        // Reset Button
+        ControlButton(
+            icon = Icons.Filled.Refresh,
+            label = "Reset",
+            onClick = onReset,
+            enabled = true
+        )
+    }
+}
+
+/**
+ * Reusable control button with icon and label.
+ */
+@Composable
+private fun ControlButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        FilledIconButton(
+            onClick = onClick,
+            enabled = enabled,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+/**
+ * The game board composable.
+ * Displays the grid and pieces.
+ */
 @Composable
 fun GameBoard(
     gameState: GameState, 
@@ -156,31 +210,25 @@ fun GameBoard(
     val gridLineColor = if (isDarkTheme) Color(0xDDCCCCCC) else Color(0xDD333333)
     val gridLineWidth = 1.dp
     val boardSize = GameState.BOARD_SIZE
+    val boardColor = if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A)
     
-    // Draw board
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(8.dp)
-            .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A))
+            .background(boardColor)
     ) {
-
-        // Draw gridlines half a tile width inwards
+        // Draw gridlines
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
                 .padding(12.dp)
         ) {
-            
-            // Draw the board with grid lines
-            // We'll calculate spacing between lines based on the available space
-            
-            // Game board layout
+            // Horizontal grid lines
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Draw the horizontal grid lines
                 for (i in 0 until boardSize) {
                     Box(
                         modifier = Modifier
@@ -195,12 +243,11 @@ fun GameBoard(
                 }
             }
             
-            // Draw the vertical grid lines
+            // Vertical grid lines
             Row(
                 modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Draw the vertical grid lines
                 for (i in 0 until boardSize) {
                     Box(
                         modifier = Modifier
@@ -216,10 +263,8 @@ fun GameBoard(
             }
         }
             
-        // Tiles and pieces - we place them at the intersections
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        // Tiles and pieces
+        Column(modifier = Modifier.fillMaxSize()) {
             for (row in 0 until boardSize) {
                 Row(
                     modifier = Modifier
@@ -244,6 +289,9 @@ fun GameBoard(
     }
 }
 
+/**
+ * Represents a single tile on the game board.
+ */
 @Composable
 fun Tile(
     state: Int,
@@ -255,7 +303,7 @@ fun Tile(
         modifier = modifier
             .aspectRatio(1f)
             .padding(2.dp)
-            .clip(CircleShape) // Clip the clickable area to a circle
+            .clip(CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
