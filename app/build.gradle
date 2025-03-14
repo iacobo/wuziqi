@@ -51,6 +51,10 @@ dependencies {
     implementation "androidx.compose.material:material-icons-core"
     implementation "androidx.compose.runtime:runtime-saveable"
 
+     // ViewModel dependencies
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7"
+
     // Splash screen
     implementation "androidx.core:core-splashscreen:1.0.1"
     
