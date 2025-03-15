@@ -14,18 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +38,7 @@ import com.iacobo.wuziqi.ui.theme.BoardDarkColor
 import com.iacobo.wuziqi.ui.theme.BoardLightColor
 import com.iacobo.wuziqi.ui.theme.GridDarkColor
 import com.iacobo.wuziqi.ui.theme.GridLightColor
+import com.iacobo.wuziqi.viewmodel.DRAW
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 import com.iacobo.wuziqi.viewmodel.Position
 import kotlinx.coroutines.delay
@@ -77,7 +67,7 @@ fun GameScreen(
     
     // Determine game type for easter eggs
     val isXandO = boardSize == 3 && winLength == 3
-    val isConnect4 = boardSize == 6 && winLength == 4
+    val isConnect4 = boardSize == 7 && winLength == 4
 
     // Determine app title based on easter egg mode
     val appTitle = when {
@@ -93,281 +83,204 @@ fun GameScreen(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Top App Bar with home button and title
-        TopAppBar(
-            title = {
-                Text(
-                    text = appTitle,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            navigationIcon = {
-                IconButton(onClick = onNavigateToHome) {
-                    Icon(
-                        imageVector = Icons.Default.Home,
-                        contentDescription = stringResource(R.string.home)
-                    )
-                }
-            },
-            actions = {
-                IconButton(onClick = onNavigateToSettings) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = stringResource(R.string.settings)
-                    )
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,
-                titleContentColor = MaterialTheme.colorScheme.onBackground
-            )
-        )
-        
-        // Fixed height container for player indicator to prevent layout shifts
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isLoading) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.secondary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {
                     Text(
-                        text = stringResource(R.string.computer_thinking),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary
+                        text = appTitle,
+                        style = MaterialTheme.typography.titleLarge
                     )
-                }
-            } else {
-                val playerText = when {
-                    isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "X's Turn" else "O's Turn"
-                    isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "Red's Turn" else "Yellow's Turn"
-                    else -> stringResource(
-                        R.string.player_turn_format,
-                        if (gameState.currentPlayer == GameState.PLAYER_ONE) 
-                            stringResource(R.string.player_black)
-                        else 
-                            stringResource(R.string.player_white)
-                    )
-                }
-                
-                val playerColor = when {
-                    isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Black else Color.Red
-                    isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Red else Color(0xFFFFD700) // Gold
-                    else -> if (gameState.currentPlayer == GameState.PLAYER_ONE) 
-                        MaterialTheme.colorScheme.primary
-                    else 
-                        MaterialTheme.colorScheme.secondary
-                }
-                
-                Text(
-                    text = playerText,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = playerColor
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
-            }
-        }
-
-        // Winner dialog
-        if (winner != null) {
-            val winnerText = when {
-                isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins!" else "O Wins!"
-                isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins!" else "Yellow Wins!"
-                else -> stringResource(
-                    R.string.winner_format,
-                    if (winner == GameState.PLAYER_ONE) 
-                        stringResource(R.string.player_black)
-                    else 
-                        stringResource(R.string.player_white)
-                )
-            }
-            
-            WinnerDialog(
-                winnerText = winnerText,
-                onRematch = { viewModel.resetGame() },
-                onDismiss = { viewModel.dismissWinnerDialog() }
             )
-        }
-
-        // Game Board
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
-        ) {
-            when {
-                isXandO -> TicTacToeBoard(
-                    gameState = gameState,
-                    lastPlacedPosition = lastPlacedPosition,
-                    isDarkTheme = isDarkTheme,
-                    isGameFrozen = winner != null || isLoading,
-                    onTileClick = { row, col ->
-                        viewModel.placeTile(row, col)
-                    }
-                )
-                isConnect4 -> Connect4Board(
-                    gameState = gameState,
-                    lastPlacedPosition = lastPlacedPosition,
-                    isDarkTheme = isDarkTheme,
-                    isGameFrozen = winner != null || isLoading,
-                    onColumnClick = { col ->
-                        viewModel.placeConnect4Tile(col)
-                    }
-                )
-                else -> GameBoard(
-                    gameState = gameState,
-                    lastPlacedPosition = lastPlacedPosition,
-                    isDarkTheme = isDarkTheme,
-                    isGameFrozen = winner != null || isLoading,
-                    onTileClick = { row, col ->
-                        viewModel.placeTile(row, col)
-                    }
-                )
-            }
-        }
-
-        // Control buttons
-        GameControls(
-            canUndo = moveHistory.isNotEmpty() && winner == null && !isLoading,
-            onUndo = { viewModel.undoMove() },
-            onReset = { viewModel.resetGame() },
-            onNavigateToSettings = onNavigateToSettings,
-            showSettingsButton = false  // we already have it in the app bar
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-/**
- * Dialog shown when a player wins.
- */
-@Composable
-private fun WinnerDialog(
-    winnerText: String,
-    onRematch: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = { },
-        title = { Text(stringResource(R.string.game_over)) },
-        text = { Text(winnerText) },
-        confirmButton = {
-            Button(onClick = onRematch) {
-                Text(stringResource(R.string.rematch))
-            }
         },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text(stringResource(R.string.close))
+        bottomBar = {
+            BottomAppBar(
+                actions = {
+                    // Home button
+                    IconButton(onClick = onNavigateToHome) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = stringResource(R.string.home)
+                        )
+                    }
+                    
+                    // Undo button (disabled if no moves or game frozen)
+                    IconButton(
+                        onClick = { viewModel.undoMove() },
+                        enabled = moveHistory.isNotEmpty() && !isLoading
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.undo)
+                        )
+                    }
+                    
+                    // Reset button
+                    IconButton(onClick = { viewModel.resetGame() }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = stringResource(R.string.reset)
+                        )
+                    }
+                    
+                    Spacer(Modifier.weight(1f))
+                    
+                    // Settings button (right aligned)
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings)
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Fixed height container for player indicator to prevent layout shifts
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoading) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.secondary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.computer_thinking),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                } else if (winner == DRAW) {
+                    // Show draw message
+                    Text(
+                        text = stringResource(R.string.draw),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else if (winner != null) {
+                    // Show winner
+                    val winnerText = when {
+                        isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins!" else "O Wins!"
+                        isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins!" else "Yellow Wins!"
+                        else -> stringResource(
+                            R.string.winner_format,
+                            if (winner == GameState.PLAYER_ONE) 
+                                stringResource(R.string.player_black)
+                            else 
+                                stringResource(R.string.player_white)
+                        )
+                    }
+                    
+                    val winnerColor = when {
+                        isXandO -> if (winner == GameState.PLAYER_ONE) Color.Black else Color.White
+                        isConnect4 -> if (winner == GameState.PLAYER_ONE) Color.Red else Color(0xFFFFD700) // Gold
+                        else -> if (winner == GameState.PLAYER_ONE) 
+                            Color.Black
+                        else 
+                            Color.White
+                    }
+                    
+                    Text(
+                        text = winnerText,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (winner == GameState.PLAYER_TWO && !isConnect4) 
+                            MaterialTheme.colorScheme.onBackground // Make white text visible
+                        else 
+                            winnerColor
+                    )
+                } else {
+                    // Show current player
+                    val playerText = when {
+                        isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "X's Turn" else "O's Turn"
+                        isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "Red's Turn" else "Yellow's Turn"
+                        else -> stringResource(
+                            R.string.player_turn_format,
+                            if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                                stringResource(R.string.player_black)
+                            else 
+                                stringResource(R.string.player_white)
+                        )
+                    }
+                    
+                    val playerColor = when {
+                        isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Black else Color.White
+                        isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Red else Color(0xFFFFD700) // Gold
+                        else -> if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                            Color.Black
+                        else 
+                            Color.White
+                    }
+                    
+                    Text(
+                        text = playerText,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (gameState.currentPlayer == GameState.PLAYER_TWO && !isConnect4) 
+                            MaterialTheme.colorScheme.onBackground // Make white text visible
+                        else 
+                            playerColor
+                    )
+                }
+            }
+
+            // Game Board - fills remaining space
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isXandO -> TicTacToeBoard(
+                        gameState = gameState,
+                        lastPlacedPosition = lastPlacedPosition,
+                        isDarkTheme = isDarkTheme,
+                        isGameFrozen = winner != null || isLoading,
+                        onTileClick = { row, col ->
+                            viewModel.placeTile(row, col)
+                        }
+                    )
+                    isConnect4 -> Connect4Board(
+                        gameState = gameState,
+                        lastPlacedPosition = lastPlacedPosition,
+                        isDarkTheme = isDarkTheme,
+                        isGameFrozen = winner != null || isLoading,
+                        onColumnClick = { col ->
+                            viewModel.placeConnect4Tile(col)
+                        }
+                    )
+                    else -> GameBoard(
+                        gameState = gameState,
+                        lastPlacedPosition = lastPlacedPosition,
+                        isDarkTheme = isDarkTheme,
+                        isGameFrozen = winner != null || isLoading,
+                        onTileClick = { row, col ->
+                            viewModel.placeTile(row, col)
+                        }
+                    )
+                }
             }
         }
-    )
-}
-
-/**
- * Game control buttons (Undo, Reset, Settings).
- */
-@Composable
-private fun GameControls(
-    canUndo: Boolean,
-    onUndo: () -> Unit,
-    onReset: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    showSettingsButton: Boolean = true
-) {
-    val controlButtons = mutableListOf<@Composable () -> Unit>()
-    
-    // Undo Button
-    controlButtons.add {
-        ControlButton(
-            icon = Icons.AutoMirrored.Filled.ArrowBack,
-            label = stringResource(R.string.undo),
-            onClick = onUndo,
-            enabled = canUndo
-        )
-    }
-    
-    // Reset Button
-    controlButtons.add {
-        ControlButton(
-            icon = Icons.Filled.Refresh,
-            label = stringResource(R.string.reset),
-            onClick = onReset,
-            enabled = true
-        )
-    }
-    
-    // Settings Button - optional
-    if (showSettingsButton) {
-        controlButtons.add {
-            ControlButton(
-                icon = Icons.Default.Settings,
-                label = stringResource(R.string.settings),
-                onClick = onNavigateToSettings,
-                enabled = true
-            )
-        }
-    }
-    
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        controlButtons.forEach { it() }
-    }
-}
-
-/**
- * Reusable control button with icon and label.
- */
-@Composable
-private fun ControlButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    enabled: Boolean
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        FilledIconButton(
-            onClick = onClick,
-            enabled = enabled,
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label
-            )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall
-        )
     }
 }
 
@@ -399,11 +312,9 @@ fun GameBoard(
         else -> 18.dp
     }
     
-    // Calculate dynamic padding as half of the cell size to ensure gridlines align with pieces
-    // Each cell is 1/boardSize of the total space
-    val cellSize = 1f / boardSize
-    // Convert to dp, but ensure a minimum padding to avoid gridlines being too close to the edge
-    val dynamicPadding = (cellSize * 100).dp.coerceAtLeast(4.dp)
+    // Calculate tile width for proper padding
+    val tileWidth = (100f / boardSize).dp
+    val dynamicPadding = (tileWidth / 2)
 
     Box(
         modifier = Modifier
@@ -525,6 +436,7 @@ fun Tile(
 
 /**
  * Tic-Tac-Toe board implementation (3x3 Easter Egg).
+ * Now with transparent background and no edge lines.
  */
 @Composable
 fun TicTacToeBoard(
@@ -535,19 +447,60 @@ fun TicTacToeBoard(
     onTileClick: (Int, Int) -> Unit
 ) {
     val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
-    val boardColor = if (isDarkTheme) 
-        Color(0xFF303030) // Dark gray for dark theme
-    else 
-        Color(0xFFF0F0F0) // Light gray for light theme
     val gridLineWidth = 4.dp // Thicker grid lines for tic-tac-toe
     
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(16.dp)
-            .background(boardColor)
+            // Transparent background
+            .background(Color.Transparent)
     ) {
-        // Draw grid lines
+        // Draw just the internal grid lines, not the outer edges
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            // Vertical inner lines (2)
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(gridLineWidth)
+                    .align(Alignment.CenterStart)
+                    .offset(x = (LocalDensity.current.density * 33).dp)
+                    .background(gridLineColor)
+            )
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(gridLineWidth)
+                    .align(Alignment.CenterEnd)
+                    .offset(x = -(LocalDensity.current.density * 33).dp)
+                    .background(gridLineColor)
+            )
+            
+            // Horizontal inner lines (2)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(gridLineWidth)
+                    .align(Alignment.TopCenter)
+                    .offset(y = (LocalDensity.current.density * 33).dp)
+                    .background(gridLineColor)
+            )
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(gridLineWidth)
+                    .align(Alignment.BottomCenter)
+                    .offset(y = -(LocalDensity.current.density * 33).dp)
+                    .background(gridLineColor)
+            )
+        }
+        
+        // Cells and pieces
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
@@ -560,15 +513,11 @@ fun TicTacToeBoard(
                 ) {
                     // 3 columns
                     for (col in 0 until 3) {
-                        // Cell with border
+                        // Cell without border
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
-                                .border(
-                                    width = gridLineWidth,
-                                    color = gridLineColor
-                                )
                                 .clickable(enabled = !isGameFrozen) {
                                     onTileClick(row, col)
                                 },
@@ -576,19 +525,19 @@ fun TicTacToeBoard(
                         ) {
                             when (gameState.board[row][col]) {
                                 GameState.PLAYER_ONE -> {
-                                    // Draw X with lines
+                                    // Draw X with lines - using BLACK to match standard pieces
                                     Canvas(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .padding(8.dp)
+                                            .size(60.dp) // Larger size
+                                            .padding(6.dp)
                                     ) {
                                         val canvasWidth = size.width
                                         val canvasHeight = size.height
-                                        val strokeWidth = 8f
+                                        val strokeWidth = 10f // Thicker lines
                                         
                                         // Draw X using two lines
                                         drawLine(
-                                            color = Color.Black,
+                                            color = Color.Black, // Pure black like standard pieces
                                             start = Offset(0f, 0f),
                                             end = Offset(canvasWidth, canvasHeight),
                                             strokeWidth = strokeWidth,
@@ -605,19 +554,19 @@ fun TicTacToeBoard(
                                     }
                                 }
                                 GameState.PLAYER_TWO -> {
-                                    // Draw O as a circle
+                                    // Draw O as a circle - using WHITE to match standard pieces
                                     Canvas(
                                         modifier = Modifier
-                                            .size(40.dp)
-                                            .padding(8.dp)
+                                            .size(60.dp) // Larger size
+                                            .padding(6.dp)
                                     ) {
                                         val canvasWidth = size.width
                                         val canvasHeight = size.height
-                                        val strokeWidth = 8f
+                                        val strokeWidth = 10f // Thicker stroke
                                         
                                         // Draw O as a circle with stroke
                                         drawCircle(
-                                            color = Color.Red,
+                                            color = Color.White, // Pure white like standard pieces
                                             radius = (canvasWidth / 2) - (strokeWidth / 2),
                                             style = Stroke(width = strokeWidth)
                                         )
@@ -649,7 +598,7 @@ fun TicTacToeBoard(
 }
 
 /**
- * Connect 4 board implementation (6x6 Easter Egg).
+ * Connect 4 board implementation (7x7 Easter Egg).
  */
 @Composable
 fun Connect4Board(

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -36,6 +37,7 @@ object Routes {
 
 /**
  * Main navigation component for the app.
+ * Now preserves game state when navigating to settings.
  */
 @Composable
 fun AppNavigation(
@@ -55,6 +57,7 @@ fun AppNavigation(
         // Home/Start Screen
         composable(Routes.HOME) {
             StartScreen(
+                viewModel = gameViewModel,
                 onNavigateToSettings = {
                     navController.navigate(Routes.SETTINGS)
                 },
@@ -67,7 +70,7 @@ fun AppNavigation(
                     navController.navigate(Routes.gameRoute(boardSize, winLength, isComputer))
                 },
                 onNavigateToCustomGame = { boardSize, winLength ->
-                    // Custom game with specified board size and win length
+                    // Launch opponent selection dialog first, which will then navigate to game
                     navController.navigate(Routes.gameRoute(boardSize, winLength, false))
                 }
             )
@@ -87,21 +90,30 @@ fun AppNavigation(
             val winLength = backStackEntry.arguments?.getInt("winLength") ?: GameState.DEFAULT_WIN_CONDITION
             val isComputer = backStackEntry.arguments?.getInt("isComputer") == 1
             
-            // Set up the game with specified parameters
-            LaunchedEffect(boardSize, winLength, isComputer) {
-                gameViewModel.setupGame(
-                    boardSize = boardSize,
-                    winLength = winLength,
-                    opponent = if (isComputer) Opponent.COMPUTER else Opponent.HUMAN
-                )
+            // Set up the game with specified parameters only on first navigation
+            // We use a LaunchedEffect with a key of boardSize+winLength+isComputer to ensure
+            // it only runs when these parameters change, not when navigating back from settings
+            LaunchedEffect(key1 = "$boardSize-$winLength-$isComputer", key2 = backStackEntry.arguments) {
+                if (gameViewModel.gameState.boardSize != boardSize ||
+                    gameViewModel.gameState.winCondition != winLength ||
+                    gameViewModel.gameState.againstComputer != isComputer) {
+                    // Only setup game if parameters have changed to preserve state
+                    gameViewModel.setupGame(
+                        boardSize = boardSize,
+                        winLength = winLength,
+                        opponent = if (isComputer) Opponent.COMPUTER else Opponent.HUMAN
+                    )
+                }
             }
             
             GameScreen(
                 viewModel = gameViewModel,
                 onNavigateToSettings = {
+                    // Navigate to settings without clearing the game state
                     navController.navigate(Routes.SETTINGS)
                 },
                 onNavigateToHome = {
+                    // Navigate back to home screen
                     navController.popBackStack(Routes.HOME, false)
                 },
                 themeMode = preferences.themeMode
@@ -127,6 +139,7 @@ fun AppNavigation(
             SettingsScreen(
                 viewModel = settingsViewModel,
                 onNavigateBack = {
+                    // Navigate back to previous screen without clearing state
                     navController.popBackStack()
                 }
             )

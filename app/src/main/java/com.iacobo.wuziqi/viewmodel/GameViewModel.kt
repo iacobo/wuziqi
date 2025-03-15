@@ -27,6 +27,9 @@ data class Move(val row: Int, val col: Int, val player: Int)
  */
 data class Position(val row: Int, val col: Int)
 
+// Special constant to represent a draw (different from winner = null)
+const val DRAW = -1
+
 /**
  * ViewModel that manages the game state and provides actions and state for the UI.
  * Handles move history and state persistence across configuration changes.
@@ -37,7 +40,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var gameState by mutableStateOf(GameState())
         private set
 
-    // Winner state (null means no winner yet)
+    // Winner state (null means no winner yet, DRAW means a draw)
     var winner by mutableStateOf<Int?>(null)
         private set
 
@@ -51,6 +54,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
     // Game is loading state (for computer moves)
     var isLoading by mutableStateOf(false)
+        private set
+    
+    // Set of discovered easter eggs
+    var discoveredEasterEggs by mutableStateOf(setOf<String>())
         private set
 
     // Sound settings
@@ -109,6 +116,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         lastPlacedPosition = null
         moveHistory = emptyList()
         
+        // Add to discovered easter eggs if this is a special game
+        if (boardSize == 3 && winLength == 3) {
+            discoveredEasterEggs = discoveredEasterEggs + "tictactoe"
+        } else if (boardSize == 7 && winLength == 4) {
+            discoveredEasterEggs = discoveredEasterEggs + "connect4"
+        }
+        
         // Play sound effect if enabled
         if (soundEnabled) {
             soundPool.play(soundReset, 0.7f, 0.7f, 1, 0, 1.0f)
@@ -121,6 +135,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      * If against computer, triggers computer move after player move.
      */
     fun placeTile(row: Int, col: Int) {
+        // Don't allow moves if game is over or loading, or position is not empty
         if (winner != null || !gameState.isTileEmpty(row, col) || isLoading) {
             return
         }
@@ -152,8 +167,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         // Check for draw (board full)
         if (isBoardFull()) {
-            // No winner, but game is over
-            winner = GameState.EMPTY
+            // Draw - no winner but game is over
+            winner = DRAW
             return
         }
         
@@ -234,7 +249,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             delay(800)
             
             // Is this a Connect 4 game?
-            val isConnect4 = gameState.boardSize == 6 && gameState.winCondition == 4
+            val isConnect4 = gameState.boardSize == 7 && gameState.winCondition == 4
             
             // Find a move using appropriate strategy
             val computerMove = if (isConnect4) {
@@ -243,8 +258,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 findComputerMove()
             }
             
-            // Place the tile for the computer
-            if (computerMove != null) {
+            // Place the tile for the computer if a move was found and game is not over
+            if (computerMove != null && winner == null) {
                 val (row, col) = computerMove
                 
                 // Save the move to history
@@ -267,6 +282,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     if (soundEnabled) {
                         playWinSound()
                     }
+                }
+                
+                // Check for draw
+                else if (isBoardFull()) {
+                    winner = DRAW
                 }
             }
             
@@ -430,10 +450,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      * If against computer, undoes both player and computer moves.
      */
     fun undoMove() {
-        if (moveHistory.isEmpty() || winner != null || isLoading) {
+        if (moveHistory.isEmpty() || isLoading) {
             return
         }
 
+        // Reset winner state if there was a win or draw
+        winner = null
+        
         // If against computer, undo both player's and computer's moves
         val movesToUndo = if (gameState.againstComputer && moveHistory.size >= 2 && 
                               gameState.currentPlayer == GameState.PLAYER_ONE) {
@@ -491,6 +514,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      * Dismisses the winner dialog without resetting the game.
      */
     fun dismissWinnerDialog() {
-        winner = null
+        // Just dismiss the dialog, but keep the winner state to prevent further moves
     }
 }

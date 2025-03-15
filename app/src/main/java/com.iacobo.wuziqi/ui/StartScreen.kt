@@ -8,6 +8,9 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.filled.Games
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,41 +20,38 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
+import com.iacobo.wuziqi.viewmodel.GameViewModel
 
 /**
  * Start screen that allows users to select game modes and options.
+ * Now includes Easter egg games once discovered.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StartScreen(
+    viewModel: GameViewModel,
     onNavigateToSettings: () -> Unit,
     onNavigateToStandardGame: (opponent: Opponent) -> Unit,
     onNavigateToCustomGame: (boardSize: Int, winLength: Int) -> Unit
 ) {
+    val discoveredEasterEggs = viewModel.discoveredEasterEggs
+    
     var showOpponentDialog by remember { mutableStateOf(false) }
     var showCustomDialog by remember { mutableStateOf(false) }
+    var currentMode by remember { mutableStateOf("standard") }
     
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(id = R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
+        bottomBar = {
+            BottomAppBar(
                 actions = {
+                    Spacer(Modifier.weight(1f))
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = stringResource(R.string.settings)
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
-                )
+                }
             )
         }
     ) { innerPadding ->
@@ -92,7 +92,10 @@ fun StartScreen(
                 title = stringResource(R.string.standard_wuziqi),
                 description = stringResource(R.string.standard_wuziqi_desc),
                 icon = Icons.Default.Apps,
-                onClick = { showOpponentDialog = true }
+                onClick = { 
+                    currentMode = "standard"
+                    showOpponentDialog = true 
+                }
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -103,6 +106,37 @@ fun StartScreen(
                 icon = Icons.Default.Dashboard,
                 onClick = { showCustomDialog = true }
             )
+            
+            // Easter Egg options (if discovered)
+            if (discoveredEasterEggs.contains("tictactoe")) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                GameModeButton(
+                    title = "X's & O's",
+                    description = "Classic 3×3 tic-tac-toe game",
+                    icon = Icons.Default.Casino,
+                    onClick = { 
+                        // Launch directly with 3x3 board and 3-in-a-row
+                        currentMode = "tictactoe"
+                        showOpponentDialog = true
+                    }
+                )
+            }
+            
+            if (discoveredEasterEggs.contains("connect4")) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                GameModeButton(
+                    title = "Connect 4",
+                    description = "Classic Connect 4 game with vertical drops",
+                    icon = Icons.Default.Games,
+                    onClick = { 
+                        // Launch directly with 7x7 board and 4-in-a-row
+                        currentMode = "connect4"
+                        showOpponentDialog = true
+                    }
+                )
+            }
         }
     }
     
@@ -112,7 +146,12 @@ fun StartScreen(
             onDismiss = { showOpponentDialog = false },
             onSelectOpponent = { opponent ->
                 showOpponentDialog = false
-                onNavigateToStandardGame(opponent)
+                
+                when (currentMode) {
+                    "standard" -> onNavigateToStandardGame(opponent)
+                    "tictactoe" -> onNavigateToCustomGame(3, 3)
+                    "connect4" -> onNavigateToCustomGame(7, 4) // Now using 7x7 for Connect4
+                }
             }
         )
     }
@@ -123,7 +162,19 @@ fun StartScreen(
             onDismiss = { showCustomDialog = false },
             onStartGame = { boardSize, winLength ->
                 showCustomDialog = false
-                onNavigateToCustomGame(boardSize, winLength)
+                
+                // Determine if this is a special mode
+                val isEasterEgg = (boardSize == 3 && winLength == 3) || (boardSize == 7 && winLength == 4)
+                
+                if (isEasterEgg) {
+                    // For easter eggs, we always need to select an opponent
+                    currentMode = if (boardSize == 3) "tictactoe" else "connect4"
+                    showOpponentDialog = true
+                } else {
+                    // For normal custom games, go straight to opponent selection
+                    currentMode = "custom"
+                    showOpponentDialog = true
+                }
             }
         )
     }
@@ -272,8 +323,8 @@ fun CustomGameDialog(
     var boardSize by remember { mutableStateOf(15) }
     var winLength by remember { mutableStateOf(5) }
     
-    // Board size options: 3, 6, 9, 11, 13, 15, 17, 19
-    val boardSizeOptions = listOf(3, 6, 9, 11, 13, 15, 17, 19)
+    // Board size options: 3, 5, 7, 9, 11, 13, 15, 17, 19
+    val boardSizeOptions = listOf(3, 5, 7, 9, 11, 13, 15, 17, 19)
     val boardSizeSteps = boardSizeOptions.size - 1
     
     // Find the closest option in boardSizeOptions to the current boardSize
@@ -285,6 +336,10 @@ fun CustomGameDialog(
     val maxWinLength = minOf(boardSize, 8)
     val winLengthOptions = (minWinLength..maxWinLength).toList()
     val winLengthSteps = winLengthOptions.size - 1
+    
+    // Check if this is a special game
+    val isTicTacToe = boardSize == 3 && winLength == 3
+    val isConnect4 = boardSize == 7 && winLength == 4
     
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -360,8 +415,8 @@ fun CustomGameDialog(
                     }
                 }
                 
-                // Show win length warning if needed
-                if (winLength > boardSize / 2 + 1) {
+                // Only show win length warning if not a special game and if it's a large win length
+                if (!isTicTacToe && !isConnect4 && winLength > boardSize / 2 + 1) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.win_length_warning),
@@ -371,7 +426,7 @@ fun CustomGameDialog(
                 }
                 
                 // Easter egg hint for special board configurations
-                if ((boardSize == 3 && winLength == 3) || (boardSize == 6 && winLength == 4)) {
+                if (isTicTacToe || isConnect4) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.special_game_hint),
