@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="250"
+    android:viewportHeight="250">
+
+    <!-- Grid Lines - 3×3 lines creating a 2×2 grid of intersections -->
+    <!-- Vertical Lines -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.3"
+        android:pathData="M83.33,25L83.33,225" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.3"
+        android:pathData="M166.67,25L166.67,225" />
+
+    <!-- Horizontal Lines -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.3"
+        android:pathData="M25,83.33L225,83.33" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.3"
+        android:pathData="M25,166.67L225,166.67" />
+
+    <!-- White Stone in Bottom Left -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="4"
+        android:strokeAlpha="0.7"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.2"
+        android:pathData="M83.33,166.67m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
+
+    <!-- Black Stone in Bottom Right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"
+        android:pathData="M166.67,166.67m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
+
+    <!-- Black Stone in Top Left -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.8"
+        android:pathData="M83.33,83.33m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
+</vector>

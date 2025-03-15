@@ -1,23 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Wuziqi</string>
-    
+
     <!-- Game UI -->
     <string name="player_turn_format">%s\'s Turn</string>
     <string name="player_black">Black</string>
     <string name="player_white">White</string>
-    
+
     <!-- Game controls -->
     <string name="undo">Undo</string>
     <string name="reset">Reset</string>
-    
+
     <!-- Dialogs -->
     <string name="game_over">Game Over</string>
     <string name="winner_format">%s won!</string>
     <string name="rematch">Rematch</string>
     <string name="close">Close</string>
-    
+
     <!-- Content descriptions -->
     <string name="cd_undo_move">Undo move</string>
     <string name="cd_reset_game">Reset game</string>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="game_settings">Game Settings</string>
+    <string name="sounds">Sounds</string>
+    <string name="theme">Theme</string>
+    <string name="language">Language</string>
+    <string name="about">About</string>
+    <string name="source_code">Source Code</string>
+    <string name="report_bug">Report Bug</string>
+    <string name="version_format">Version %s</string>
+    <string name="app_tagline">Free and open-source, with no ads or trackers</string>
 </resources>

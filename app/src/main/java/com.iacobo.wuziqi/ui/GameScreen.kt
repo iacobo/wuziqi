@@ -9,10 +9,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.viewmodel.GameViewModel
@@ -34,26 +35,43 @@ import com.iacobo.wuziqi.viewmodel.Position
  * Displays the game board, status, and controls.
  */
 @Composable
-fun GameScreen() {
-    val viewModel: GameViewModel = viewModel()
+fun GameScreen(
+    viewModel: GameViewModel,
+    onNavigateToSettings: () -> Unit
+) {
     val gameState = viewModel.gameState
     val winner = viewModel.winner
     val lastPlacedPosition = viewModel.lastPlacedPosition
     val moveHistory = viewModel.moveHistory
-    
+
     val isDarkTheme = isSystemInDarkTheme()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Player turn indicator
-        PlayerTurnIndicator(gameState.currentPlayer)
-        
-        Spacer(modifier = Modifier.height(24.dp))
+        // Header with player turn and settings button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Player turn indicator
+            PlayerTurnIndicator(gameState.currentPlayer)
+
+            // Settings button
+            IconButton(onClick = onNavigateToSettings) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.settings),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
         // Winner dialog
         if (winner != null) {
@@ -63,18 +81,22 @@ fun GameScreen() {
                 onDismiss = { viewModel.dismissWinnerDialog() }
             )
         }
-        
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // Game Board
         GameBoard(
             gameState = gameState,
             lastPlacedPosition = lastPlacedPosition,
             isDarkTheme = isDarkTheme,
             isGameFrozen = winner != null,
-            onTileClick = { row, col -> viewModel.placeTile(row, col) }
+            onTileClick = { row, col ->
+                viewModel.placeTile(row, col)
+            }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         // Control buttons
         GameControls(
             canUndo = moveHistory.isNotEmpty() && winner == null,
@@ -89,14 +111,18 @@ fun GameScreen() {
  */
 @Composable
 private fun PlayerTurnIndicator(currentPlayer: Int) {
-    val playerName = if (currentPlayer == GameState.PLAYER_ONE) "Black" else "White"
-    val playerColor = if (currentPlayer == GameState.PLAYER_ONE) 
-        MaterialTheme.colorScheme.primary 
-    else 
+    val playerName = if (currentPlayer == GameState.PLAYER_ONE)
+        stringResource(R.string.player_black)
+    else
+        stringResource(R.string.player_white)
+
+    val playerColor = if (currentPlayer == GameState.PLAYER_ONE)
+        MaterialTheme.colorScheme.primary
+    else
         MaterialTheme.colorScheme.secondary
-    
+
     Text(
-        text = "$playerName's Turn",
+        text = stringResource(R.string.player_turn_format, playerName),
         style = MaterialTheme.typography.titleMedium,
         color = playerColor
     )
@@ -113,16 +139,26 @@ private fun WinnerDialog(
 ) {
     AlertDialog(
         onDismissRequest = { },
-        title = { Text("Game Over") },
-        text = { Text("${if (winner == GameState.PLAYER_ONE) "Black" else "White"} won!") },
+        title = { Text(stringResource(R.string.game_over)) },
+        text = {
+            Text(
+                stringResource(
+                    R.string.winner_format,
+                    if (winner == GameState.PLAYER_ONE)
+                        stringResource(R.string.player_black)
+                    else
+                        stringResource(R.string.player_white)
+                )
+            )
+        },
         confirmButton = {
             Button(onClick = onRematch) {
-                Text("Rematch")
+                Text(stringResource(R.string.rematch))
             }
         },
         dismissButton = {
             Button(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.close))
             }
         }
     )
@@ -144,15 +180,15 @@ private fun GameControls(
         // Undo Button
         ControlButton(
             icon = Icons.AutoMirrored.Filled.ArrowBack,
-            label = "Undo",
+            label = stringResource(R.string.undo),
             onClick = onUndo,
             enabled = canUndo
         )
-        
+
         // Reset Button
         ControlButton(
             icon = Icons.Filled.Refresh,
-            label = "Reset",
+            label = stringResource(R.string.reset),
             onClick = onReset,
             enabled = true
         )
@@ -201,7 +237,7 @@ private fun ControlButton(
  */
 @Composable
 fun GameBoard(
-    gameState: GameState, 
+    gameState: GameState,
     lastPlacedPosition: Position?,
     isDarkTheme: Boolean,
     isGameFrozen: Boolean,
@@ -211,7 +247,7 @@ fun GameBoard(
     val gridLineWidth = 1.dp
     val boardSize = GameState.BOARD_SIZE
     val boardColor = if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A)
-    
+
     Box(
         modifier = Modifier
             .aspectRatio(1f)
@@ -236,13 +272,13 @@ fun GameBoard(
                             .height(gridLineWidth)
                             .background(gridLineColor)
                     )
-                    
+
                     if (i < boardSize - 1) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
-            
+
             // Vertical grid lines
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -255,14 +291,14 @@ fun GameBoard(
                             .width(gridLineWidth)
                             .background(gridLineColor)
                     )
-                    
+
                     if (i < boardSize - 1) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
         }
-            
+
         // Tiles and pieces
         Column(modifier = Modifier.fillMaxSize()) {
             for (row in 0 until boardSize) {
@@ -276,9 +312,9 @@ fun GameBoard(
                             state = gameState.board[row][col],
                             isLastPlaced = lastPlacedPosition?.row == row && lastPlacedPosition?.col == col,
                             modifier = Modifier.weight(1f),
-                            onClick = { 
+                            onClick = {
                                 if (!isGameFrozen) {
-                                    onTileClick(row, col) 
+                                    onTileClick(row, col)
                                 }
                             }
                         )

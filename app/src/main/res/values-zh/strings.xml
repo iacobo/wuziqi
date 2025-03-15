@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">五子棋</string>
+
+    <!-- Game UI -->
+    <string name="player_turn_format">%s子</string>
+    <string name="player_black">黑</string>
+    <string name="player_white">白</string>
+
+    <!-- Game controls -->
+    <string name="undo">撤消</string>
+    <string name="reset">重置</string>
+
+    <!-- Dialogs -->
+    <string name="game_over">游戏结束</string>
+    <string name="winner_format">%s赢了！</string>
+    <string name="rematch">重赛</string>
+    <string name="close">关闭</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_undo_move">撤消移动</string>
+    <string name="cd_reset_game">重置游戏</string>
+
+    <!-- Settings -->
+    <string name="settings">设置</string>
+    <string name="back">返回</string>
+    <string name="game_settings">游戏设置</string>
+    <string name="sounds">声音</string>
+    <string name="theme">主题</string>
+    <string name="language">语言</string>
+    <string name="about">关于</string>
+    <string name="source_code">源代码</string>
+    <string name="report_bug">报告问题</string>
+    <string name="version_format">版本 %s</string>
+    <string name="app_tagline">免费开源，没有广告或跟踪器</string>
+</resources>
