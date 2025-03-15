@@ -11,8 +11,11 @@ import androidx.lifecycle.viewModelScope
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.UserPreferencesRepository
+import com.iacobo.wuziqi.ui.Opponent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 /**
  * Represents a move in the game with position and player information.
@@ -27,6 +30,7 @@ data class Position(val row: Int, val col: Int)
 /**
  * ViewModel that manages the game state and provides actions and state for the UI.
  * Handles move history and state persistence across configuration changes.
+ * Now supports custom board sizes and computer opponent.
  */
 class GameViewModel(application: Application) : AndroidViewModel(application) {
     // Game state
@@ -43,6 +47,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // Move history for undo functionality
     var moveHistory by mutableStateOf(emptyList<Move>())
+        private set
+        
+    // Game is loading state (for computer moves)
+    var isLoading by mutableStateOf(false)
         private set
 
     // Sound settings
@@ -86,13 +94,34 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
         soundPool.release()
     }
+    
+    /**
+     * Sets up a new game with specified parameters.
+     * 
+     * @param boardSize The size of the board (e.g., 15 for a 15x15 board)
+     * @param winLength Number of consecutive pieces needed to win
+     * @param opponent The type of opponent (HUMAN or COMPUTER)
+     */
+    fun setupGame(boardSize: Int, winLength: Int, opponent: Opponent) {
+        gameState = GameState(boardSize, winLength)
+        gameState.againstComputer = opponent == Opponent.COMPUTER
+        winner = null
+        lastPlacedPosition = null
+        moveHistory = emptyList()
+        
+        // Play sound effect if enabled
+        if (soundEnabled) {
+            soundPool.play(soundReset, 0.7f, 0.7f, 1, 0, 1.0f)
+        }
+    }
 
     /**
      * Places a tile at the specified position if valid.
      * Updates state and checks for win condition.
+     * If against computer, triggers computer move after player move.
      */
     fun placeTile(row: Int, col: Int) {
-        if (winner != null || !gameState.isTileEmpty(row, col)) {
+        if (winner != null || !gameState.isTileEmpty(row, col) || isLoading) {
             return
         }
 
@@ -118,6 +147,144 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             if (soundEnabled) {
                 playWinSound()
             }
+            return
+        }
+        
+        // Computer's turn if enabled and game is still ongoing
+        if (gameState.againstComputer && winner == null && gameState.currentPlayer == GameState.PLAYER_TWO) {
+            makeComputerMove()
+        }
+    }
+
+    /**
+     * Makes a move for the computer player.
+     * Uses a simple algorithm to find a good move.
+     */
+    private fun makeComputerMove() {
+        isLoading = true
+        
+        viewModelScope.launch {
+            // Add a small delay to make it seem like the computer is "thinking"
+            delay(500)
+            
+            // Find a move using a simple algorithm
+            val computerMove = findComputerMove()
+            
+            // Place the tile for the computer
+            if (computerMove != null) {
+                val (row, col) = computerMove
+                
+                // Save the move to history
+                moveHistory = moveHistory + Move(row, col, GameState.PLAYER_TWO)
+                
+                // Place the tile
+                gameState.placeTile(row, col)
+                lastPlacedPosition = Position(row, col)
+                
+                // Play sound effect if enabled
+                if (soundEnabled) {
+                    playTileSound()
+                }
+                
+                // Check for win
+                if (gameState.checkWin(row, col, GameState.PLAYER_TWO)) {
+                    winner = GameState.PLAYER_TWO
+                    
+                    // Play win sound if enabled
+                    if (soundEnabled) {
+                        playWinSound()
+                    }
+                }
+            }
+            
+            isLoading = false
+        }
+    }
+    
+    /**
+     * Finds a good move for the computer.
+     * This is a simplified algorithm that:
+     * 1. Checks for winning moves
+     * 2. Checks for blocking opponent's winning moves
+     * 3. Otherwise makes a move near existing pieces
+     * 
+     * @return A pair of (row, col) for the computer's move, or null if no moves available
+     */
+    private fun findComputerMove(): Pair<Int, Int>? {
+        val boardSize = gameState.boardSize
+        val winCondition = gameState.winCondition
+        
+        // Create a list of all empty positions
+        val emptyPositions = mutableListOf<Pair<Int, Int>>()
+        val nearPiecesPositions = mutableListOf<Pair<Int, Int>>()
+        
+        // Check each position on the board
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.isTileEmpty(row, col)) {
+                    emptyPositions.add(row to col)
+                    
+                    // Check if this position is adjacent to any existing piece
+                    var hasAdjacentPiece = false
+                    for (dr in -1..1) {
+                        for (dc in -1..1) {
+                            val newRow = row + dr
+                            val newCol = col + dc
+                            if (newRow in 0 until boardSize && newCol in 0 until boardSize && 
+                                !gameState.isTileEmpty(newRow, newCol)) {
+                                hasAdjacentPiece = true
+                                break
+                            }
+                        }
+                        if (hasAdjacentPiece) break
+                    }
+                    
+                    if (hasAdjacentPiece) {
+                        nearPiecesPositions.add(row to col)
+                    }
+                }
+            }
+        }
+        
+        if (emptyPositions.isEmpty()) return null
+        
+        // 1. Look for winning moves
+        for (pos in nearPiecesPositions) {
+            val (row, col) = pos
+            
+            // Temporarily place a piece and check if it's a winning move
+            gameState.board[row][col] = GameState.PLAYER_TWO
+            val isWinningMove = gameState.checkWin(row, col, GameState.PLAYER_TWO)
+            gameState.board[row][col] = GameState.EMPTY
+            
+            if (isWinningMove) {
+                return pos
+            }
+        }
+        
+        // 2. Look for opponent's winning moves to block
+        for (pos in nearPiecesPositions) {
+            val (row, col) = pos
+            
+            // Temporarily place opponent's piece and check if it would be a winning move
+            gameState.board[row][col] = GameState.PLAYER_ONE
+            val wouldBeWinningMove = gameState.checkWin(row, col, GameState.PLAYER_ONE)
+            gameState.board[row][col] = GameState.EMPTY
+            
+            if (wouldBeWinningMove) {
+                return pos
+            }
+        }
+        
+        // 3. If there's no immediate winning or blocking move, make a strategic move
+        // For simplicity, we'll just choose a random position near existing pieces
+        return if (nearPiecesPositions.isNotEmpty()) {
+            nearPiecesPositions[Random.nextInt(nearPiecesPositions.size)]
+        } else {
+            // If no pieces on board yet, choose center or near-center position
+            val center = boardSize / 2
+            val offset = Random.nextInt(-2, 3)
+            (center + offset) to (center + Random.nextInt(-2, 3))
         }
     }
 
@@ -137,24 +304,40 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Undoes the last move if possible.
+     * If against computer, undoes both player and computer moves.
      */
     fun undoMove() {
-        if (moveHistory.isEmpty() || winner != null) {
+        if (moveHistory.isEmpty() || winner != null || isLoading) {
             return
         }
 
-        // Get last move
-        val lastMove = moveHistory.last()
+        // If against computer, undo both player's and computer's moves
+        val movesToUndo = if (gameState.againstComputer && moveHistory.size >= 2 && 
+                              gameState.currentPlayer == GameState.PLAYER_ONE) {
+            2
+        } else {
+            1
+        }
+        
+        repeat(movesToUndo) {
+            if (moveHistory.isEmpty()) return@repeat
+            
+            // Get last move
+            val lastMove = moveHistory.last()
 
-        // Remove it from board
-        gameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
+            // Remove it from board
+            gameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
 
-        // Update current player to the one who made the last move
-        gameState.currentPlayer = lastMove.player
+            // Update current player to the one who made the last move
+            gameState.currentPlayer = lastMove.player
 
+            // Remove the move from history
+            moveHistory = moveHistory.dropLast(1)
+        }
+        
         // Update last placed position
-        lastPlacedPosition = if (moveHistory.size > 1) {
-            val previousMove = moveHistory[moveHistory.size - 2]
+        lastPlacedPosition = if (moveHistory.isNotEmpty()) {
+            val previousMove = moveHistory.last()
             Position(previousMove.row, previousMove.col)
         } else {
             null
@@ -164,16 +347,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (soundEnabled) {
             soundPool.play(soundUndo, 0.7f, 0.7f, 1, 0, 1.0f)
         }
-
-        // Remove the move from history
-        moveHistory = moveHistory.dropLast(1)
     }
 
     /**
-     * Resets the game to initial state.
+     * Resets the game to initial state while maintaining current settings.
      */
     fun resetGame() {
-        gameState = GameState()
+        gameState.reset()
         winner = null
         lastPlacedPosition = null
         moveHistory = emptyList()

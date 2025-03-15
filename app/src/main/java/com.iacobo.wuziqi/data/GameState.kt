@@ -3,18 +3,23 @@ package com.iacobo.wuziqi.data
 /**
  * Represents the state of a Wuziqi game.
  * Manages the board, current player, and win condition checking.
+ * Now supports custom board sizes and win conditions.
  */
-class GameState {
+class GameState(
+    val boardSize: Int = DEFAULT_BOARD_SIZE,
+    val winCondition: Int = DEFAULT_WIN_CONDITION
+) {
     companion object {
         const val EMPTY = 0
         const val PLAYER_ONE = 1 // Black
         const val PLAYER_TWO = 2 // White
-        const val BOARD_SIZE = 15 // Standard wuziqi board size
-        const val WIN_CONDITION = 5 // Number of consecutive pieces needed to win
+        const val DEFAULT_BOARD_SIZE = 15 // Standard wuziqi board size
+        const val DEFAULT_WIN_CONDITION = 5 // Standard number of consecutive pieces needed to win
     }
 
-    var board: Array<IntArray> = Array(BOARD_SIZE) { IntArray(BOARD_SIZE) { EMPTY } }
+    var board: Array<IntArray> = Array(boardSize) { IntArray(boardSize) { EMPTY } }
     var currentPlayer: Int = PLAYER_ONE
+    var againstComputer: Boolean = false
 
     /**
      * Places a tile on the board and switches the current player.
@@ -44,7 +49,7 @@ class GameState {
      * Resets the game state to initial values.
      */
     fun reset() {
-        board = Array(BOARD_SIZE) { IntArray(BOARD_SIZE) { EMPTY } }
+        board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
         currentPlayer = PLAYER_ONE
     }
 
@@ -75,7 +80,7 @@ class GameState {
         // Check in the negative direction
         count += countInDirection(row, col, -deltaRow, -deltaCol, playerValue)
 
-        return count >= WIN_CONDITION
+        return count >= winCondition
     }
 
     /**
@@ -86,7 +91,7 @@ class GameState {
         var r = row + deltaRow
         var c = col + deltaCol
 
-        while (r in 0 until BOARD_SIZE && c in 0 until BOARD_SIZE && board[r][c] == playerValue) {
+        while (r in 0 until boardSize && c in 0 until boardSize && board[r][c] == playerValue) {
             count++
             r += deltaRow
             c += deltaCol

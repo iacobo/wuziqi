@@ -2,6 +2,25 @@
 <resources>
     <string name="app_name">Wuziqi</string>
 
+    <!-- Start screen -->
+    <string name="welcome_wuziqi">Welcome to Wuziqi</string>
+    <string name="choose_game_mode">Choose a game mode to play</string>
+    <string name="standard_wuziqi">Standard Wuziqi</string>
+    <string name="standard_wuziqi_desc">15×15 board with 5-in-a-row to win</string>
+    <string name="custom_game">Custom Game</string>
+    <string name="custom_game_desc">Create a game with custom board size and win conditions</string>
+    <string name="choose_opponent">Choose Your Opponent</string>
+    <string name="play_against_human">Play Against Human</string>
+    <string name="play_against_computer">Play Against Computer</string>
+    <string name="custom_game_settings">Custom Game Settings</string>
+    <string name="board_size">Board Size: %1$d×%2$d</string>
+    <string name="win_length">Win Length: %1$d in a row</string>
+    <string name="win_length_warning">Large win lengths may make the game difficult to win!</string>
+    <string name="start_game">Start Game</string>
+    <string name="cancel">Cancel</string>
+    <string name="home">Home</string>
+    <string name="computer_thinking">Computer is thinking…</string>
+
     <!-- Game UI -->
     <string name="player_turn_format">%s\'s Turn</string>
     <string name="player_black">Black</string>

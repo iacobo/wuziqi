@@ -2,6 +2,25 @@
 <resources>
     <string name="app_name">五子棋</string>
 
+    <!-- Start screen -->
+    <string name="welcome_wuziqi">欢迎来到五子棋</string>
+    <string name="choose_game_mode">选择游戏模式</string>
+    <string name="standard_wuziqi">标准五子棋</string>
+    <string name="standard_wuziqi_desc">15×15棋盘，五子连珠获胜</string>
+    <string name="custom_game">自定义游戏</string>
+    <string name="custom_game_desc">自定义棋盘大小和获胜条件</string>
+    <string name="choose_opponent">选择对手</string>
+    <string name="play_against_human">人类对手</string>
+    <string name="play_against_computer">电脑对手</string>
+    <string name="custom_game_settings">自定义游戏设置</string>
+    <string name="board_size">棋盘大小: %1$d×%2$d</string>
+    <string name="win_length">获胜长度: %1$d 子连珠</string>
+    <string name="win_length_warning">较大的获胜长度可能使游戏难以获胜！</string>
+    <string name="start_game">开始游戏</string>
+    <string name="cancel">取消</string>
+    <string name="home">主页</string>
+    <string name="computer_thinking">电脑思考中…</string>
+
     <!-- Game UI -->
     <string name="player_turn_format">%s子</string>
     <string name="player_black">黑</string>

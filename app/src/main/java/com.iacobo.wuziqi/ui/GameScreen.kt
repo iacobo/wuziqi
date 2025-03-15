@@ -10,8 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -26,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
@@ -41,18 +44,22 @@ import com.iacobo.wuziqi.viewmodel.Position
 /**
  * Main game screen composable.
  * Displays the game board, status, and controls.
+ * Now supports custom board sizes and computer opponent.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     viewModel: GameViewModel,
     onNavigateToSettings: () -> Unit,
+    onNavigateToHome: () -> Unit,
     themeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
     val gameState = viewModel.gameState
     val winner = viewModel.winner
     val lastPlacedPosition = viewModel.lastPlacedPosition
     val moveHistory = viewModel.moveHistory
+    val isLoading = viewModel.isLoading
+    val boardSize = gameState.boardSize
 
     // Determine if we're in dark theme based on the theme mode
     val isDarkTheme = when (themeMode) {
@@ -66,7 +73,7 @@ fun GameScreen(
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top App Bar with the app name - using background color instead of primaryContainer
+        // Top App Bar with home button and title
         TopAppBar(
             title = {
                 Text(
@@ -74,16 +81,32 @@ fun GameScreen(
                     style = MaterialTheme.typography.titleLarge
                 )
             },
+            navigationIcon = {
+                IconButton(onClick = onNavigateToHome) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = stringResource(R.string.home)
+                    )
+                }
+            },
+            actions = {
+                IconButton(onClick = onNavigateToSettings) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.settings)
+                    )
+                }
+            },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background,  // Changed from primaryContainer
-                titleContentColor = MaterialTheme.colorScheme.onBackground  // Changed from onPrimaryContainer
+                containerColor = MaterialTheme.colorScheme.background,
+                titleContentColor = MaterialTheme.colorScheme.onBackground
             )
         )
         
         // Space between app bar and player turn indicator (for vertical centering)
         Spacer(modifier = Modifier.weight(0.5f))
 
-        // Player turn indicator (now placed with weight for vertical centering)
+        // Player turn indicator with loading indicator when computer is thinking
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -91,7 +114,21 @@ fun GameScreen(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PlayerTurnIndicator(gameState.currentPlayer)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.secondary,
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.computer_thinking),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            } else {
+                PlayerTurnIndicator(gameState.currentPlayer)
+            }
         }
 
         // Winner dialog
@@ -116,7 +153,7 @@ fun GameScreen(
                 gameState = gameState,
                 lastPlacedPosition = lastPlacedPosition,
                 isDarkTheme = isDarkTheme,
-                isGameFrozen = winner != null,
+                isGameFrozen = winner != null || isLoading,
                 onTileClick = { row, col ->
                     viewModel.placeTile(row, col)
                 }
@@ -127,10 +164,11 @@ fun GameScreen(
 
         // Control buttons
         GameControls(
-            canUndo = moveHistory.isNotEmpty() && winner == null,
+            canUndo = moveHistory.isNotEmpty() && winner == null && !isLoading,
             onUndo = { viewModel.undoMove() },
             onReset = { viewModel.resetGame() },
-            onNavigateToSettings = onNavigateToSettings
+            onNavigateToSettings = onNavigateToSettings,
+            showSettingsButton = false  // we already have it in the app bar
         )
         
         Spacer(modifier = Modifier.weight(1f))
@@ -203,37 +241,50 @@ private fun GameControls(
     canUndo: Boolean,
     onUndo: () -> Unit,
     onReset: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    showSettingsButton: Boolean = true
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        // Undo Button
+    val controlButtons = mutableListOf<@Composable () -> Unit>()
+    
+    // Undo Button
+    controlButtons.add {
         ControlButton(
             icon = Icons.AutoMirrored.Filled.ArrowBack,
             label = stringResource(R.string.undo),
             onClick = onUndo,
             enabled = canUndo
         )
-
-        // Reset Button
+    }
+    
+    // Reset Button
+    controlButtons.add {
         ControlButton(
             icon = Icons.Filled.Refresh,
             label = stringResource(R.string.reset),
             onClick = onReset,
             enabled = true
         )
-        
-        // Settings Button (moved to bottom)
-        ControlButton(
-            icon = Icons.Default.Settings,
-            label = stringResource(R.string.settings),
-            onClick = onNavigateToSettings,
-            enabled = true
-        )
+    }
+    
+    // Settings Button - optional
+    if (showSettingsButton) {
+        controlButtons.add {
+            ControlButton(
+                icon = Icons.Default.Settings,
+                label = stringResource(R.string.settings),
+                onClick = onNavigateToSettings,
+                enabled = true
+            )
+        }
+    }
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        controlButtons.forEach { it() }
     }
 }
 
@@ -276,6 +327,7 @@ private fun ControlButton(
 /**
  * The game board composable.
  * Displays the grid and pieces.
+ * Now supports variable board sizes.
  */
 @Composable
 fun GameBoard(
@@ -289,7 +341,16 @@ fun GameBoard(
     val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
     val boardColor = if (isDarkTheme) BoardDarkColor else BoardLightColor
     val gridLineWidth = 1.dp
-    val boardSize = GameState.BOARD_SIZE
+    val boardSize = gameState.boardSize
+    
+    // Adjust piece size based on board size
+    val pieceSize = when {
+        boardSize <= 10 -> 32.dp
+        boardSize <= 13 -> 28.dp
+        boardSize <= 15 -> 24.dp
+        boardSize <= 17 -> 20.dp
+        else -> 18.dp
+    }
 
     Box(
         modifier = Modifier
@@ -354,6 +415,7 @@ fun GameBoard(
                         Tile(
                             state = gameState.board[row][col],
                             isLastPlaced = lastPlacedPosition?.row == row && lastPlacedPosition?.col == col,
+                            pieceSize = pieceSize,
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 if (!isGameFrozen) {
@@ -375,13 +437,14 @@ fun GameBoard(
 fun Tile(
     state: Int,
     isLastPlaced: Boolean,
+    pieceSize: androidx.compose.ui.unit.Dp = 24.dp,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Box(
         modifier = modifier
             .aspectRatio(1f)
-            .padding(2.dp)
+            .padding(1.dp)
             .clip(CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -389,7 +452,7 @@ fun Tile(
         if (state != GameState.EMPTY) {
             Box(
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(pieceSize)
                     .clip(CircleShape)
                     .background(
                         when (state) {
