@@ -2,8 +2,7 @@ package com.iacobo.wuziqi.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
@@ -26,6 +25,7 @@ import com.iacobo.wuziqi.viewmodel.SettingsViewModel
 
 /**
  * Settings screen that displays user-configurable options.
+ * Improved with LazyColumn for better performance.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +35,9 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
-    val userPreferences = viewModel.userPreferences.collectAsState().value
+    
+    // Collect state once to minimize recompositions
+    val userPreferences by viewModel.userPreferences.collectAsState()
 
     Scaffold(
         topBar = {
@@ -48,27 +50,41 @@ fun SettingsScreen(
                             contentDescription = stringResource(R.string.back)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         }
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
         ) {
             // Game Settings Section
-            SettingsSection(title = stringResource(R.string.game_settings)) {
-                // Sound toggle with icon
+            item {
+                Text(
+                    text = stringResource(R.string.game_settings),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            
+            // Sound toggle
+            item {
                 SwitchPreference(
                     title = stringResource(R.string.sounds),
                     icon = Icons.AutoMirrored.Filled.VolumeUp,
                     isChecked = userPreferences.soundEnabled,
                     onCheckedChange = { viewModel.updateSoundEnabled(it) }
                 )
-
-                // Theme selector with icon
+            }
+            
+            // Theme selector
+            item {
                 DropdownPreference(
                     title = stringResource(R.string.theme),
                     icon = Icons.Default.DarkMode,
@@ -77,15 +93,17 @@ fun SettingsScreen(
                     onOptionSelected = { viewModel.updateThemeMode(ThemeMode.valueOf(it)) },
                     getOptionLabel = {
                         when (it) {
-                            "SYSTEM" -> "System Default"
+                            "SYSTEM" -> "System"
                             "LIGHT" -> "Light"
                             "DARK" -> "Dark"
                             else -> it
                         }
                     }
                 )
-
-                // Language selector with icon
+            }
+            
+            // Language selector
+            item {
                 DropdownPreference(
                     title = stringResource(R.string.language),
                     icon = Icons.Default.Language,
@@ -95,16 +113,33 @@ fun SettingsScreen(
                     getOptionLabel = {
                         when (it) {
                             "en" -> "English"
-                            "zh" -> "简体中文"
+                            "zh" -> "中文"
                             else -> it
                         }
                     }
                 )
             }
-
+            
+            // Divider
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+            
             // About Section
-            SettingsSection(title = stringResource(R.string.about)) {
-                // Source code link
+            item {
+                Text(
+                    text = stringResource(R.string.about),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+            
+            // Links
+            item {
                 LinkPreference(
                     title = stringResource(R.string.source_code),
                     icon = Icons.Default.Code,
@@ -112,8 +147,9 @@ fun SettingsScreen(
                         uriHandler.openUri("https://github.com/iacobo/wuziqi")
                     }
                 )
-
-                // Bug report link
+            }
+            
+            item {
                 LinkPreference(
                     title = stringResource(R.string.report_bug),
                     icon = Icons.Default.BugReport,
@@ -122,50 +158,37 @@ fun SettingsScreen(
                     }
                 )
             }
-
-            // Version and tagline
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = stringResource(R.string.version_format, BuildConfig.VERSION_NAME),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.app_tagline),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            
+            // Divider
+            item {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
             }
+            
+            // Version and tagline
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.version_format, BuildConfig.VERSION_NAME),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.app_tagline),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
-    }
-}
-
-/**
- * Section header with title and content.
- */
-@Composable
-fun SettingsSection(
-    title: String,
-    content: @Composable () -> Unit
-) {
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-        content()
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 8.dp),
-            color = MaterialTheme.colorScheme.outlineVariant
-        )
     }
 }
 
@@ -205,7 +228,7 @@ fun SwitchPreference(
 }
 
 /**
- * Dropdown preference item with icon.
+ * Dropdown preference item with icon - optimized version.
  */
 @Composable
 fun DropdownPreference(

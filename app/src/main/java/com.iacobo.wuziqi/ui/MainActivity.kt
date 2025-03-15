@@ -23,6 +23,7 @@ import com.iacobo.wuziqi.data.UserPreferences
 import com.iacobo.wuziqi.ui.theme.WuziqiTheme
 import com.iacobo.wuziqi.viewmodel.SettingsViewModel
 import java.util.Locale
+import androidx.core.view.WindowCompat
 
 /**
  * Main entry point for the Wuziqi application.
@@ -31,8 +32,12 @@ class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply splash screen
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        
+        // Make system UI transparent with edge-to-edge
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         // Preload sound resources
         preloadSounds()
@@ -50,6 +55,7 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
 
+            // Use dynamic theme (Material You) if available, but with our theme colors
             WuziqiTheme(darkTheme = darkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

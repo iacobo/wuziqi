@@ -1,6 +1,8 @@
 package com.iacobo.wuziqi.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -24,20 +26,28 @@ object Routes {
 fun AppNavigation(
     navController: NavHostController = rememberNavController()
 ) {
+    // Create a shared ViewModel instance that persists across navigation
+    val settingsViewModel: SettingsViewModel = viewModel()
+    val gameViewModel: GameViewModel = viewModel()
+    
+    // Observe user preferences for theme
+    val preferences by settingsViewModel.userPreferences.collectAsState()
+
     NavHost(
         navController = navController,
         startDestination = Routes.GAME
     ) {
         composable(Routes.GAME) {
-            GameScreenWrapper(
+            GameScreen(
+                viewModel = gameViewModel,
                 onNavigateToSettings = {
                     navController.navigate(Routes.SETTINGS)
-                }
+                },
+                themeMode = preferences.themeMode
             )
         }
         
         composable(Routes.SETTINGS) {
-            val settingsViewModel: SettingsViewModel = viewModel()
             SettingsScreen(
                 viewModel = settingsViewModel,
                 onNavigateBack = {
@@ -46,18 +56,4 @@ fun AppNavigation(
             )
         }
     }
-}
-
-/**
- * Wrapper for the GameScreen that adds a settings button.
- */
-@Composable
-fun GameScreenWrapper(
-    onNavigateToSettings: () -> Unit
-) {
-    val gameViewModel: GameViewModel = viewModel()
-    GameScreen(
-        viewModel = gameViewModel,
-        onNavigateToSettings = onNavigateToSettings
-    )
 }

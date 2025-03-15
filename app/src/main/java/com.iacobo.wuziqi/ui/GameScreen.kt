@@ -30,6 +30,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
+import com.iacobo.wuziqi.data.ThemeMode
+import com.iacobo.wuziqi.ui.theme.BoardDarkColor
+import com.iacobo.wuziqi.ui.theme.BoardLightColor
+import com.iacobo.wuziqi.ui.theme.GridDarkColor
+import com.iacobo.wuziqi.ui.theme.GridLightColor
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 import com.iacobo.wuziqi.viewmodel.Position
 
@@ -41,21 +46,27 @@ import com.iacobo.wuziqi.viewmodel.Position
 @Composable
 fun GameScreen(
     viewModel: GameViewModel,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    themeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
     val gameState = viewModel.gameState
     val winner = viewModel.winner
     val lastPlacedPosition = viewModel.lastPlacedPosition
     val moveHistory = viewModel.moveHistory
 
-    val isDarkTheme = isSystemInDarkTheme()
+    // Determine if we're in dark theme based on the theme mode
+    val isDarkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top App Bar with the app name
+        // Top App Bar with the app name - using background color instead of primaryContainer
         TopAppBar(
             title = {
                 Text(
@@ -64,12 +75,15 @@ fun GameScreen(
                 )
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                containerColor = MaterialTheme.colorScheme.background,  // Changed from primaryContainer
+                titleContentColor = MaterialTheme.colorScheme.onBackground  // Changed from onPrimaryContainer
             )
         )
+        
+        // Space between app bar and player turn indicator (for vertical centering)
+        Spacer(modifier = Modifier.weight(0.5f))
 
-        // Player turn indicator
+        // Player turn indicator (now placed with weight for vertical centering)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -89,13 +103,13 @@ fun GameScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.weight(0.5f))
 
         // Game Board (centered with weight)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(8f),
             contentAlignment = Alignment.Center
         ) {
             GameBoard(
@@ -109,7 +123,7 @@ fun GameScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.weight(1f))
 
         // Control buttons
         GameControls(
@@ -119,7 +133,7 @@ fun GameScreen(
             onNavigateToSettings = onNavigateToSettings
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 
@@ -271,10 +285,11 @@ fun GameBoard(
     isGameFrozen: Boolean,
     onTileClick: (Int, Int) -> Unit
 ) {
-    val gridLineColor = if (isDarkTheme) Color(0xDDCCCCCC) else Color(0xDD333333)
+    // Use theme-appropriate colors for grid lines and board background
+    val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
+    val boardColor = if (isDarkTheme) BoardDarkColor else BoardLightColor
     val gridLineWidth = 1.dp
     val boardSize = GameState.BOARD_SIZE
-    val boardColor = if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE6C47A)
 
     Box(
         modifier = Modifier
