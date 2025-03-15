@@ -17,10 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.ThemeMode
-import com.iacobo.wuziqi.ui.theme.BoardDarkColor
-import com.iacobo.wuziqi.ui.theme.BoardLightColor
-import com.iacobo.wuziqi.ui.theme.GridDarkColor
-import com.iacobo.wuziqi.ui.theme.GridLightColor
 import com.iacobo.wuziqi.viewmodel.DRAW
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 import com.iacobo.wuziqi.viewmodel.Position

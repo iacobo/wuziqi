@@ -36,8 +36,8 @@ fun SettingsScreen(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     
-    // Collect state once to minimize recompositions
-    val userPreferences by viewModel.userPreferences.collectAsState()
+    // Get preferences as a direct value
+    val preferences = viewModel.userPreferences.value
 
     Scaffold(
         topBar = {
@@ -78,7 +78,7 @@ fun SettingsScreen(
                 SwitchPreference(
                     title = stringResource(R.string.sounds),
                     icon = Icons.AutoMirrored.Filled.VolumeUp,
-                    isChecked = userPreferences.soundEnabled,
+                    isChecked = preferences.soundEnabled,
                     onCheckedChange = { viewModel.updateSoundEnabled(it) }
                 )
             }
@@ -88,12 +88,12 @@ fun SettingsScreen(
                 DropdownPreference(
                     title = stringResource(R.string.theme),
                     icon = Icons.Default.DarkMode,
-                    selectedValue = userPreferences.themeMode.name,
+                    selectedValue = preferences.themeMode.name,
                     options = ThemeMode.entries.map { it.name },
                     onOptionSelected = { viewModel.updateThemeMode(ThemeMode.valueOf(it)) },
                     getOptionLabel = {
                         when (it) {
-                            "SYSTEM" -> "System"
+                            "SYSTEM" -> "System Default"
                             "LIGHT" -> "Light"
                             "DARK" -> "Dark"
                             else -> it
@@ -107,13 +107,13 @@ fun SettingsScreen(
                 DropdownPreference(
                     title = stringResource(R.string.language),
                     icon = Icons.Default.Language,
-                    selectedValue = userPreferences.languageCode,
+                    selectedValue = preferences.languageCode,
                     options = listOf("en", "zh"),
                     onOptionSelected = { viewModel.updateLanguage(it) },
                     getOptionLabel = {
                         when (it) {
                             "en" -> "English"
-                            "zh" -> "中文"
+                            "zh" -> "简体中文"
                             else -> it
                         }
                     }
