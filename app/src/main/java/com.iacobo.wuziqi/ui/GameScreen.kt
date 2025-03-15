@@ -355,7 +355,9 @@ fun Connect4Board(
     val emptySlotColor = MaterialTheme.colorScheme.background
     val pieceSize = 36.dp
     val boardSize = gameState.boardSize
-    val scope = rememberCoroutineScope()
+    
+    // Use a coroutine scope
+    val coroutineScope = rememberCoroutineScope()
     
     // Track animation states for "dropping" pieces
     val droppingAnimations = remember { mutableStateMapOf<Pair<Int, Int>, Animatable<Float, AnimationVector1D>>() }
@@ -392,8 +394,8 @@ fun Connect4Board(
                             lastPlacedPosition?.col == col) {
                             droppingAnimations[cellPosition] = Animatable(0f)
                             
-                            // Start animation
-                            scope.launch {
+                            // Start animation using the coroutine scope
+                            coroutineScope.launch {
                                 droppingAnimations[cellPosition]?.animateTo(
                                     targetValue = 1f,
                                     animationSpec = tween(

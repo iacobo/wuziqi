@@ -43,7 +43,8 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         
         setContent {
-            val preferences by settingsViewModel.userPreferencesFlow.collectAsState()
+            // Access userPreferences flow
+            val preferences by settingsViewModel.userPreferences
 
             // Apply language settings
             ApplyLanguageSettings(preferences)
@@ -52,7 +53,7 @@ class MainActivity : ComponentActivity() {
             val darkTheme = when (preferences.themeMode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
-                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                else -> isSystemInDarkTheme()
             }
 
             // Use dynamic theme (Material You) if available, but with our theme colors

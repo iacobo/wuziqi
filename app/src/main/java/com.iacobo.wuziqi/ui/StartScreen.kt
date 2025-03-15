@@ -38,6 +38,8 @@ fun StartScreen(
     var showOpponentDialog by remember { mutableStateOf(false) }
     var showCustomDialog by remember { mutableStateOf(false) }
     var currentMode by remember { mutableStateOf("standard") }
+    var boardSize by remember { mutableStateOf(15) }
+    var winLength by remember { mutableStateOf(5) }
     
     // Determine AI support for different game modes
     val aiSupportedModes = remember {
@@ -155,7 +157,7 @@ fun StartScreen(
                     "standard" -> onNavigateToStandardGame(opponent)
                     "tictactoe" -> onNavigateToCustomGame(3, 3, opponent)
                     "connect4" -> onNavigateToCustomGame(7, 4, opponent) 
-                    "custom" -> onNavigateToCustomGame(15, 5, opponent) // Should not happen, fallback
+                    "custom" -> onNavigateToCustomGame(boardSize, winLength, opponent)
                 }
             },
             isAISupported = aiSupportedModes.contains(currentMode)
@@ -166,7 +168,10 @@ fun StartScreen(
     if (showCustomDialog) {
         CustomGameDialog(
             onDismiss = { showCustomDialog = false },
-            onStartGame = { boardSize, winLength ->
+            onStartGame = { newBoardSize, newWinLength ->
+                // Update our variables
+                boardSize = newBoardSize
+                winLength = newWinLength
                 showCustomDialog = false
                 
                 // Determine if this is a special mode

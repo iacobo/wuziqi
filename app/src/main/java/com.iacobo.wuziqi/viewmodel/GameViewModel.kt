@@ -622,22 +622,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         var score = 0
         
         // Player patterns (offensive)
-        if (line.contains("xxxxx")) score += 10000000000 // Five in a row (win)
-        if (line.contains("-xxxx-")) score += 9999999   // Open four
-        if (line.contains("xxxx-")) score += 999999     // Closed four (one side)
-        if (line.contains("-xxxx")) score += 999999     // Closed four (other side)
-        if (line.contains("-xxx-")) score += 50000      // Open three
-        if (line.contains("-xx-")) score += 500         // Open two
+        if (line.contains("xxxxx")) score += 10000000  // Five in a row (win)
+        if (line.contains("-xxxx-")) score += 9999999  // Open four
+        if (line.contains("xxxx-")) score += 999999    // Closed four (one side)
+        if (line.contains("-xxxx")) score += 999999    // Closed four (other side)
+        if (line.contains("-xxx-")) score += 50000     // Open three
+        if (line.contains("-xx-")) score += 500        // Open two
         
         // Opponent patterns (defensive - negative scores)
-        if (line.contains("ooooo")) score -= 100000000  // Five in a row (opponent win)
-        if (line.contains("-oooo-")) score -= 99999999  // Open four (urgent defense needed)
-        if (line.contains("oooo-")) score -= 9999999    // Closed four (one side)
-        if (line.contains("-oooo")) score -= 9999999    // Closed four (other side)
-        if (line.contains("-ooo-")) score -= 999999     // Open three (urgent threat)
-        if (line.contains("-ooo--")) score -= 999999    // Open three (with extra space)
-        if (line.contains("--ooo-")) score -= 999999    // Open three (with extra space other side)
-        if (line.contains("-oo-")) score -= 2000        // Open two
+        if (line.contains("ooooo")) score -= 10000000  // Five in a row (opponent win)
+        if (line.contains("-oooo-")) score -= 9999999  // Open four (urgent defense needed)
+        if (line.contains("oooo-")) score -= 999999    // Closed four (one side)
+        if (line.contains("-oooo")) score -= 999999    // Closed four (other side)
+        if (line.contains("-ooo-")) score -= 999999    // Open three (urgent threat)
+        if (line.contains("-ooo--")) score -= 999999   // Open three (with extra space)
+        if (line.contains("--ooo-")) score -= 999999   // Open three (with extra space other side)
+        if (line.contains("-oo-")) score -= 2000       // Open two
         
         return score
     }
