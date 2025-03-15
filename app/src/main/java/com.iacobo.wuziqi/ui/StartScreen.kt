@@ -272,9 +272,13 @@ fun CustomGameDialog(
     var boardSize by remember { mutableStateOf(15) }
     var winLength by remember { mutableStateOf(5) }
     
-    // Board size options: 3, 5, 7, 9, 11, 13, 15, 17, 19
-    val boardSizeOptions = listOf(3, 5, 7, 9, 11, 13, 15, 17, 19)
+    // Board size options: 3, 6, 9, 11, 13, 15, 17, 19
+    val boardSizeOptions = listOf(3, 6, 9, 11, 13, 15, 17, 19)
     val boardSizeSteps = boardSizeOptions.size - 1
+    
+    // Find the closest option in boardSizeOptions to the current boardSize
+    val closestBoardSizeIndex = boardSizeOptions.indexOfFirst { it == boardSize }
+        .takeIf { it != -1 } ?: boardSizeOptions.indexOfFirst { it > boardSize } - 1
     
     // Dynamically calculate win length options based on board size
     val minWinLength = 3
@@ -293,9 +297,9 @@ fun CustomGameDialog(
                 )
                 
                 Slider(
-                    value = boardSizeOptions.indexOf(boardSize).toFloat(),
+                    value = closestBoardSizeIndex.toFloat(),
                     onValueChange = { 
-                        val index = it.toInt()
+                        val index = it.toInt().coerceIn(0, boardSizeOptions.size - 1)
                         boardSize = boardSizeOptions[index]
                         // Adjust win length if needed
                         if (winLength > minOf(boardSize, 8)) {
@@ -306,6 +310,23 @@ fun CustomGameDialog(
                     steps = boardSizeSteps - 1, // Correct number of steps
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
+                
+                // Display board size options
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    boardSizeOptions.forEach { size ->
+                        Text(
+                            text = "$size",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (size == boardSize) 
+                                MaterialTheme.colorScheme.primary 
+                            else 
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
@@ -321,6 +342,23 @@ fun CustomGameDialog(
                     steps = if (winLengthSteps > 0) winLengthSteps - 1 else 0, // Correct number of steps
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
+                
+                // Display win length options
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    winLengthOptions.forEach { length ->
+                        Text(
+                            text = "$length",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (length == winLength) 
+                                MaterialTheme.colorScheme.primary 
+                            else 
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    }
+                }
                 
                 // Show win length warning if needed
                 if (winLength > boardSize / 2 + 1) {

@@ -370,7 +370,7 @@ private fun ControlButton(
 /**
  * The standard Wuziqi game board composable.
  * Displays the grid and pieces.
- * Supports variable board sizes.
+ * Supports variable board sizes with dynamic gridline padding.
  */
 @Composable
 fun GameBoard(
@@ -394,6 +394,12 @@ fun GameBoard(
         boardSize <= 17 -> 20.dp
         else -> 18.dp
     }
+    
+    // Calculate dynamic padding as half of the cell size to ensure gridlines align with pieces
+    // Each cell is 1/boardSize of the total space
+    val cellSize = 1f / boardSize
+    // Convert to dp, but ensure a minimum padding to avoid gridlines being too close to the edge
+    val dynamicPadding = (cellSize * 100).dp.coerceAtLeast(4.dp)
 
     Box(
         modifier = Modifier
@@ -401,11 +407,11 @@ fun GameBoard(
             .padding(8.dp)
             .background(boardColor)
     ) {
-        // Draw gridlines
+        // Draw gridlines with dynamic padding
         Box(
             modifier = Modifier
                 .aspectRatio(1f)
-                .padding(12.dp)
+                .padding(dynamicPadding)
         ) {
             // Horizontal grid lines
             Column(
@@ -566,30 +572,69 @@ fun TicTacToeBoard(
                         ) {
                             when (gameState.board[row][col]) {
                                 GameState.PLAYER_ONE -> {
-                                    // Draw X
-                                    Text(
-                                        text = "X",
-                                        style = TextStyle(
-                                            fontSize = 40.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.Black
+                                    // Draw X with lines
+                                    Canvas(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .padding(8.dp)
+                                    ) {
+                                        val canvasWidth = size.width
+                                        val canvasHeight = size.height
+                                        val strokeWidth = 8f
+                                        
+                                        // Draw X using two lines
+                                        drawLine(
+                                            color = Color.Black,
+                                            start = Offset(0f, 0f),
+                                            end = Offset(canvasWidth, canvasHeight),
+                                            strokeWidth = strokeWidth,
+                                            cap = StrokeCap.Round
                                         )
-                                    )
+                                        
+                                        drawLine(
+                                            color = Color.Black,
+                                            start = Offset(canvasWidth, 0f),
+                                            end = Offset(0f, canvasHeight),
+                                            strokeWidth = strokeWidth,
+                                            cap = StrokeCap.Round
+                                        )
+                                    }
                                 }
                                 GameState.PLAYER_TWO -> {
-                                    // Draw O
-                                    Text(
-                                        text = "O",
-                                        style = TextStyle(
-                                            fontSize = 40.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.Red
+                                    // Draw O as a circle
+                                    Canvas(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .padding(8.dp)
+                                    ) {
+                                        val canvasWidth = size.width
+                                        val canvasHeight = size.height
+                                        val strokeWidth = 8f
+                                        
+                                        // Draw O as a circle with stroke
+                                        drawCircle(
+                                            color = Color.Red,
+                                            radius = (canvasWidth / 2) - (strokeWidth / 2),
+                                            style = Stroke(width = strokeWidth)
                                         )
-                                    )
+                                    }
                                 }
                                 else -> {
                                     // Empty cell
                                 }
+                            }
+                            
+                            // Highlight last placed position
+                            if (lastPlacedPosition?.row == row && lastPlacedPosition.col == col) {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .border(
+                                            width = 2.dp,
+                                            color = MaterialTheme.colorScheme.tertiary,
+                                            shape = RectangleShape
+                                        )
+                                )
                             }
                         }
                     }
