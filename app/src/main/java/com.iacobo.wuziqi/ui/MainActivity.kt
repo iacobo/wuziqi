@@ -34,6 +34,9 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
+        // Preload sound resources
+        preloadSounds()
+        
         setContent {
             val preferences by settingsViewModel.userPreferences.collectAsState()
 
@@ -57,6 +60,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+    
+    /**
+     * Preload sound resources to minimize lag when first playing sounds.
+     * This is optional but provides a better user experience.
+     */
+    private fun preloadSounds() {
+        // SoundPool initialization is now handled in the GameViewModel
+        // This method exists for potential future sound preloading if needed
     }
 }
 

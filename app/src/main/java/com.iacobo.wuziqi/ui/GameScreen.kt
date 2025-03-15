@@ -12,12 +12,15 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +37,7 @@ import com.iacobo.wuziqi.viewmodel.Position
  * Main game screen composable.
  * Displays the game board, status, and controls.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
     viewModel: GameViewModel,
@@ -48,29 +52,32 @@ fun GameScreen(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+            .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header with player turn and settings button
+        // Top App Bar with the app name
+        TopAppBar(
+            title = {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        )
+
+        // Player turn indicator
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Player turn indicator
             PlayerTurnIndicator(gameState.currentPlayer)
-
-            // Settings button
-            IconButton(onClick = onNavigateToSettings) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = stringResource(R.string.settings),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
         }
 
         // Winner dialog
@@ -84,25 +91,35 @@ fun GameScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Game Board
-        GameBoard(
-            gameState = gameState,
-            lastPlacedPosition = lastPlacedPosition,
-            isDarkTheme = isDarkTheme,
-            isGameFrozen = winner != null,
-            onTileClick = { row, col ->
-                viewModel.placeTile(row, col)
-            }
-        )
+        // Game Board (centered with weight)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            GameBoard(
+                gameState = gameState,
+                lastPlacedPosition = lastPlacedPosition,
+                isDarkTheme = isDarkTheme,
+                isGameFrozen = winner != null,
+                onTileClick = { row, col ->
+                    viewModel.placeTile(row, col)
+                }
+            )
+        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Control buttons
         GameControls(
             canUndo = moveHistory.isNotEmpty() && winner == null,
             onUndo = { viewModel.undoMove() },
-            onReset = { viewModel.resetGame() }
+            onReset = { viewModel.resetGame() },
+            onNavigateToSettings = onNavigateToSettings
         )
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -165,16 +182,19 @@ private fun WinnerDialog(
 }
 
 /**
- * Game control buttons (Undo, Reset).
+ * Game control buttons (Undo, Reset, Settings).
  */
 @Composable
 private fun GameControls(
     canUndo: Boolean,
     onUndo: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onNavigateToSettings: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         // Undo Button
@@ -190,6 +210,14 @@ private fun GameControls(
             icon = Icons.Filled.Refresh,
             label = stringResource(R.string.reset),
             onClick = onReset,
+            enabled = true
+        )
+        
+        // Settings Button (moved to bottom)
+        ControlButton(
+            icon = Icons.Default.Settings,
+            label = stringResource(R.string.settings),
+            onClick = onNavigateToSettings,
             enabled = true
         )
     }

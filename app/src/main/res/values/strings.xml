@@ -32,5 +32,5 @@
     <string name="source_code">Source Code</string>
     <string name="report_bug">Report Bug</string>
     <string name="version_format">Version %s</string>
-    <string name="app_tagline">Free and open-source, with no ads or trackers</string>
+    <string name="app_tagline">Free, libre, open-source, with no ads or trackers.</string>
 </resources>

@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,7 +45,7 @@ fun SettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back)
                         )
                     }
@@ -58,24 +61,35 @@ fun SettingsScreen(
         ) {
             // Game Settings Section
             SettingsSection(title = stringResource(R.string.game_settings)) {
-                // Sound toggle
+                // Sound toggle with icon
                 SwitchPreference(
                     title = stringResource(R.string.sounds),
+                    icon = Icons.Default.VolumeUp,
                     isChecked = userPreferences.soundEnabled,
                     onCheckedChange = { viewModel.updateSoundEnabled(it) }
                 )
 
-                // Theme selector
+                // Theme selector with icon
                 DropdownPreference(
                     title = stringResource(R.string.theme),
+                    icon = Icons.Default.DarkMode,
                     selectedValue = userPreferences.themeMode.name,
                     options = ThemeMode.values().map { it.name },
-                    onOptionSelected = { viewModel.updateThemeMode(ThemeMode.valueOf(it)) }
+                    onOptionSelected = { viewModel.updateThemeMode(ThemeMode.valueOf(it)) },
+                    getOptionLabel = {
+                        when (it) {
+                            "SYSTEM" -> "System Default"
+                            "LIGHT" -> "Light"
+                            "DARK" -> "Dark"
+                            else -> it
+                        }
+                    }
                 )
 
-                // Language selector
+                // Language selector with icon
                 DropdownPreference(
                     title = stringResource(R.string.language),
+                    icon = Icons.Default.Language,
                     selectedValue = userPreferences.languageCode,
                     options = listOf("en", "zh"),
                     onOptionSelected = { viewModel.updateLanguage(it) },
@@ -149,7 +163,7 @@ fun SettingsSection(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
         content()
-        Divider(
+        HorizontalDivider(
             modifier = Modifier.padding(vertical = 8.dp),
             color = MaterialTheme.colorScheme.outlineVariant
         )
@@ -157,11 +171,12 @@ fun SettingsSection(
 }
 
 /**
- * Switch preference item.
+ * Switch preference item with icon.
  */
 @Composable
 fun SwitchPreference(
     title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     isChecked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -170,12 +185,18 @@ fun SwitchPreference(
             .fillMaxWidth()
             .clickable { onCheckedChange(!isChecked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(32.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
         )
         Switch(
             checked = isChecked,
@@ -185,11 +206,12 @@ fun SwitchPreference(
 }
 
 /**
- * Dropdown preference item.
+ * Dropdown preference item with icon.
  */
 @Composable
 fun DropdownPreference(
     title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     selectedValue: String,
     options: List<String>,
     onOptionSelected: (String) -> Unit,
@@ -202,12 +224,18 @@ fun DropdownPreference(
             .fillMaxWidth()
             .clickable { expanded = true }
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(32.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
         )
         
         Box {

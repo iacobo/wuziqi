@@ -39,6 +39,10 @@ A simple material design Wuziqi game (aka [Gomoku, 5-in-a-row, Caro](https://en.
 
 Completely FOSS, no ads, no trackers, nothing unnecessary. Just a clean, offline, 2-player boardgame app.
 
+## How to play
+
+Players take turns placing their stones on the grid. The first player to place 5 of their colour in a row (vertically, horizontally, or diagonally) wins.
+
 ## Donate 🕊️
 
 This app is free, but if you can afford to, please consider donating to these charities:

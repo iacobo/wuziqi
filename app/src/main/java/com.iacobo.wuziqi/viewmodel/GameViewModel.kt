@@ -1,13 +1,14 @@
 package com.iacobo.wuziqi.viewmodel
 
 import android.app.Application
-import android.media.AudioManager
-import android.media.ToneGenerator
+import android.media.AudioAttributes
+import android.media.SoundPool
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.UserPreferencesRepository
 import kotlinx.coroutines.flow.collectLatest
@@ -47,9 +48,33 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     // Sound settings
     private val userPreferencesRepository = UserPreferencesRepository(application)
     private var soundEnabled = false
-    private val toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+    
+    // SoundPool for softer, more natural sounds
+    private val soundPool: SoundPool
+    private val soundPlaceTile: Int
+    private val soundWin: Int
+    private val soundUndo: Int
+    private val soundReset: Int
 
     init {
+        // Initialize SoundPool
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_GAME)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+            
+        soundPool = SoundPool.Builder()
+            .setMaxStreams(4)
+            .setAudioAttributes(audioAttributes)
+            .build()
+        
+        // Load sound effects
+        soundPlaceTile = soundPool.load(application, R.raw.soft_tap, 1)
+        soundWin = soundPool.load(application, R.raw.soft_success, 1)
+        soundUndo = soundPool.load(application, R.raw.soft_pop, 1)
+        soundReset = soundPool.load(application, R.raw.soft_click, 1)
+        
+        // Observe sound settings
         viewModelScope.launch {
             userPreferencesRepository.userPreferencesFlow.collectLatest { preferences ->
                 soundEnabled = preferences.soundEnabled
@@ -59,7 +84,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
-        toneGenerator.release()
+        soundPool.release()
     }
 
     /**
@@ -97,17 +122,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Plays a simple sound effect for placing a tile.
+     * Plays a soft sound effect for placing a tile.
      */
     private fun playTileSound() {
-        toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 50)
+        soundPool.play(soundPlaceTile, 0.7f, 0.7f, 1, 0, 1.0f)
     }
 
     /**
      * Plays a sound effect for winning the game.
      */
     private fun playWinSound() {
-        toneGenerator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 200)
+        soundPool.play(soundWin, 0.7f, 0.7f, 1, 0, 1.0f)
     }
 
     /**
@@ -137,7 +162,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // Play sound effect if enabled
         if (soundEnabled) {
-            toneGenerator.startTone(ToneGenerator.TONE_CDMA_PIP, 50)
+            soundPool.play(soundUndo, 0.7f, 0.7f, 1, 0, 1.0f)
         }
 
         // Remove the move from history
@@ -155,7 +180,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // Play sound effect if enabled
         if (soundEnabled) {
-            toneGenerator.startTone(ToneGenerator.TONE_CDMA_SOFT_ERROR_LITE, 100)
+            soundPool.play(soundReset, 0.7f, 0.7f, 1, 0, 1.0f)
         }
     }
 
