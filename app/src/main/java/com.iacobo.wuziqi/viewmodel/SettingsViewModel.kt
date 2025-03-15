@@ -1,6 +1,7 @@
 package com.iacobo.wuziqi.viewmodel
 
 import android.app.Application
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
@@ -21,13 +22,20 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     
     private val repository = UserPreferencesRepository(application)
     
-    // Expose user preferences as a state flow for the UI
-    val userPreferences: StateFlow<UserPreferences> = repository.userPreferencesFlow
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = UserPreferences()
-        )
+    // Internal mutable state 
+    private val _userPreferences = mutableStateOf(UserPreferences())
+    
+    // Exposed as immutable state for the UI
+    val userPreferences: State<UserPreferences> = _userPreferences
+    
+    init {
+        // Collect preferences from repository and update the state
+        viewModelScope.launch {
+            repository.userPreferencesFlow.collect { prefs ->
+                _userPreferences.value = prefs
+            }
+        }
+    }
     
     /**
      * Update sound enabled preference.

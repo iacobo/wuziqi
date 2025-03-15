@@ -724,3 +724,4 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         return score
     }
+}

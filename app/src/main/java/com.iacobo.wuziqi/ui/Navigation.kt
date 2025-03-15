@@ -51,7 +51,7 @@ fun AppNavigation(
     val gameViewModel: GameViewModel = viewModel()
     
     // Observe user preferences for theme
-    val preferences by settingsViewModel.userPreferences.collectAsState()
+    val preferences = settingsViewModel.userPreferences.value
 
     NavHost(
         navController = navController,

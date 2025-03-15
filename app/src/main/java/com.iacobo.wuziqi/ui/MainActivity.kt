@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -43,17 +42,18 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         
         setContent {
-            // Access userPreferences flow
-            val preferences by settingsViewModel.userPreferences
+            // Access userPreferences as a State<UserPreferences>
+            val preferences = settingsViewModel.userPreferences.value
 
             // Apply language settings
             ApplyLanguageSettings(preferences)
 
-            // Apply theme settings
+            // Apply theme settings based on user preferences
             val darkTheme = when (preferences.themeMode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                else -> isSystemInDarkTheme() // Fallback
             }
 
             // Use dynamic theme (Material You) if available, but with our theme colors
