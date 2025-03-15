@@ -10,7 +10,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.BuildConfig
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.ThemeMode
-import com.iacobo.wuziqi.data.UserPreferences
 import com.iacobo.wuziqi.viewmodel.SettingsViewModel
 
 /**
@@ -64,7 +63,7 @@ fun SettingsScreen(
                 // Sound toggle with icon
                 SwitchPreference(
                     title = stringResource(R.string.sounds),
-                    icon = Icons.Default.VolumeUp,
+                    icon = Icons.AutoMirrored.Filled.VolumeUp,
                     isChecked = userPreferences.soundEnabled,
                     onCheckedChange = { viewModel.updateSoundEnabled(it) }
                 )
@@ -74,7 +73,7 @@ fun SettingsScreen(
                     title = stringResource(R.string.theme),
                     icon = Icons.Default.DarkMode,
                     selectedValue = userPreferences.themeMode.name,
-                    options = ThemeMode.values().map { it.name },
+                    options = ThemeMode.entries.map { it.name },
                     onOptionSelected = { viewModel.updateThemeMode(ThemeMode.valueOf(it)) },
                     getOptionLabel = {
                         when (it) {
