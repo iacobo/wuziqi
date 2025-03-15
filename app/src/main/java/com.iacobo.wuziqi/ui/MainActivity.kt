@@ -30,6 +30,9 @@ import androidx.core.view.WindowCompat
  */
 class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()
+    
+    // Flag to track whether startup sound should be suppressed
+    private var isInitialLaunch = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Apply splash screen
@@ -38,12 +41,9 @@ class MainActivity : ComponentActivity() {
         
         // Make system UI transparent with edge-to-edge
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Preload sound resources
-        preloadSounds()
         
         setContent {
-            val preferences by settingsViewModel.userPreferences.collectAsState()
+            val preferences by settingsViewModel.userPreferencesFlow.collectAsState()
 
             // Apply language settings
             ApplyLanguageSettings(preferences)
@@ -62,19 +62,20 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    AppNavigation(navController = navController)
+                    
+                    // Pass initial launch flag to suppress startup sound
+                    AppNavigation(
+                        navController = navController,
+                        isInitialLaunch = isInitialLaunch
+                    )
+                    
+                    // Reset the flag after first navigation
+                    LaunchedEffect(Unit) {
+                        isInitialLaunch = false
+                    }
                 }
             }
         }
-    }
-    
-    /**
-     * Preload sound resources to minimize lag when first playing sounds.
-     * This is optional but provides a better user experience.
-     */
-    private fun preloadSounds() {
-        // SoundPool initialization is now handled in the GameViewModel
-        // This method exists for potential future sound preloading if needed
     }
 }
 

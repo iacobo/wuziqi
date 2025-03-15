@@ -1,25 +1,50 @@
 package com.iacobo.wuziqi.data
 
+import android.content.Context
+import android.content.SharedPreferences
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 /**
  * Represents the state of a Wuziqi game.
  * Manages the board, current player, and win condition checking.
- * Now supports custom board sizes and win conditions.
  */
-class GameState(
-    val boardSize: Int = DEFAULT_BOARD_SIZE,
-    val winCondition: Int = DEFAULT_WIN_CONDITION
-) {
+class GameState {
     companion object {
         const val EMPTY = 0
         const val PLAYER_ONE = 1 // Black
         const val PLAYER_TWO = 2 // White
         const val DEFAULT_BOARD_SIZE = 15 // Standard wuziqi board size
-        const val DEFAULT_WIN_CONDITION = 5 // Standard number of consecutive pieces needed to win
+        const val DEFAULT_WIN_CONDITION = 5 // Number of consecutive pieces needed to win
+        
+        // Keys for saved state
+        private const val PREFS_NAME = "wuziqi_game_state"
+        private const val KEY_BOARD = "board"
+        private const val KEY_CURRENT_PLAYER = "current_player"
+        private const val KEY_BOARD_SIZE = "board_size"
+        private const val KEY_WIN_CONDITION = "win_condition"
+        private const val KEY_AGAINST_COMPUTER = "against_computer"
+        private const val KEY_EASTER_EGGS = "easter_eggs"
     }
 
-    var board: Array<IntArray> = Array(boardSize) { IntArray(boardSize) { EMPTY } }
+    var board: Array<IntArray>
     var currentPlayer: Int = PLAYER_ONE
+    var boardSize: Int = DEFAULT_BOARD_SIZE
+    var winCondition: Int = DEFAULT_WIN_CONDITION
     var againstComputer: Boolean = false
+
+    // Initialize with default values
+    init {
+        board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
+    }
+    
+    // Constructor with custom board size and win condition
+    constructor(boardSize: Int = DEFAULT_BOARD_SIZE, winCondition: Int = DEFAULT_WIN_CONDITION, againstComputer: Boolean = false) {
+        this.boardSize = boardSize
+        this.winCondition = winCondition
+        this.againstComputer = againstComputer
+        this.board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
+    }
 
     /**
      * Places a tile on the board and switches the current player.
@@ -98,5 +123,105 @@ class GameState(
         }
 
         return count
+    }
+    
+    /**
+     * Checks if the board is full (draw condition)
+     */
+    fun isBoardFull(): Boolean {
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] == EMPTY) {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    /**
+     * Checks if a position is valid on the board
+     */
+    fun isValidPosition(row: Int, col: Int): Boolean {
+        return row in 0 until boardSize && col in 0 until boardSize
+    }
+    
+    /**
+     * Saves the current game state to persistent storage
+     */
+    suspend fun saveState(context: Context) = withContext(Dispatchers.IO) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        
+        // Convert board to string
+        val boardStr = StringBuilder()
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                boardStr.append(board[row][col])
+                if (col < boardSize - 1) boardStr.append(",")
+            }
+            if (row < boardSize - 1) boardStr.append(";")
+        }
+        
+        editor.putString(KEY_BOARD, boardStr.toString())
+        editor.putInt(KEY_CURRENT_PLAYER, currentPlayer)
+        editor.putInt(KEY_BOARD_SIZE, boardSize)
+        editor.putInt(KEY_WIN_CONDITION, winCondition)
+        editor.putBoolean(KEY_AGAINST_COMPUTER, againstComputer)
+        editor.apply()
+    }
+    
+    /**
+     * Loads a saved game state from persistent storage
+     * Returns true if a state was loaded, false otherwise
+     */
+    suspend fun loadState(context: Context): Boolean = withContext(Dispatchers.IO) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val boardStr = prefs.getString(KEY_BOARD, null) ?: return@withContext false
+        
+        // Load board configuration
+        boardSize = prefs.getInt(KEY_BOARD_SIZE, DEFAULT_BOARD_SIZE)
+        winCondition = prefs.getInt(KEY_WIN_CONDITION, DEFAULT_WIN_CONDITION)
+        againstComputer = prefs.getBoolean(KEY_AGAINST_COMPUTER, false)
+        
+        // Parse board from string
+        board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
+        val rows = boardStr.split(";")
+        for (i in rows.indices) {
+            val cols = rows[i].split(",")
+            for (j in cols.indices) {
+                board[i][j] = cols[j].toInt()
+            }
+        }
+        
+        currentPlayer = prefs.getInt(KEY_CURRENT_PLAYER, PLAYER_ONE)
+        true
+    }
+    
+    /**
+     * Clears saved game state
+     */
+    suspend fun clearSavedState(context: Context) = withContext(Dispatchers.IO) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().remove(KEY_BOARD).apply()
+    }
+    
+    /**
+     * Helper class for persistent storage of discovered easter eggs
+     */
+    class EasterEggManager(private val context: Context) {
+        private val prefs: SharedPreferences by lazy {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        }
+        
+        fun getDiscoveredEasterEggs(): Set<String> {
+            return prefs.getStringSet(KEY_EASTER_EGGS, emptySet()) ?: emptySet()
+        }
+        
+        fun addDiscoveredEasterEgg(eggName: String) {
+            val currentEggs = getDiscoveredEasterEggs().toMutableSet()
+            currentEggs.add(eggName)
+            prefs.edit().putStringSet(KEY_EASTER_EGGS, currentEggs).apply()
+        }
     }
 }

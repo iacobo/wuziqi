@@ -38,17 +38,21 @@ object Routes {
 /**
  * Main navigation component for the app.
  * Now preserves game state when navigating to settings.
+ * 
+ * @param navController The navigation controller
+ * @param isInitialLaunch Flag to suppress startup sound on initial app launch
  */
 @Composable
 fun AppNavigation(
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    isInitialLaunch: Boolean = false
 ) {
     // Create shared ViewModel instances that persist across navigation
     val settingsViewModel: SettingsViewModel = viewModel()
     val gameViewModel: GameViewModel = viewModel()
     
     // Observe user preferences for theme
-    val preferences by settingsViewModel.userPreferences.collectAsState()
+    val preferences by settingsViewModel.userPreferencesFlow.collectAsState()
 
     NavHost(
         navController = navController,
@@ -67,11 +71,13 @@ fun AppNavigation(
                     val winLength = GameState.DEFAULT_WIN_CONDITION
                     val isComputer = opponent == Opponent.COMPUTER
                     
+                    // Navigate to game with proper arguments
                     navController.navigate(Routes.gameRoute(boardSize, winLength, isComputer))
                 },
-                onNavigateToCustomGame = { boardSize, winLength ->
-                    // Launch opponent selection dialog first, which will then navigate to game
-                    navController.navigate(Routes.gameRoute(boardSize, winLength, false))
+                onNavigateToCustomGame = { boardSize, winLength, opponent ->
+                    // Fix: pass opponent in navigation
+                    val isComputer = opponent == Opponent.COMPUTER
+                    navController.navigate(Routes.gameRoute(boardSize, winLength, isComputer))
                 }
             )
         }
@@ -93,17 +99,14 @@ fun AppNavigation(
             // Set up the game with specified parameters only on first navigation
             // We use a LaunchedEffect with a key of boardSize+winLength+isComputer to ensure
             // it only runs when these parameters change, not when navigating back from settings
-            LaunchedEffect(key1 = "$boardSize-$winLength-$isComputer", key2 = backStackEntry.arguments) {
-                if (gameViewModel.gameState.boardSize != boardSize ||
-                    gameViewModel.gameState.winCondition != winLength ||
-                    gameViewModel.gameState.againstComputer != isComputer) {
-                    // Only setup game if parameters have changed to preserve state
-                    gameViewModel.setupGame(
-                        boardSize = boardSize,
-                        winLength = winLength,
-                        opponent = if (isComputer) Opponent.COMPUTER else Opponent.HUMAN
-                    )
-                }
+            LaunchedEffect(key1 = "$boardSize-$winLength-$isComputer") {
+                // Setup game with the specified parameters
+                gameViewModel.setupGame(
+                    boardSize = boardSize,
+                    winLength = winLength,
+                    opponent = if (isComputer) Opponent.COMPUTER else Opponent.HUMAN,
+                    skipStartSound = isInitialLaunch
+                )
             }
             
             GameScreen(
@@ -124,11 +127,13 @@ fun AppNavigation(
         composable(Routes.GAME) {
             // Redirect to standard game against human
             LaunchedEffect(Unit) {
-                navController.navigate(Routes.gameRoute(
-                    GameState.DEFAULT_BOARD_SIZE,
-                    GameState.DEFAULT_WIN_CONDITION,
-                    false
-                )) {
+                navController.navigate(
+                    Routes.gameRoute(
+                        GameState.DEFAULT_BOARD_SIZE,
+                        GameState.DEFAULT_WIN_CONDITION,
+                        false
+                    )
+                ) {
                     popUpTo(Routes.GAME) { inclusive = true }
                 }
             }

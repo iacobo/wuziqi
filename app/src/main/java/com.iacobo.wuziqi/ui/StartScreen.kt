@@ -8,7 +8,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Games
 import androidx.compose.material3.*
@@ -32,13 +31,18 @@ fun StartScreen(
     viewModel: GameViewModel,
     onNavigateToSettings: () -> Unit,
     onNavigateToStandardGame: (opponent: Opponent) -> Unit,
-    onNavigateToCustomGame: (boardSize: Int, winLength: Int) -> Unit
+    onNavigateToCustomGame: (boardSize: Int, winLength: Int, opponent: Opponent) -> Unit
 ) {
     val discoveredEasterEggs = viewModel.discoveredEasterEggs
     
     var showOpponentDialog by remember { mutableStateOf(false) }
     var showCustomDialog by remember { mutableStateOf(false) }
     var currentMode by remember { mutableStateOf("standard") }
+    
+    // Determine AI support for different game modes
+    val aiSupportedModes = remember {
+        setOf("standard", "tictactoe", "connect4")
+    }
     
     Scaffold(
         bottomBar = {
@@ -70,7 +74,7 @@ fun StartScreen(
             
             // Title
             Text(
-                text = stringResource(R.string.welcome_wuziqi),
+                text = stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center
             )
@@ -149,10 +153,12 @@ fun StartScreen(
                 
                 when (currentMode) {
                     "standard" -> onNavigateToStandardGame(opponent)
-                    "tictactoe" -> onNavigateToCustomGame(3, 3)
-                    "connect4" -> onNavigateToCustomGame(7, 4) // Now using 7x7 for Connect4
+                    "tictactoe" -> onNavigateToCustomGame(3, 3, opponent)
+                    "connect4" -> onNavigateToCustomGame(7, 4, opponent) 
+                    "custom" -> onNavigateToCustomGame(15, 5, opponent) // Should not happen, fallback
                 }
-            }
+            },
+            isAISupported = aiSupportedModes.contains(currentMode)
         )
     }
     
@@ -164,16 +170,22 @@ fun StartScreen(
                 showCustomDialog = false
                 
                 // Determine if this is a special mode
-                val isEasterEgg = (boardSize == 3 && winLength == 3) || (boardSize == 7 && winLength == 4)
-                
-                if (isEasterEgg) {
-                    // For easter eggs, we always need to select an opponent
-                    currentMode = if (boardSize == 3) "tictactoe" else "connect4"
-                    showOpponentDialog = true
-                } else {
-                    // For normal custom games, go straight to opponent selection
-                    currentMode = "custom"
-                    showOpponentDialog = true
+                when {
+                    // TicTacToe
+                    boardSize == 3 && winLength == 3 -> {
+                        currentMode = "tictactoe"
+                        showOpponentDialog = true
+                    }
+                    // Connect4
+                    boardSize == 7 && winLength == 4 -> {
+                        currentMode = "connect4"
+                        showOpponentDialog = true
+                    }
+                    // Custom sizes
+                    else -> {
+                        currentMode = "custom"
+                        showOpponentDialog = true
+                    }
                 }
             }
         )
@@ -242,7 +254,8 @@ fun GameModeButton(
 @Composable
 fun OpponentSelectionDialog(
     onDismiss: () -> Unit,
-    onSelectOpponent: (Opponent) -> Unit
+    onSelectOpponent: (Opponent) -> Unit,
+    isAISupported: Boolean = true
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -262,8 +275,17 @@ fun OpponentSelectionDialog(
                 OpponentButton(
                     title = stringResource(R.string.play_against_computer),
                     icon = Icons.Default.Computer,
-                    onClick = { onSelectOpponent(Opponent.COMPUTER) }
+                    onClick = { onSelectOpponent(Opponent.COMPUTER) },
+                    enabled = isAISupported
                 )
+                
+                if (!isAISupported) {
+                    Text(
+                        text = stringResource(R.string.ai_not_supported),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {},
@@ -282,15 +304,19 @@ fun OpponentSelectionDialog(
 fun OpponentButton(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-        )
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+        ),
+        enabled = enabled
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
