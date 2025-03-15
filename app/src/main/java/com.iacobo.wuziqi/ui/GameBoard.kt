@@ -67,8 +67,9 @@ fun GameBoard(
          * 1. A padding of exactly half a cell size on each edge
          * 2. A total of (boardSize - 1) grid lines that create boardSize intersections
          */
-         
-        // Create the grid of lines - now with proper padding
+
+        // Draw grid lines on canvas
+        val density = LocalDensity.current
         Canvas(modifier = Modifier.fillMaxSize()) {
             val canvasWidth = size.width
             val canvasHeight = size.height
@@ -84,7 +85,7 @@ fun GameBoard(
             val endY = canvasHeight - (cellHeight / 2)
             
             // Convert DP to pixels for line width
-            val strokeWidth = with(LocalDensity.current) { gridLineWidth.toPx() }
+            val strokeWidth = with(density) { gridLineWidth.toPx() }
             
             // Draw horizontal lines
             for (i in 0 until boardSize) {
