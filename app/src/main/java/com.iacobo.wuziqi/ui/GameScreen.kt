@@ -1,11 +1,13 @@
 package com.iacobo.wuziqi.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -23,14 +25,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.ThemeMode
@@ -40,11 +47,13 @@ import com.iacobo.wuziqi.ui.theme.GridDarkColor
 import com.iacobo.wuziqi.ui.theme.GridLightColor
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 import com.iacobo.wuziqi.viewmodel.Position
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Main game screen composable.
  * Displays the game board, status, and controls.
- * Now supports custom board sizes and computer opponent.
+ * Supports standard game and easter eggs.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +69,18 @@ fun GameScreen(
     val moveHistory = viewModel.moveHistory
     val isLoading = viewModel.isLoading
     val boardSize = gameState.boardSize
+    val winLength = gameState.winCondition
+    
+    // Determine game type for easter eggs
+    val isXandO = boardSize == 3 && winLength == 3
+    val isConnect4 = boardSize == 6 && winLength == 4
+
+    // Determine app title based on easter egg mode
+    val appTitle = when {
+        isXandO -> "X's & O's"
+        isConnect4 -> "Connect 4"
+        else -> stringResource(R.string.app_name)
+    }
 
     // Determine if we're in dark theme based on the theme mode
     val isDarkTheme = when (themeMode) {
@@ -77,7 +98,7 @@ fun GameScreen(
         TopAppBar(
             title = {
                 Text(
-                    text = stringResource(R.string.app_name),
+                    text = appTitle,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -103,64 +124,118 @@ fun GameScreen(
             )
         )
         
-        // Space between app bar and player turn indicator (for vertical centering)
-        Spacer(modifier = Modifier.weight(0.5f))
-
-        // Player turn indicator with loading indicator when computer is thinking
-        Row(
+        // Fixed height container for player indicator to prevent layout shifts
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
         ) {
             if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.secondary,
-                    strokeWidth = 2.dp
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.computer_thinking),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.secondary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.computer_thinking),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             } else {
-                PlayerTurnIndicator(gameState.currentPlayer)
+                val playerText = when {
+                    isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "X's Turn" else "O's Turn"
+                    isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "Red's Turn" else "Yellow's Turn"
+                    else -> stringResource(
+                        R.string.player_turn_format,
+                        if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                            stringResource(R.string.player_black)
+                        else 
+                            stringResource(R.string.player_white)
+                    )
+                }
+                
+                val playerColor = when {
+                    isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Black else Color.Red
+                    isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Red else Color(0xFFFFD700) // Gold
+                    else -> if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                        MaterialTheme.colorScheme.primary
+                    else 
+                        MaterialTheme.colorScheme.secondary
+                }
+                
+                Text(
+                    text = playerText,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = playerColor
+                )
             }
         }
 
         // Winner dialog
         if (winner != null) {
+            val winnerText = when {
+                isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins!" else "O Wins!"
+                isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins!" else "Yellow Wins!"
+                else -> stringResource(
+                    R.string.winner_format,
+                    if (winner == GameState.PLAYER_ONE) 
+                        stringResource(R.string.player_black)
+                    else 
+                        stringResource(R.string.player_white)
+                )
+            }
+            
             WinnerDialog(
-                winner = winner,
+                winnerText = winnerText,
                 onRematch = { viewModel.resetGame() },
                 onDismiss = { viewModel.dismissWinnerDialog() }
             )
         }
 
-        Spacer(modifier = Modifier.weight(0.5f))
-
-        // Game Board (centered with weight)
+        // Game Board
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(8f),
+                .weight(1f),
             contentAlignment = Alignment.Center
         ) {
-            GameBoard(
-                gameState = gameState,
-                lastPlacedPosition = lastPlacedPosition,
-                isDarkTheme = isDarkTheme,
-                isGameFrozen = winner != null || isLoading,
-                onTileClick = { row, col ->
-                    viewModel.placeTile(row, col)
-                }
-            )
+            when {
+                isXandO -> TicTacToeBoard(
+                    gameState = gameState,
+                    lastPlacedPosition = lastPlacedPosition,
+                    isDarkTheme = isDarkTheme,
+                    isGameFrozen = winner != null || isLoading,
+                    onTileClick = { row, col ->
+                        viewModel.placeTile(row, col)
+                    }
+                )
+                isConnect4 -> Connect4Board(
+                    gameState = gameState,
+                    lastPlacedPosition = lastPlacedPosition,
+                    isDarkTheme = isDarkTheme,
+                    isGameFrozen = winner != null || isLoading,
+                    onColumnClick = { col ->
+                        viewModel.placeConnect4Tile(col)
+                    }
+                )
+                else -> GameBoard(
+                    gameState = gameState,
+                    lastPlacedPosition = lastPlacedPosition,
+                    isDarkTheme = isDarkTheme,
+                    isGameFrozen = winner != null || isLoading,
+                    onTileClick = { row, col ->
+                        viewModel.placeTile(row, col)
+                    }
+                )
+            }
         }
-
-        Spacer(modifier = Modifier.weight(1f))
 
         // Control buttons
         GameControls(
@@ -171,30 +246,8 @@ fun GameScreen(
             showSettingsButton = false  // we already have it in the app bar
         )
         
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(16.dp))
     }
-}
-
-/**
- * Displays the current player's turn.
- */
-@Composable
-private fun PlayerTurnIndicator(currentPlayer: Int) {
-    val playerName = if (currentPlayer == GameState.PLAYER_ONE)
-        stringResource(R.string.player_black)
-    else
-        stringResource(R.string.player_white)
-
-    val playerColor = if (currentPlayer == GameState.PLAYER_ONE)
-        MaterialTheme.colorScheme.primary
-    else
-        MaterialTheme.colorScheme.secondary
-
-    Text(
-        text = stringResource(R.string.player_turn_format, playerName),
-        style = MaterialTheme.typography.titleMedium,
-        color = playerColor
-    )
 }
 
 /**
@@ -202,24 +255,14 @@ private fun PlayerTurnIndicator(currentPlayer: Int) {
  */
 @Composable
 private fun WinnerDialog(
-    winner: Int,
+    winnerText: String,
     onRematch: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = { },
         title = { Text(stringResource(R.string.game_over)) },
-        text = {
-            Text(
-                stringResource(
-                    R.string.winner_format,
-                    if (winner == GameState.PLAYER_ONE)
-                        stringResource(R.string.player_black)
-                    else
-                        stringResource(R.string.player_white)
-                )
-            )
-        },
+        text = { Text(winnerText) },
         confirmButton = {
             Button(onClick = onRematch) {
                 Text(stringResource(R.string.rematch))
@@ -325,9 +368,9 @@ private fun ControlButton(
 }
 
 /**
- * The game board composable.
+ * The standard Wuziqi game board composable.
  * Displays the grid and pieces.
- * Now supports variable board sizes.
+ * Supports variable board sizes.
  */
 @Composable
 fun GameBoard(
@@ -431,7 +474,7 @@ fun GameBoard(
 }
 
 /**
- * Represents a single tile on the game board.
+ * Standard tile representing a game piece.
  */
 @Composable
 fun Tile(
@@ -469,3 +512,219 @@ fun Tile(
         }
     }
 }
+
+/**
+ * Tic-Tac-Toe board implementation (3x3 Easter Egg).
+ */
+@Composable
+fun TicTacToeBoard(
+    gameState: GameState,
+    lastPlacedPosition: Position?,
+    isDarkTheme: Boolean,
+    isGameFrozen: Boolean,
+    onTileClick: (Int, Int) -> Unit
+) {
+    val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
+    val boardColor = if (isDarkTheme) 
+        Color(0xFF303030) // Dark gray for dark theme
+    else 
+        Color(0xFFF0F0F0) // Light gray for light theme
+    val gridLineWidth = 4.dp // Thicker grid lines for tic-tac-toe
+    
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .padding(16.dp)
+            .background(boardColor)
+    ) {
+        // Draw grid lines
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // 3 rows
+            for (row in 0 until 3) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    // 3 columns
+                    for (col in 0 until 3) {
+                        // Cell with border
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .border(
+                                    width = gridLineWidth,
+                                    color = gridLineColor
+                                )
+                                .clickable(enabled = !isGameFrozen) {
+                                    onTileClick(row, col)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when (gameState.board[row][col]) {
+                                GameState.PLAYER_ONE -> {
+                                    // Draw X
+                                    Text(
+                                        text = "X",
+                                        style = TextStyle(
+                                            fontSize = 40.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Black
+                                        )
+                                    )
+                                }
+                                GameState.PLAYER_TWO -> {
+                                    // Draw O
+                                    Text(
+                                        text = "O",
+                                        style = TextStyle(
+                                            fontSize = 40.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.Red
+                                        )
+                                    )
+                                }
+                                else -> {
+                                    // Empty cell
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Connect 4 board implementation (6x6 Easter Egg).
+ */
+@Composable
+fun Connect4Board(
+    gameState: GameState,
+    lastPlacedPosition: Position?,
+    isDarkTheme: Boolean,
+    isGameFrozen: Boolean,
+    onColumnClick: (Int) -> Unit
+) {
+    val boardColor = Color(0xFF1565C0) // Connect 4 blue board color
+    val emptySlotColor = MaterialTheme.colorScheme.background
+    val pieceSize = 36.dp
+    val boardSize = gameState.boardSize
+    val scope = rememberCoroutineScope()
+    
+    // Track animation states for "dropping" pieces
+    val droppingAnimations = remember { mutableStateMapOf<Pair<Int, Int>, Animatable<Float, AnimationVector1D>>() }
+    
+    Box(
+        modifier = Modifier
+            .aspectRatio(1f)
+            .padding(16.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(boardColor)
+    ) {
+        // Main grid with pieces
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Rows
+            for (row in 0 until boardSize) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Columns
+                    for (col in 0 until boardSize) {
+                        val cellPosition = row to col
+                        
+                        // Create animation if it's a newly placed piece
+                        if (gameState.board[row][col] != GameState.EMPTY && 
+                            !droppingAnimations.containsKey(cellPosition) &&
+                            lastPlacedPosition?.col == col) {
+                            droppingAnimations[cellPosition] = Animatable(0f)
+                            
+                            // Start animation
+                            scope.launch {
+                                droppingAnimations[cellPosition]?.animateTo(
+                                    targetValue = 1f,
+                                    animationSpec = tween(
+                                        durationMillis = 500,
+                                        easing = BounceEasing
+                                    )
+                                )
+                            }
+                        }
+                        
+                        // Calculate offset for animation
+                        val yOffset = droppingAnimations[cellPosition]?.value ?: 1f
+                        
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Empty slot (always visible)
+                            Box(
+                                modifier = Modifier
+                                    .size(pieceSize)
+                                    .clip(CircleShape)
+                                    .background(emptySlotColor)
+                            )
+                            
+                            // Game piece (if not empty)
+                            if (gameState.board[row][col] != GameState.EMPTY) {
+                                val pieceColor = when (gameState.board[row][col]) {
+                                    GameState.PLAYER_ONE -> Color.Red
+                                    else -> Color(0xFFFFD700) // Gold/Yellow
+                                }
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .size(pieceSize)
+                                        .offset(
+                                            y = if (yOffset < 1f) {
+                                                (-pieceSize.value * (1f - yOffset)).dp
+                                            } else {
+                                                0.dp
+                                            }
+                                        )
+                                        .clip(CircleShape)
+                                        .background(pieceColor)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Clickable columns
+        Row(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            for (col in 0 until boardSize) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(enabled = !isGameFrozen) {
+                            onColumnClick(col)
+                        }
+                )
+            }
+        }
+    }
+}
+
+// Custom bounce easing for Connect 4 pieces
+private val BounceEasing = CubicBezierEasing(0.17f, 0.67f, 0.83f, 1.2f)

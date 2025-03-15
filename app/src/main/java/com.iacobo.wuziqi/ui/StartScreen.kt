@@ -4,6 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Computer
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -87,6 +91,7 @@ fun StartScreen(
             GameModeButton(
                 title = stringResource(R.string.standard_wuziqi),
                 description = stringResource(R.string.standard_wuziqi_desc),
+                icon = Icons.Default.Apps,
                 onClick = { showOpponentDialog = true }
             )
             
@@ -95,6 +100,7 @@ fun StartScreen(
             GameModeButton(
                 title = stringResource(R.string.custom_game),
                 description = stringResource(R.string.custom_game_desc),
+                icon = Icons.Default.Dashboard,
                 onClick = { showCustomDialog = true }
             )
         }
@@ -130,6 +136,7 @@ fun StartScreen(
 fun GameModeButton(
     title: String,
     description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
     Button(
@@ -147,21 +154,33 @@ fun GameModeButton(
             defaultElevation = 2.dp
         )
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
             )
             
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center
-            )
+            Column(
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
@@ -183,19 +202,17 @@ fun OpponentSelectionDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = { onSelectOpponent(Opponent.HUMAN) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.play_against_human))
-                }
+                OpponentButton(
+                    title = stringResource(R.string.play_against_human),
+                    icon = Icons.Default.Person,
+                    onClick = { onSelectOpponent(Opponent.HUMAN) }
+                )
                 
-                Button(
-                    onClick = { onSelectOpponent(Opponent.COMPUTER) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.play_against_computer))
-                }
+                OpponentButton(
+                    title = stringResource(R.string.play_against_computer),
+                    icon = Icons.Default.Computer,
+                    onClick = { onSelectOpponent(Opponent.COMPUTER) }
+                )
             }
         },
         confirmButton = {},
@@ -205,6 +222,43 @@ fun OpponentSelectionDialog(
             }
         }
     )
+}
+
+/**
+ * Button for selecting an opponent type.
+ */
+@Composable
+fun OpponentButton(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
 }
 
 /**
@@ -218,6 +272,16 @@ fun CustomGameDialog(
     var boardSize by remember { mutableStateOf(15) }
     var winLength by remember { mutableStateOf(5) }
     
+    // Board size options: 3, 5, 7, 9, 11, 13, 15, 17, 19
+    val boardSizeOptions = listOf(3, 5, 7, 9, 11, 13, 15, 17, 19)
+    val boardSizeSteps = boardSizeOptions.size - 1
+    
+    // Dynamically calculate win length options based on board size
+    val minWinLength = 3
+    val maxWinLength = minOf(boardSize, 8)
+    val winLengthOptions = (minWinLength..maxWinLength).toList()
+    val winLengthSteps = winLengthOptions.size - 1
+    
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.custom_game_settings)) },
@@ -229,10 +293,17 @@ fun CustomGameDialog(
                 )
                 
                 Slider(
-                    value = boardSize.toFloat(),
-                    onValueChange = { boardSize = it.toInt() },
-                    valueRange = 5f..19f,
-                    steps = 7,
+                    value = boardSizeOptions.indexOf(boardSize).toFloat(),
+                    onValueChange = { 
+                        val index = it.toInt()
+                        boardSize = boardSizeOptions[index]
+                        // Adjust win length if needed
+                        if (winLength > minOf(boardSize, 8)) {
+                            winLength = minOf(boardSize, 8)
+                        }
+                    },
+                    valueRange = 0f..boardSizeSteps.toFloat(),
+                    steps = boardSizeSteps - 1, // Correct number of steps
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
                 
@@ -244,10 +315,10 @@ fun CustomGameDialog(
                 )
                 
                 Slider(
-                    value = winLength.toFloat(),
-                    onValueChange = { winLength = it.toInt() },
-                    valueRange = 3f..minOf(boardSize.toFloat(), 8f),
-                    steps = minOf(boardSize, 8) - 3,
+                    value = (winLength - minWinLength).toFloat(),
+                    onValueChange = { winLength = it.toInt() + minWinLength },
+                    valueRange = 0f..(maxWinLength - minWinLength).toFloat(),
+                    steps = if (winLengthSteps > 0) winLengthSteps - 1 else 0, // Correct number of steps
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
                 
@@ -258,6 +329,16 @@ fun CustomGameDialog(
                         text = stringResource(R.string.win_length_warning),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
+                    )
+                }
+                
+                // Easter egg hint for special board configurations
+                if ((boardSize == 3 && winLength == 3) || (boardSize == 6 && winLength == 4)) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.special_game_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }

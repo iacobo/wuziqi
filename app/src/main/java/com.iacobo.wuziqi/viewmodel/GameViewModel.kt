@@ -30,7 +30,7 @@ data class Position(val row: Int, val col: Int)
 /**
  * ViewModel that manages the game state and provides actions and state for the UI.
  * Handles move history and state persistence across configuration changes.
- * Now supports custom board sizes and computer opponent.
+ * Now supports custom board sizes, computer opponent, and game variants.
  */
 class GameViewModel(application: Application) : AndroidViewModel(application) {
     // Game state
@@ -150,10 +150,76 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         
+        // Check for draw (board full)
+        if (isBoardFull()) {
+            // No winner, but game is over
+            winner = GameState.EMPTY
+            return
+        }
+        
         // Computer's turn if enabled and game is still ongoing
         if (gameState.againstComputer && winner == null && gameState.currentPlayer == GameState.PLAYER_TWO) {
             makeComputerMove()
         }
+    }
+    
+    /**
+     * Places a tile in Connect 4 mode - automatically finds the lowest available
+     * row in the selected column.
+     * 
+     * @param col The column to place the piece in
+     */
+    fun placeConnect4Tile(col: Int) {
+        if (winner != null || isLoading) {
+            return
+        }
+        
+        // Find the lowest empty position in the column
+        val row = findLowestEmptyRow(col)
+        if (row == -1) {
+            // Column is full
+            return
+        }
+        
+        // Place the tile at the found position
+        placeTile(row, col)
+    }
+    
+    /**
+     * Finds the lowest empty row in a column for Connect 4 gameplay.
+     * 
+     * @param col The column to check
+     * @return The row index of the lowest empty position, or -1 if column is full
+     */
+    private fun findLowestEmptyRow(col: Int): Int {
+        val boardSize = gameState.boardSize
+        
+        // Start from the bottom row and move up
+        for (row in boardSize - 1 downTo 0) {
+            if (gameState.isTileEmpty(row, col)) {
+                return row
+            }
+        }
+        
+        // Column is full
+        return -1
+    }
+    
+    /**
+     * Checks if the board is completely full.
+     */
+    private fun isBoardFull(): Boolean {
+        val boardSize = gameState.boardSize
+        
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.isTileEmpty(row, col)) {
+                    return false
+                }
+            }
+        }
+        
+        return true
     }
 
     /**
@@ -165,10 +231,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         viewModelScope.launch {
             // Add a small delay to make it seem like the computer is "thinking"
-            delay(500)
+            delay(800)
             
-            // Find a move using a simple algorithm
-            val computerMove = findComputerMove()
+            // Is this a Connect 4 game?
+            val isConnect4 = gameState.boardSize == 6 && gameState.winCondition == 4
+            
+            // Find a move using appropriate strategy
+            val computerMove = if (isConnect4) {
+                findConnect4Move()
+            } else {
+                findComputerMove()
+            }
             
             // Place the tile for the computer
             if (computerMove != null) {
@@ -202,6 +275,48 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     /**
+     * Finds a good move for the computer in Connect 4.
+     */
+    private fun findConnect4Move(): Pair<Int, Int>? {
+        val boardSize = gameState.boardSize
+        
+        // First, check for each column if we can place a piece
+        val availableColumns = mutableListOf<Int>()
+        for (col in 0 until boardSize) {
+            val row = findLowestEmptyRow(col)
+            if (row != -1) {
+                availableColumns.add(col)
+                
+                // Check if placing here would win
+                gameState.board[row][col] = GameState.PLAYER_TWO
+                val isWinningMove = gameState.checkWin(row, col, GameState.PLAYER_TWO)
+                gameState.board[row][col] = GameState.EMPTY
+                
+                if (isWinningMove) {
+                    return row to col
+                }
+                
+                // Check if opponent would win by placing here
+                gameState.board[row][col] = GameState.PLAYER_ONE
+                val wouldBeWinningMove = gameState.checkWin(row, col, GameState.PLAYER_ONE)
+                gameState.board[row][col] = GameState.EMPTY
+                
+                if (wouldBeWinningMove) {
+                    return row to col
+                }
+            }
+        }
+        
+        // If no immediate win or block, choose a random column
+        return if (availableColumns.isNotEmpty()) {
+            val col = availableColumns[Random.nextInt(availableColumns.size)]
+            findLowestEmptyRow(col) to col
+        } else {
+            null // No valid moves
+        }
+    }
+    
+    /**
      * Finds a good move for the computer.
      * This is a simplified algorithm that:
      * 1. Checks for winning moves
@@ -213,6 +328,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private fun findComputerMove(): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
         val winCondition = gameState.winCondition
+        
+        // Is this a Tic-Tac-Toe game?
+        val isTicTacToe = boardSize == 3 && winCondition == 3
         
         // Create a list of all empty positions
         val emptyPositions = mutableListOf<Pair<Int, Int>>()
@@ -249,7 +367,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (emptyPositions.isEmpty()) return null
         
         // 1. Look for winning moves
-        for (pos in nearPiecesPositions) {
+        for (pos in if (nearPiecesPositions.isNotEmpty()) nearPiecesPositions else emptyPositions) {
             val (row, col) = pos
             
             // Temporarily place a piece and check if it's a winning move
@@ -263,7 +381,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         // 2. Look for opponent's winning moves to block
-        for (pos in nearPiecesPositions) {
+        for (pos in if (nearPiecesPositions.isNotEmpty()) nearPiecesPositions else emptyPositions) {
             val (row, col) = pos
             
             // Temporarily place opponent's piece and check if it would be a winning move
@@ -276,7 +394,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         
-        // 3. If there's no immediate winning or blocking move, make a strategic move
+        // 3. For Tic-Tac-Toe, try to take the center if available
+        if (isTicTacToe && gameState.isTileEmpty(1, 1)) {
+            return 1 to 1
+        }
+        
+        // 4. If there's no immediate winning or blocking move, make a strategic move
         // For simplicity, we'll just choose a random position near existing pieces
         return if (nearPiecesPositions.isNotEmpty()) {
             nearPiecesPositions[Random.nextInt(nearPiecesPositions.size)]

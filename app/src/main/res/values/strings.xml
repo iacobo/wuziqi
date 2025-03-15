@@ -20,6 +20,9 @@
     <string name="cancel">Cancel</string>
     <string name="home">Home</string>
     <string name="computer_thinking">Computer is thinking…</string>
+    
+    <!-- Easter egg hint -->
+    <string name="special_game_hint">You might discover something special with this configuration…</string>
 
     <!-- Game UI -->
     <string name="player_turn_format">%s\'s Turn</string>
@@ -33,6 +36,7 @@
     <!-- Dialogs -->
     <string name="game_over">Game Over</string>
     <string name="winner_format">%s won!</string>
+    <string name="draw">It\'s a draw!</string>
     <string name="rematch">Rematch</string>
     <string name="close">Close</string>
 
