@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
             val darkTheme = when (preferences.themeMode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
-                else -> isSystemInDarkTheme()
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
 
             // Use dynamic theme (Material You) if available, but with our theme colors
