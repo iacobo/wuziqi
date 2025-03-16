@@ -272,7 +272,7 @@ fun OpponentSelectionDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OpponentButton(
-                    title = stringResource(R.string.play_against_human),
+                    title = stringResource(R.string.play_against_human), // This string now translates to "Over the board"
                     icon = Icons.Default.Person,
                     onClick = { onSelectOpponent(Opponent.HUMAN) }
                 )

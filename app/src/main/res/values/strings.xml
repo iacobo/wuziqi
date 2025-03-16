@@ -10,13 +10,18 @@
     <string name="home">Home</string>
     <string name="computer_thinking">Thinking…</string>
 
+    <!-- Computer player text -->
+    <string name="your_turn">Your Turn</string>
+    <string name="you_won">You Won! 🎆</string>
+    <string name="computer_won">Computer Won! 🎆</string>
+
     <!-- Game controls -->
     <string name="undo">Undo</string>
     <string name="reset">Reset</string>
 
     <!-- Dialogs -->
     <string name="game_over">Game Over</string>
-    <string name="winner_format">%s won!</string>
+    <string name="winner_format">%s won! 🎆</string>
     <string name="rematch">Rematch</string>
     <string name="close">Close</string>
 
@@ -30,6 +35,9 @@
     <string name="game_settings">Game Settings</string>
     <string name="sounds">Sounds</string>
     <string name="theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
     <string name="language">Language</string>
     <string name="about">About</string>
     <string name="source_code">Source Code</string>
@@ -45,7 +53,7 @@
     <string name="custom_game">Custom Game</string>
     <string name="custom_game_desc">Choose your own board size and win condition</string>
     <string name="choose_opponent">Choose your opponent</string>
-    <string name="play_against_human">Play against Human</string>
+    <string name="play_against_human">Over the board</string>
     <string name="play_against_computer">Play against Computer</string>
     <string name="ai_not_supported">AI not available for this custom game size</string>
     <string name="start_game">Start Game</string>

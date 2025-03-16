@@ -93,9 +93,9 @@ fun SettingsScreen(
                     onOptionSelected = { viewModel.updateThemeMode(ThemeMode.valueOf(it)) },
                     getOptionLabel = {
                         when (it) {
-                            "SYSTEM" -> "System Default"
-                            "LIGHT" -> "Light"
-                            "DARK" -> "Dark"
+                            "SYSTEM" -> stringResource(R.string.theme_system)
+                            "LIGHT" -> stringResource(R.string.theme_light)
+                            "DARK" -> stringResource(R.string.theme_dark)
                             else -> it
                         }
                     }

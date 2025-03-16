@@ -10,8 +10,9 @@
     <string name="custom_game">自定义游戏</string>
     <string name="custom_game_desc">自定义棋盘大小和获胜条件</string>
     <string name="choose_opponent">选择对手</string>
-    <string name="play_against_human">人类对手</string>
+    <string name="play_against_human">面对面对战</string>
     <string name="play_against_computer">电脑对手</string>
+    <string name="ai_not_supported">此游戏尺寸不支持AI</string>
     <string name="custom_game_settings">自定义游戏设置</string>
     <string name="board_size">棋盘大小: %1$d×%2$d</string>
     <string name="win_length">获胜长度: %1$d 子连珠</string>
@@ -29,13 +30,18 @@
     <string name="player_black">黑</string>
     <string name="player_white">白</string>
 
+    <!-- Computer player text -->
+    <string name="your_turn">你的回合</string>
+    <string name="you_won">你赢了！🎆</string>
+    <string name="computer_won">电脑赢了！🎆</string>
+
     <!-- Game controls -->
     <string name="undo">撤消</string>
     <string name="reset">重置</string>
 
     <!-- Dialogs -->
     <string name="game_over">游戏结束</string>
-    <string name="winner_format">%s赢了！</string>
+    <string name="winner_format">%s赢了！🎆</string>
     <string name="draw">平局!</string>
     <string name="rematch">重赛</string>
     <string name="close">关闭</string>
@@ -50,6 +56,9 @@
     <string name="game_settings">游戏设置</string>
     <string name="sounds">声音</string>
     <string name="theme">主题</string>
+    <string name="theme_system">系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
     <string name="language">语言</string>
     <string name="about">关于</string>
     <string name="source_code">源代码</string>

@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
@@ -156,17 +157,27 @@ fun GameScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else if (winner != null) {
-                    // Show winner
+                    // Show winner with fireworks emoji
                     val winnerText = when {
-                        isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins!" else "O Wins!"
-                        isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins!" else "Yellow Wins!"
-                        else -> stringResource(
-                            R.string.winner_format,
-                            if (winner == GameState.PLAYER_ONE) 
-                                stringResource(R.string.player_black)
-                            else 
-                                stringResource(R.string.player_white)
-                        )
+                        isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins! 🎆" else "O Wins! 🎆"
+                        isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins! 🎆" else "Yellow Wins! 🎆"
+                        else -> {
+                            // Handle computer opponent case
+                            if (gameState.againstComputer) {
+                                if (winner == GameState.PLAYER_ONE) 
+                                    stringResource(R.string.you_won)
+                                else 
+                                    stringResource(R.string.computer_won)
+                            } else {
+                                stringResource(
+                                    R.string.winner_format,
+                                    if (winner == GameState.PLAYER_ONE) 
+                                        stringResource(R.string.player_black)
+                                    else 
+                                        stringResource(R.string.player_white)
+                                )
+                            }
+                        }
                     }
                     
                     val winnerColor = when {
@@ -178,26 +189,43 @@ fun GameScreen(
                             Color.White
                     }
                     
+                    // Ensure good contrast in dark theme
+                    val displayColor = if (isDarkTheme && (winner == GameState.PLAYER_TWO && !isConnect4 || 
+                                                        winner == GameState.PLAYER_ONE && !isConnect4 && !isXandO)) {
+                        MaterialTheme.colorScheme.onBackground
+                    } else {
+                        winnerColor
+                    }
+                    
                     Text(
                         text = winnerText,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (winner == GameState.PLAYER_TWO && !isConnect4) 
-                            MaterialTheme.colorScheme.onBackground // Make white text visible
-                        else 
-                            winnerColor
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = displayColor
                     )
                 } else {
                     // Show current player
                     val playerText = when {
                         isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "X's Turn" else "O's Turn"
                         isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "Red's Turn" else "Yellow's Turn"
-                        else -> stringResource(
-                            R.string.player_turn_format,
-                            if (gameState.currentPlayer == GameState.PLAYER_ONE) 
-                                stringResource(R.string.player_black)
-                            else 
-                                stringResource(R.string.player_white)
-                        )
+                        else -> {
+                            // Handle computer opponent case
+                            if (gameState.againstComputer) {
+                                if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                                    stringResource(R.string.your_turn)
+                                else 
+                                    stringResource(R.string.computer_thinking)
+                            } else {
+                                stringResource(
+                                    R.string.player_turn_format,
+                                    if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                                        stringResource(R.string.player_black)
+                                    else 
+                                        stringResource(R.string.player_white)
+                                )
+                            }
+                        }
                     }
                     
                     val playerColor = when {
@@ -209,13 +237,18 @@ fun GameScreen(
                             Color.White
                     }
                     
+                    // Ensure good contrast in dark theme
+                    val displayColor = if (isDarkTheme && (gameState.currentPlayer == GameState.PLAYER_TWO && !isConnect4 || 
+                                                          gameState.currentPlayer == GameState.PLAYER_ONE && !isConnect4 && !isXandO)) {
+                        MaterialTheme.colorScheme.onBackground
+                    } else {
+                        playerColor
+                    }
+                    
                     Text(
                         text = playerText,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (gameState.currentPlayer == GameState.PLAYER_TWO && !isConnect4) 
-                            MaterialTheme.colorScheme.onBackground // Make white text visible
-                        else 
-                            playerColor
+                        color = displayColor
                     )
                 }
             }
