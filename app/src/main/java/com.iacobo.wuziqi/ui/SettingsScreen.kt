@@ -39,6 +39,15 @@ fun SettingsScreen(
     // Get preferences as a direct value
     val preferences = viewModel.userPreferences.value
 
+    // Pre-translate the theme options within the composable context
+    val translatedOptions = ThemeMode.entries.associate { 
+        it.name to when (it) {
+            ThemeMode.SYSTEM -> stringResource(R.string.theme_system)
+            ThemeMode.LIGHT -> stringResource(R.string.theme_light)
+            ThemeMode.DARK -> stringResource(R.string.theme_dark)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -91,14 +100,7 @@ fun SettingsScreen(
                     selectedValue = preferences.themeMode.name,
                     options = ThemeMode.entries.map { it.name },
                     onOptionSelected = { viewModel.updateThemeMode(ThemeMode.valueOf(it)) },
-                    getOptionLabel = {
-                        when (it) {
-                            "SYSTEM" -> stringResource(R.string.theme_system)
-                            "LIGHT" -> stringResource(R.string.theme_light)
-                            "DARK" -> stringResource(R.string.theme_dark)
-                            else -> it
-                        }
-                    }
+                    getOptionLabel = { value -> translatedOptions[value] ?: value }
                 )
             }
             
