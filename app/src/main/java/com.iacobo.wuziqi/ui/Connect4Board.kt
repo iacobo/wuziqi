@@ -1,41 +1,33 @@
 package com.iacobo.wuziqi.ui
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.viewmodel.Position
-import kotlinx.coroutines.launch
 
 /**
- * Connect 4 board implementation (7x6 Easter Egg).
- * Features a traditional Connect 4 board with actual holes where you can see the 
- * pieces drop and stack behind the board.
+ * Connect 4 board implementation with actual holes and visible pieces.
+ * Uses a simpler approach with a background and foreground layer
+ * to make pieces visible through the holes.
  */
 @Composable
 fun Connect4Board(
     gameState: GameState,
     lastPlacedPosition: Position?,
-    isDarkTheme: Boolean,
     isGameFrozen: Boolean,
     onColumnClick: (Int) -> Unit
 ) {
     val boardColor = Color(0xFF1565C0) // Connect 4 blue board color
-    val backgroundColor = MaterialTheme.colorScheme.background
     val boardSize = gameState.boardSize
     val boardHeight = 6 // 6 rows for Connect 4 (7x6 grid)
     
@@ -45,23 +37,21 @@ fun Connect4Board(
     // Track if an animation is currently in progress
     val isAnimating = remember { mutableStateOf(false) }
     
-    // Use a coroutine scope for animations
-    val coroutineScope = rememberCoroutineScope()
-    
     Box(
         modifier = Modifier
             .aspectRatio(7f/6f) // Aspect ratio for 7x6 board
             .padding(16.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColor) // Use background color behind the board
+            .background(boardColor) // Board color as background
     ) {
-        // First layer: Pieces that will be visible through the holes
+        // Board content with pieces
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
+            // Create 6 rows
             for (row in 0 until boardHeight) {
                 Row(
                     modifier = Modifier
@@ -69,14 +59,17 @@ fun Connect4Board(
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    // Create 7 columns
                     for (col in 0 until boardSize) {
+                        // Create holes with pieces behind them
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .aspectRatio(1f),
+                                .aspectRatio(1f)
+                                .padding(4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Only render pieces that have been placed
+                            // Background piece (only visible if there's a piece in this position)
                             if (gameState.board[row][col] != GameState.EMPTY) {
                                 val cellPosition = row to col
                                 
@@ -111,12 +104,13 @@ fun Connect4Board(
                                     else -> Color(0xFFFFD700) // Gold/Yellow
                                 }
                                 
+                                // Piece that will be visible through the hole
                                 Box(
                                     modifier = Modifier
-                                        .size(35.dp)
+                                        .size(40.dp)
                                         .offset(
                                             y = if (yOffset < 1f) {
-                                                (-200 * (1f - yOffset)).dp
+                                                (-300 * (1f - yOffset)).dp
                                             } else {
                                                 0.dp
                                             }
@@ -125,25 +119,30 @@ fun Connect4Board(
                                         .background(pieceColor)
                                 )
                             }
+                            
+                            // Hole frame (a blue ring)
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(boardColor)
+                            ) {
+                                // Transparent hole (inner cut-out)
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .align(Alignment.Center)
+                                        .clip(CircleShape)
+                                        .background(Color.Transparent)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-        
-        // Second layer: Board with circular holes
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawBoard(
-                boardColor = boardColor,
-                backgroundColor = backgroundColor,
-                boardWidth = size.width,
-                boardHeight = size.height,
-                columns = boardSize,
-                rows = boardHeight
-            )
-        }
-        
-        // Third layer: Clickable column overlays
+
+        // Clickable column overlays
         Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -162,46 +161,6 @@ fun Connect4Board(
                         }
                 )
             }
-        }
-    }
-}
-
-/**
- * Draws the Connect 4 board with circular holes using Canvas.
- */
-private fun DrawScope.drawBoard(
-    boardColor: Color,
-    backgroundColor: Color,
-    boardWidth: Float,
-    boardHeight: Float,
-    columns: Int,
-    rows: Int
-) {
-    // Draw the base board
-    drawRect(color = boardColor)
-    
-    // Calculate circle size and spacing
-    val hPadding = boardWidth * 0.05f  // 5% horizontal padding
-    val vPadding = boardHeight * 0.05f // 5% vertical padding
-    val availableWidth = boardWidth - (2 * hPadding)
-    val availableHeight = boardHeight - (2 * vPadding)
-    
-    val cellWidth = availableWidth / columns
-    val cellHeight = availableHeight / rows
-    
-    val circleRadius = minOf(cellWidth, cellHeight) * 0.4f // 80% of the smaller dimension
-
-    // Draw the circular holes (where background shows through)
-    for (row in 0 until rows) {
-        for (col in 0 until columns) {
-            val centerX = hPadding + (col * cellWidth) + (cellWidth / 2)
-            val centerY = vPadding + (row * cellHeight) + (cellHeight / 2)
-            
-            drawCircle(
-                color = backgroundColor,
-                radius = circleRadius,
-                center = Offset(centerX, centerY)
-            )
         }
     }
 }
