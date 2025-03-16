@@ -6,10 +6,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Computer
-import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.ViewComfy
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Casino
-import androidx.compose.material.icons.filled.Games
+import androidx.compose.material.icons.filled.Grid3x3
+import androidx.compose.material.icons.filled.Margin
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -108,7 +108,7 @@ fun StartScreen(
             GameModeButton(
                 title = stringResource(R.string.custom_game),
                 description = stringResource(R.string.custom_game_desc),
-                icon = Icons.Default.Dashboard,
+                icon = Icons.Default.ViewComfy,
                 onClick = { showCustomDialog = true }
             )
             
@@ -119,7 +119,7 @@ fun StartScreen(
                 GameModeButton(
                     title = "X's & O's",
                     description = "Classic 3×3 tic-tac-toe game",
-                    icon = Icons.Default.Casino,
+                    icon = Icons.Default.Grid3x3,
                     onClick = { 
                         // Launch directly with 3x3 board and 3-in-a-row
                         currentMode = "tictactoe"
@@ -134,7 +134,7 @@ fun StartScreen(
                 GameModeButton(
                     title = "Connect 4",
                     description = "Classic Connect 4 game with vertical drops",
-                    icon = Icons.Default.Games,
+                    icon = Icons.Default.Margin,
                     onClick = { 
                         // Launch directly with 7x7 board and 4-in-a-row
                         currentMode = "connect4"
