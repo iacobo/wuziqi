@@ -52,7 +52,6 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
-                else -> isSystemInDarkTheme() // Fallback
             }
 
             // Use dynamic theme (Material You) if available, but with our theme colors

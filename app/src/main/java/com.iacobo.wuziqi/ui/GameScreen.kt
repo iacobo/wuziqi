@@ -3,9 +3,9 @@ package com.iacobo.wuziqi.ui
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -92,7 +92,7 @@ fun GameScreen(
                         enabled = moveHistory.isNotEmpty() && !isLoading
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.Undo,
                             contentDescription = stringResource(R.string.undo)
                         )
                     }
@@ -100,7 +100,7 @@ fun GameScreen(
                     // Reset button
                     IconButton(onClick = { viewModel.resetGame() }) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
+                            imageVector = Icons.Default.Replay,
                             contentDescription = stringResource(R.string.reset)
                         )
                     }
@@ -260,7 +260,6 @@ fun GameScreen(
                 when {
                     isXandO -> TicTacToeBoard(
                         gameState = gameState,
-                        lastPlacedPosition = lastPlacedPosition,
                         isDarkTheme = isDarkTheme,
                         isGameFrozen = winner != null || isLoading,
                         onTileClick = { row, col ->

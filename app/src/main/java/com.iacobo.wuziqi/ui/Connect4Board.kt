@@ -30,7 +30,6 @@ import com.iacobo.wuziqi.viewmodel.Position
 fun Connect4Board(
     gameState: GameState,
     lastPlacedPosition: Position?,
-    isDarkTheme: Boolean,
     isGameFrozen: Boolean,
     onColumnClick: (Int) -> Unit
 ) {

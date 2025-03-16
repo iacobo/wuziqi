@@ -43,7 +43,7 @@ class UserPreferencesRepository(private val context: Context) {
      * Get user preferences as a Flow.
      */
     val userPreferencesFlow: Flow<UserPreferences> = context.dataStore.data.map { preferences ->
-        val soundEnabled = preferences[SOUND_ENABLED] ?: false
+        val soundEnabled = preferences[SOUND_ENABLED] == true
         val themeMode = preferences[THEME_MODE]?.let { 
             try {
                 ThemeMode.valueOf(it)

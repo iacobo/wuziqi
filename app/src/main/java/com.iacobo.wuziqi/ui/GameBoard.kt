@@ -181,7 +181,6 @@ fun Tile(
 @Composable
 fun TicTacToeBoard(
     gameState: GameState,
-    lastPlacedPosition: Position?,
     isDarkTheme: Boolean,
     isGameFrozen: Boolean,
     onTileClick: (Int, Int) -> Unit
@@ -305,7 +304,6 @@ fun TicTacToeBoard(
                                             .padding(6.dp)
                                     ) {
                                         val canvasWidth = size.width
-                                        val canvasHeight = size.height
                                         val strokeWidth = 10f // Thicker stroke
                                         
                                         // Draw O as a circle with stroke using the secondary color passed from outside
