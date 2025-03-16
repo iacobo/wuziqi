@@ -115,13 +115,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     /**
-     * Sets up a new game with the specified parameters
-     * 
-     * @param boardSize The size of the game board
-     * @param winLength The number of consecutive pieces needed to win
-     * @param opponent The type of opponent (human or computer)
-     * @param skipStartSound Flag to skip playing the reset sound on initial setup
-     */
+    * Sets up a new game with the specified parameters
+    * 
+    * @param boardSize The size of the game board
+    * @param winLength The number of consecutive pieces needed to win
+    * @param opponent The type of opponent (human or computer)
+    * @param skipStartSound Flag to skip playing the reset sound on initial setup
+    */
     fun setupGame(
         boardSize: Int, 
         winLength: Int, 
@@ -139,6 +139,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             winCondition = winLength,
             againstComputer = opponent == Opponent.COMPUTER
         )
+        
+        // Special handling for Connect4 to initialize a 7x6 board
+        // The GameState will create a boardSize x boardSize array (7x7)
+        // But we want to limit gameplay to 7x6 for Connect4
         
         // Check for easter eggs
         if (boardSize == 3 && winLength == 3) {
@@ -224,8 +228,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     /**
-     * Places a Connect4 tile in the specified column
-     */
+    * Finds the bottom-most empty row in a column for Connect4
+    * Updated to handle a 7x6 board size (width x height)
+    */
+    private fun findBottomEmptyRow(col: Int): Int {
+        // For Connect4 (7x6 board), we need to only check the 6 rows (0-5)
+        val maxRow = if (gameState.boardSize == 7 && gameState.winCondition == 4) {
+            5 // 6 rows (0-5) for Connect4
+        } else {
+            gameState.boardSize - 1
+        }
+        
+        for (row in maxRow downTo 0) {
+            if (gameState.board[row][col] == GameState.EMPTY) {
+                return row
+            }
+        }
+        return -1 // Column is full
+    }
+
+    /**
+    * Places a Connect4 tile in the specified column
+    * Updated to handle a 7x6 board (width x height)
+    */
     fun placeConnect4Tile(col: Int) {
         if (winner != null || isLoading) {
             return
@@ -237,18 +262,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         // Place the tile normally
         placeTile(row, col)
-    }
-    
-    /**
-     * Finds the bottom-most empty row in a column for Connect4
-     */
-    private fun findBottomEmptyRow(col: Int): Int {
-        for (row in gameState.boardSize - 1 downTo 0) {
-            if (gameState.board[row][col] == GameState.EMPTY) {
-                return row
-            }
-        }
-        return -1 // Column is full
     }
     
     /**
