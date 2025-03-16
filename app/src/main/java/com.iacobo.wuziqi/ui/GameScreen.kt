@@ -160,17 +160,17 @@ fun GameScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else if (winner != null) {
-                    // Show winner with fireworks emoji
+                    // Show winner
                     val winnerText = when {
-                        isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins! 🎆" else "O Wins! 🎆"
-                        isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins! 🎆" else "Yellow Wins! 🎆"
+                        isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins!" else "O Wins!"
+                        isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins!" else "Yellow Wins!"
                         else -> {
                             // Handle computer opponent case
                             if (gameState.againstComputer) {
                                 if (winner == GameState.PLAYER_ONE) 
-                                    "You Won! 🎆"
+                                    stringResource(R.string.you_won)
                                 else 
-                                    "Computer Won! 🎆"
+                                    stringResource(R.string.computer_won)
                             } else {
                                 stringResource(
                                     R.string.winner_format,
@@ -216,9 +216,9 @@ fun GameScreen(
                             // Handle computer opponent case
                             if (gameState.againstComputer) {
                                 if (gameState.currentPlayer == GameState.PLAYER_ONE) 
-                                    "Your Turn"
+                                    stringResource(R.string.your_turn)
                                 else 
-                                    "Computer's Turn"
+                                    stringResource(R.string.computer_thinking)
                             } else {
                                 stringResource(
                                     R.string.player_turn_format,

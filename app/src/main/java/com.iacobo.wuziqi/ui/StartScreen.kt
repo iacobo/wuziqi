@@ -4,12 +4,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Apps
-import androidx.compose.material.icons.outlined.GridView
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.SmartToy
-import androidx.compose.material.icons.outlined.VerticalDistribute
-import androidx.compose.material.icons.outlined.ViewComfy
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.ViewModule
+import androidx.compose.material.icons.filled.VerticalAlign
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -93,11 +94,11 @@ fun StartScreen(
             
             Spacer(modifier = Modifier.height(48.dp))
             
-            // Standard Wuziqi icon
+            // Standard Wuziqi icon - using a common Apps icon that should be available
             GameModeButton(
                 title = stringResource(R.string.standard_wuziqi),
                 description = stringResource(R.string.standard_wuziqi_desc),
-                icon = Icons.Outlined.Apps,
+                icon = Icons.Filled.Apps,
                 onClick = { 
                     currentMode = "standard"
                     showOpponentDialog = true 
@@ -106,23 +107,23 @@ fun StartScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Custom game icon 
+            // Custom game icon - using ViewModule which is a common icon
             GameModeButton(
                 title = stringResource(R.string.custom_game),
                 description = stringResource(R.string.custom_game_desc),
-                icon = Icons.Outlined.ViewComfy, // Using ViewComfy instead of Resize which is unavailable
+                icon = Icons.Filled.ViewModule,
                 onClick = { showCustomDialog = true }
             )
-            
+                        
             // Easter Egg options (if discovered)
             if (discoveredEasterEggs.contains("tictactoe")) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Tic-tac-toe (X's and O's) icon
+                // Tic-tac-toe (X's and O's) icon - using GridOn which is a common icon
                 GameModeButton(
                     title = "X's & O's",
                     description = "Classic 3×3 tic-tac-toe game",
-                    icon = Icons.Outlined.GridView, // Using GridView instead of Grid3x3 which is unavailable
+                    icon = Icons.Filled.GridOn,
                     onClick = { 
                         // Launch directly with 3x3 board and 3-in-a-row
                         currentMode = "tictactoe"
@@ -133,11 +134,11 @@ fun StartScreen(
             if (discoveredEasterEggs.contains("connect4")) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Connect4 icon
+                // Connect4 icon - using VerticalAlign which is a common icon
                 GameModeButton(
                     title = "Connect 4",
                     description = "Classic Connect 4 game with vertical drops",
-                    icon = Icons.Outlined.VerticalDistribute, // Using VerticalDistribute instead of ShelfAutoHide which is unavailable
+                    icon = Icons.Filled.VerticalAlign,
                     onClick = { 
                         // Launch with 7x6 board and 4-in-a-row
                         currentMode = "connect4"
@@ -273,7 +274,6 @@ fun OpponentSelectionDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Changed "Play against human" to "Over the board"
                 Button(
                     onClick = { onSelectOpponent(Opponent.HUMAN) },
                     modifier = Modifier.fillMaxWidth(),
@@ -295,7 +295,7 @@ fun OpponentSelectionDialog(
                         Spacer(modifier = Modifier.width(16.dp))
                         
                         Text(
-                            text = "Over the board", // Changed from Play against human
+                            text = stringResource(R.string.play_against_human),
                             style = MaterialTheme.typography.bodyLarge
                         )
                     }
