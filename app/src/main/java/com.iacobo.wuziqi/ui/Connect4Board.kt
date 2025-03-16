@@ -16,7 +16,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.viewmodel.Position
-import kotlinx.coroutines.launch
 
 /**
  * Connect 4 board implementation (7x6 Easter Egg).

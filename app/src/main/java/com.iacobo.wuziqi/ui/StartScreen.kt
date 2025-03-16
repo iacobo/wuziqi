@@ -25,7 +25,6 @@ import com.iacobo.wuziqi.viewmodel.GameViewModel
  * Start screen that allows users to select game modes and options.
  * Now includes Easter egg games once discovered.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StartScreen(
     viewModel: GameViewModel,
@@ -38,8 +37,8 @@ fun StartScreen(
     var showOpponentDialog by remember { mutableStateOf(false) }
     var showCustomDialog by remember { mutableStateOf(false) }
     var currentMode by remember { mutableStateOf("standard") }
-    var boardSize by remember { mutableStateOf(15) }
-    var winLength by remember { mutableStateOf(5) }
+    var boardSize by remember { mutableIntStateOf(15) }
+    var winLength by remember { mutableIntStateOf(5) }
     
     // Determine AI support for different game modes
     val aiSupportedModes = remember {
@@ -351,8 +350,8 @@ fun CustomGameDialog(
     onDismiss: () -> Unit,
     onStartGame: (boardSize: Int, winLength: Int) -> Unit
 ) {
-    var boardSize by remember { mutableStateOf(15) }
-    var winLength by remember { mutableStateOf(5) }
+    var boardSize by remember { mutableIntStateOf(15) }
+    var winLength by remember { mutableIntStateOf(5) }
     
     // Board size options: 3, 5, 7, 9, 11, 13, 15, 17, 19
     val boardSizeOptions = listOf(3, 5, 7, 9, 11, 13, 15, 17, 19)
@@ -360,7 +359,7 @@ fun CustomGameDialog(
     
     // Find the closest option in boardSizeOptions to the current boardSize
     val closestBoardSizeIndex = boardSizeOptions.indexOfFirst { it == boardSize }
-        .takeIf { it != -1 } ?: boardSizeOptions.indexOfFirst { it > boardSize } - 1
+        .takeIf { it != -1 } ?: (boardSizeOptions.indexOfFirst { it > boardSize } - 1)
     
     // Dynamically calculate win length options based on board size
     val minWinLength = 3

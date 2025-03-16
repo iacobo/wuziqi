@@ -15,6 +15,7 @@ import com.iacobo.wuziqi.ui.Opponent
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Random
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -501,7 +502,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         // Otherwise, prioritize columns near the center
-        val colPriorities = (0 until boardSize).sortedBy { Math.abs(it - centerCol) }
+        val colPriorities = (0 until boardSize).sortedBy { abs(it - centerCol) }
         for (col in colPriorities) {
             if (findBottomEmptyRow(col) != -1) {
                 placeConnect4Tile(col)

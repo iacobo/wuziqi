@@ -4,12 +4,18 @@ import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.core.content.edit
 
 /**
  * Represents the state of a Wuziqi game.
  * Manages the board, current player, and win condition checking.
  */
-class GameState {
+class GameState// Constructor with custom board size and win condition
+    (
+    var boardSize: Int = DEFAULT_BOARD_SIZE,
+    var winCondition: Int = DEFAULT_WIN_CONDITION,
+    var againstComputer: Boolean = false
+) {
     companion object {
         const val EMPTY = 0
         const val PLAYER_ONE = 1 // Black
@@ -29,20 +35,13 @@ class GameState {
 
     var board: Array<IntArray>
     var currentPlayer: Int = PLAYER_ONE
-    var boardSize: Int = DEFAULT_BOARD_SIZE
-    var winCondition: Int = DEFAULT_WIN_CONDITION
-    var againstComputer: Boolean = false
 
     // Initialize with default values
     init {
         board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
     }
-    
-    // Constructor with custom board size and win condition
-    constructor(boardSize: Int = DEFAULT_BOARD_SIZE, winCondition: Int = DEFAULT_WIN_CONDITION, againstComputer: Boolean = false) {
-        this.boardSize = boardSize
-        this.winCondition = winCondition
-        this.againstComputer = againstComputer
+
+    init {
         this.board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
     }
 
@@ -151,24 +150,24 @@ class GameState {
      */
     suspend fun saveState(context: Context) = withContext(Dispatchers.IO) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val editor = prefs.edit()
-        
-        // Convert board to string
-        val boardStr = StringBuilder()
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                boardStr.append(board[row][col])
-                if (col < boardSize - 1) boardStr.append(",")
+        prefs.edit {
+
+            // Convert board to string
+            val boardStr = StringBuilder()
+            for (row in 0 until boardSize) {
+                for (col in 0 until boardSize) {
+                    boardStr.append(board[row][col])
+                    if (col < boardSize - 1) boardStr.append(",")
+                }
+                if (row < boardSize - 1) boardStr.append(";")
             }
-            if (row < boardSize - 1) boardStr.append(";")
+
+            putString(KEY_BOARD, boardStr.toString())
+            putInt(KEY_CURRENT_PLAYER, currentPlayer)
+            putInt(KEY_BOARD_SIZE, boardSize)
+            putInt(KEY_WIN_CONDITION, winCondition)
+            putBoolean(KEY_AGAINST_COMPUTER, againstComputer)
         }
-        
-        editor.putString(KEY_BOARD, boardStr.toString())
-        editor.putInt(KEY_CURRENT_PLAYER, currentPlayer)
-        editor.putInt(KEY_BOARD_SIZE, boardSize)
-        editor.putInt(KEY_WIN_CONDITION, winCondition)
-        editor.putBoolean(KEY_AGAINST_COMPUTER, againstComputer)
-        editor.apply()
     }
     
     /**
@@ -203,7 +202,7 @@ class GameState {
      */
     suspend fun clearSavedState(context: Context) = withContext(Dispatchers.IO) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().remove(KEY_BOARD).apply()
+        prefs.edit { remove(KEY_BOARD) }
     }
     
     /**
@@ -221,7 +220,7 @@ class GameState {
         fun addDiscoveredEasterEgg(eggName: String) {
             val currentEggs = getDiscoveredEasterEggs().toMutableSet()
             currentEggs.add(eggName)
-            prefs.edit().putStringSet(KEY_EASTER_EGGS, currentEggs).apply()
+            prefs.edit { putStringSet(KEY_EASTER_EGGS, currentEggs) }
         }
     }
 }

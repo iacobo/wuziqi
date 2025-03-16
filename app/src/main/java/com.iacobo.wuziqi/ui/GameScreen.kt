@@ -20,7 +20,6 @@ import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.ThemeMode
 import com.iacobo.wuziqi.viewmodel.DRAW
 import com.iacobo.wuziqi.viewmodel.GameViewModel
-import com.iacobo.wuziqi.viewmodel.Position
 
 /**
  * Main game screen composable.

@@ -1,7 +1,6 @@
 package com.iacobo.wuziqi.viewmodel
 
 import android.app.Application
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
@@ -9,10 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.iacobo.wuziqi.data.ThemeMode
 import com.iacobo.wuziqi.data.UserPreferences
 import com.iacobo.wuziqi.data.UserPreferencesRepository
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
