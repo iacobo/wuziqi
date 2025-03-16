@@ -180,12 +180,11 @@ fun GameScreen(
                     }
                     
                     val winnerColor = when {
-                        isXandO -> if (winner == GameState.PLAYER_ONE) Color.Black else Color.White
                         isConnect4 -> if (winner == GameState.PLAYER_ONE) Color.Red else Color(0xFFFFD700) // Gold
                         else -> if (winner == GameState.PLAYER_ONE) 
-                            Color.Black
+                            MaterialTheme.colorScheme.primary
                         else 
-                            Color.White
+                            MaterialTheme.colorScheme.secondary
                     }
                     
                     // Ensure good contrast in dark theme
@@ -228,12 +227,11 @@ fun GameScreen(
                     }
                     
                     val playerColor = when {
-                        isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Black else Color.White
                         isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Red else Color(0xFFFFD700) // Gold
                         else -> if (gameState.currentPlayer == GameState.PLAYER_ONE) 
-                            Color.Black
+                            MaterialTheme.colorScheme.primary
                         else 
-                            Color.White
+                            MaterialTheme.colorScheme.secondary
                     }
                     
                     // Ensure good contrast in dark theme

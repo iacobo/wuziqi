@@ -277,7 +277,7 @@ fun TicTacToeBoard(
                                         
                                         // Draw X using two lines
                                         drawLine(
-                                            color = Color.Black, // Pure black like standard pieces
+                                            color = MaterialTheme.colorScheme.primary, // Pure black like standard pieces
                                             start = Offset(0f, 0f),
                                             end = Offset(canvasWidth, canvasHeight),
                                             strokeWidth = strokeWidth,
@@ -285,7 +285,7 @@ fun TicTacToeBoard(
                                         )
                                         
                                         drawLine(
-                                            color = Color.Black,
+                                            color = MaterialTheme.colorScheme.primary,
                                             start = Offset(canvasWidth, 0f),
                                             end = Offset(0f, canvasHeight),
                                             strokeWidth = strokeWidth,
@@ -306,7 +306,7 @@ fun TicTacToeBoard(
                                         
                                         // Draw O as a circle with stroke
                                         drawCircle(
-                                            color = Color.White, // Pure white like standard pieces
+                                            color = MaterialTheme.colorScheme.secondary, // Pure white like standard pieces
                                             radius = (canvasWidth / 2) - (strokeWidth / 2),
                                             style = Stroke(width = strokeWidth)
                                         )
