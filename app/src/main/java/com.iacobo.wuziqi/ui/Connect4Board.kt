@@ -55,17 +55,9 @@ fun Connect4Board(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Column highlight animation (drawn behind the board)
-            if (lastPlacedPosition != null && !isAnimating.value) {
-                val highlightCol = lastPlacedPosition.col
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(1f.div(boardSize).times(100).dp)
-                        .offset(x = (highlightCol * (1f.div(boardSize) * 100)).dp)
-                        .background(Color.LightGray.copy(alpha = 0.2f))
-                )
-            }
+            // FIX: Remove column highlight animation for Connect4
+            // Column highlight animation code removed
+            
             // Game pieces are positioned here and will be visible through the holes
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -172,8 +164,9 @@ fun Connect4Board(
                     val boardWidth = size.width
                     val boardHeight = size.height
                     
-                    val hPadding = boardWidth * 0.05f // 5% padding
-                    val vPadding = boardHeight * 0.05f // 5% padding
+                    // FIX: Increase padding to better align pieces with holes
+                    val hPadding = boardWidth * 0.1f // Increased from 0.05f to 0.1f (10% padding)
+                    val vPadding = boardHeight * 0.1f // Increased from 0.05f to 0.1f (10% padding)
                     
                     val cellWidth = (boardWidth - (2 * hPadding)) / columns
                     val cellHeight = (boardHeight - (2 * vPadding)) / rows

@@ -178,6 +178,9 @@ fun Tile(
  * Tic-Tac-Toe board implementation (3x3 Easter Egg).
  * Now with transparent background and no edge lines.
  */
+// The issue is in the TicTacToeBoard function in GameBoard.kt
+// Here's the complete fix for the function:
+
 @Composable
 fun TicTacToeBoard(
     gameState: GameState,
@@ -188,7 +191,7 @@ fun TicTacToeBoard(
     val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
     val gridLineWidth = 4.dp // Thicker grid lines for tic-tac-toe
     
-    // Get color scheme values from MaterialTheme upfront in the Composable context
+    // Get color scheme values directly from MaterialTheme
     val primaryColor = MaterialTheme.colorScheme.primary
     val secondaryColor = MaterialTheme.colorScheme.secondary
     
@@ -196,7 +199,6 @@ fun TicTacToeBoard(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(16.dp)
-            // Transparent background
             .background(Color.Transparent)
     ) {
         // Draw just the internal grid lines, not the outer edges
@@ -268,17 +270,17 @@ fun TicTacToeBoard(
                         ) {
                             when (gameState.board[row][col]) {
                                 GameState.PLAYER_ONE -> {
-                                    // Draw X with lines - using theme primary color
+                                    // Draw X with fixed, highly visible colors
                                     Canvas(
                                         modifier = Modifier
-                                            .size(60.dp) // Larger size
+                                            .size(60.dp)
                                             .padding(6.dp)
                                     ) {
                                         val canvasWidth = size.width
                                         val canvasHeight = size.height
-                                        val strokeWidth = 14f // Increased from 10f to make X more bold
+                                        val strokeWidth = 14f
                                         
-                                        // Draw X using two lines with the primary color passed from outside
+                                        // Use the primary color from MaterialTheme directly
                                         drawLine(
                                             color = primaryColor,
                                             start = Offset(0f, 0f),
@@ -297,16 +299,16 @@ fun TicTacToeBoard(
                                     }
                                 }
                                 GameState.PLAYER_TWO -> {
-                                    // Draw O as a circle - using theme secondary color
+                                    // Draw O with fixed, highly visible colors
                                     Canvas(
                                         modifier = Modifier
-                                            .size(60.dp) // Larger size
+                                            .size(60.dp)
                                             .padding(6.dp)
                                     ) {
                                         val canvasWidth = size.width
-                                        val strokeWidth = 10f // Thicker stroke
+                                        val strokeWidth = 10f
                                         
-                                        // Draw O as a circle with stroke using the secondary color passed from outside
+                                        // Use the secondary color from MaterialTheme directly
                                         drawCircle(
                                             color = secondaryColor,
                                             radius = (canvasWidth / 2) - (strokeWidth / 2),
