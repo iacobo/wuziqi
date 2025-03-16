@@ -2,7 +2,6 @@ package com.iacobo.wuziqi.ui
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -19,7 +18,7 @@ import com.iacobo.wuziqi.viewmodel.Position
 import kotlinx.coroutines.launch
 
 /**
- * Connect 4 board implementation (7x6 Easter Egg).
+ * Connect 4 board implementation (7x7 Easter Egg).
  * This is a separate file to fix compilation issues.
  */
 @Composable
@@ -33,8 +32,7 @@ fun Connect4Board(
     val boardColor = Color(0xFF1565C0) // Connect 4 blue board color
     val emptySlotColor = MaterialTheme.colorScheme.background
     val pieceSize = 36.dp
-    val boardWidth = gameState.boardSize
-    val boardHeight = 6 // 6 rows for Connect4 (7x6 grid)
+    val boardSize = gameState.boardSize
     
     // Use a coroutine scope
     val coroutineScope = rememberCoroutineScope()
@@ -44,20 +42,20 @@ fun Connect4Board(
     
     Box(
         modifier = Modifier
-            .aspectRatio(7f/6f) // Aspect ratio for 7x6 board
+            .aspectRatio(1f)
             .padding(16.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(boardColor)
     ) {
-        // Main grid with pieces BEHIND the holes
+        // Main grid with pieces
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(8.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Rows (only use 6 rows for Connect4)
-            for (row in 0 until boardHeight) {
+            // Rows
+            for (row in 0 until boardSize) {
                 Row(
                     modifier = Modifier
                         .weight(1f)
@@ -65,7 +63,7 @@ fun Connect4Board(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     // Columns
-                    for (col in 0 until boardWidth) {
+                    for (col in 0 until boardSize) {
                         val cellPosition = row to col
                         
                         // Create animation if it's a newly placed piece
@@ -96,7 +94,15 @@ fun Connect4Board(
                                 .padding(4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Game piece (if not empty) - this appears BEHIND the holes
+                            // Empty slot (always visible)
+                            Box(
+                                modifier = Modifier
+                                    .size(pieceSize)
+                                    .clip(CircleShape)
+                                    .background(emptySlotColor)
+                            )
+                            
+                            // Game piece (if not empty)
                             if (gameState.board[row][col] != GameState.EMPTY) {
                                 val pieceColor = when (gameState.board[row][col]) {
                                     GameState.PLAYER_ONE -> Color.Red
@@ -108,7 +114,7 @@ fun Connect4Board(
                                         .size(pieceSize)
                                         .offset(
                                             y = if (yOffset < 1f) {
-                                                (-pieceSize.value * (1f - yOffset) * boardHeight).dp
+                                                (-pieceSize.value * (1f - yOffset)).dp
                                             } else {
                                                 0.dp
                                             }
@@ -123,52 +129,11 @@ fun Connect4Board(
             }
         }
         
-        // Overlay with "holes" (using transparent circles with borders)
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Rows of holes
-            for (row in 0 until boardHeight) {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Columns of holes
-                    for (col in 0 until boardWidth) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Cut-out hole (transparent circle with border)
-                            Box(
-                                modifier = Modifier
-                                    .size(pieceSize)
-                                    .border(
-                                        width = 2.dp,
-                                        color = boardColor.copy(alpha = 0.7f),
-                                        shape = CircleShape
-                                    )
-                                    .clip(CircleShape)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Clickable columns (on top)
+        // Clickable columns
         Row(
             modifier = Modifier.fillMaxSize()
         ) {
-            for (col in 0 until boardWidth) {
+            for (col in 0 until boardSize) {
                 Box(
                     modifier = Modifier
                         .weight(1f)

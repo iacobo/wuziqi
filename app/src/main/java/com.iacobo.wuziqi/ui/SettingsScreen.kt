@@ -93,15 +93,15 @@ fun SettingsScreen(
                     onOptionSelected = { viewModel.updateThemeMode(ThemeMode.valueOf(it)) },
                     getOptionLabel = {
                         when (it) {
-                            "SYSTEM" -> stringResource(R.string.theme_system)
-                            "LIGHT" -> stringResource(R.string.theme_light)
-                            "DARK" -> stringResource(R.string.theme_dark)
+                            "SYSTEM" -> "System Default"
+                            "LIGHT" -> "Light"
+                            "DARK" -> "Dark"
                             else -> it
                         }
                     }
                 )
             }
-                        
+            
             // Language selector
             item {
                 DropdownPreference(
@@ -228,7 +228,7 @@ fun SwitchPreference(
 }
 
 /**
- * Dropdown preference item with icon - optimized version with updated labels.
+ * Dropdown preference item with icon - optimized version.
  */
 @Composable
 fun DropdownPreference(
