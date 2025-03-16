@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.viewmodel.Position
@@ -21,7 +20,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Connect 4 board implementation (7x6 Easter Egg).
- * Improved with transparent overlay and falling animations.
+ * This is a separate file to fix compilation issues.
  */
 @Composable
 fun Connect4Board(
@@ -32,9 +31,10 @@ fun Connect4Board(
     onColumnClick: (Int) -> Unit
 ) {
     val boardColor = Color(0xFF1565C0) // Connect 4 blue board color
-    val boardWidth = gameState.boardSize
-    val boardHeight = 6 // Changed to 6 rows instead of 7
+    val emptySlotColor = MaterialTheme.colorScheme.background
     val pieceSize = 36.dp
+    val boardWidth = gameState.boardSize
+    val boardHeight = 6 // 6 rows for Connect4 (7x6 grid)
     
     // Use a coroutine scope
     val coroutineScope = rememberCoroutineScope()
@@ -44,19 +44,19 @@ fun Connect4Board(
     
     Box(
         modifier = Modifier
-            .aspectRatio(7f/6f) // Adjusted aspect ratio for 7x6 board
+            .aspectRatio(7f/6f) // Aspect ratio for 7x6 board
             .padding(16.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(boardColor)
     ) {
-        // Main grid with pieces (BEHIND the overlay)
+        // Main grid with pieces BEHIND the holes
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(8.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Rows
+            // Rows (only use 6 rows for Connect4)
             for (row in 0 until boardHeight) {
                 Row(
                     modifier = Modifier
@@ -96,7 +96,7 @@ fun Connect4Board(
                                 .padding(4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Game piece (if not empty) - Now BELOW the holes
+                            // Game piece (if not empty) - this appears BEHIND the holes
                             if (gameState.board[row][col] != GameState.EMPTY) {
                                 val pieceColor = when (gameState.board[row][col]) {
                                     GameState.PLAYER_ONE -> Color.Red
@@ -123,7 +123,7 @@ fun Connect4Board(
             }
         }
         
-        // Overlay with "holes" (using CircleShape cutouts)
+        // Overlay with "holes" (using transparent circles with borders)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -147,17 +147,16 @@ fun Connect4Board(
                                 .padding(4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Cut-out hole (transparent circle)
+                            // Cut-out hole (transparent circle with border)
                             Box(
                                 modifier = Modifier
                                     .size(pieceSize)
-                                    .clip(CircleShape)
-                                    .background(Color.Transparent)
                                     .border(
                                         width = 2.dp,
                                         color = boardColor.copy(alpha = 0.7f),
                                         shape = CircleShape
                                     )
+                                    .clip(CircleShape)
                             )
                         }
                     }

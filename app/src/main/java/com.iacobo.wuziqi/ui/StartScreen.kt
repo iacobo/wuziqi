@@ -3,14 +3,7 @@ package com.iacobo.wuziqi.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.GridOn
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material.icons.filled.ViewModule
-import androidx.compose.material.icons.filled.VerticalAlign
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -274,62 +267,18 @@ fun OpponentSelectionDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = { onSelectOpponent(Opponent.HUMAN) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        
-                        Spacer(modifier = Modifier.width(16.dp))
-                        
-                        Text(
-                            text = stringResource(R.string.play_against_human),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
+                OpponentButton(
+                    title = stringResource(R.string.play_against_human), // This string now translates to "Over the board"
+                    icon = Icons.Default.Person,
+                    onClick = { onSelectOpponent(Opponent.HUMAN) }
+                )
                 
-                Button(
+                OpponentButton(
+                    title = stringResource(R.string.play_against_computer),
+                    icon = Icons.Default.Computer,
                     onClick = { onSelectOpponent(Opponent.COMPUTER) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    ),
                     enabled = isAISupported
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.SmartToy,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        
-                        Spacer(modifier = Modifier.width(16.dp))
-                        
-                        Text(
-                            text = stringResource(R.string.play_against_computer),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
+                )
                 
                 if (!isAISupported) {
                     Text(

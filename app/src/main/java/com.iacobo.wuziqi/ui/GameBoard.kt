@@ -276,7 +276,7 @@ fun TicTacToeBoard(
                                     ) {
                                         val canvasWidth = size.width
                                         val canvasHeight = size.height
-                                        val strokeWidth = 14f // Thicker lines
+                                        val strokeWidth = 14f // Increased from 10f to make X more bold
                                         
                                         // Draw X using two lines
                                         drawLine(
@@ -320,15 +320,14 @@ fun TicTacToeBoard(
                                 }
                             }
                             
+                            // Subtle indicator for last placed position (instead of box highlight)
                             if (lastPlacedPosition?.row == row && lastPlacedPosition.col == col) {
-                                // Add a subtle glow instead of a box
                                 Box(
                                     modifier = Modifier
-                                        .matchParentSize()
-                                        .padding(4.dp)
+                                        .size(60.dp)
                                         .background(
                                             color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
-                                            shape = RoundedCornerShape(4.dp)
+                                            shape = CircleShape
                                         )
                                 )
                             }

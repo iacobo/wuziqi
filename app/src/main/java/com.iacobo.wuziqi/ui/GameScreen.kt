@@ -3,10 +3,10 @@ package com.iacobo.wuziqi.ui
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,9 +60,6 @@ fun GameScreen(
         ThemeMode.DARK -> true
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
-    
-    // For text color adaptation in dark theme
-    val textColorScheme = MaterialTheme.colorScheme
 
     Scaffold(
         topBar = {
@@ -96,7 +93,7 @@ fun GameScreen(
                         enabled = moveHistory.isNotEmpty() && !isLoading
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Undo,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.undo)
                         )
                     }
@@ -104,7 +101,7 @@ fun GameScreen(
                     // Reset button
                     IconButton(onClick = { viewModel.resetGame() }) {
                         Icon(
-                            imageVector = Icons.Default.Replay,
+                            imageVector = Icons.Default.Refresh,
                             contentDescription = stringResource(R.string.reset)
                         )
                     }
@@ -160,10 +157,10 @@ fun GameScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else if (winner != null) {
-                    // Show winner
+                    // Show winner with fireworks emoji
                     val winnerText = when {
-                        isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins!" else "O Wins!"
-                        isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins!" else "Yellow Wins!"
+                        isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins! 🎆" else "O Wins! 🎆"
+                        isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins! 🎆" else "Yellow Wins! 🎆"
                         else -> {
                             // Handle computer opponent case
                             if (gameState.againstComputer) {
@@ -194,8 +191,8 @@ fun GameScreen(
                     
                     // Ensure good contrast in dark theme
                     val displayColor = if (isDarkTheme && (winner == GameState.PLAYER_TWO && !isConnect4 || 
-                                                           winner == GameState.PLAYER_ONE && !isConnect4 && !isXandO)) {
-                        textColorScheme.onBackground
+                                                        winner == GameState.PLAYER_ONE && !isConnect4 && !isXandO)) {
+                        MaterialTheme.colorScheme.onBackground
                     } else {
                         winnerColor
                     }
@@ -243,7 +240,7 @@ fun GameScreen(
                     // Ensure good contrast in dark theme
                     val displayColor = if (isDarkTheme && (gameState.currentPlayer == GameState.PLAYER_TWO && !isConnect4 || 
                                                           gameState.currentPlayer == GameState.PLAYER_ONE && !isConnect4 && !isXandO)) {
-                        textColorScheme.onBackground
+                        MaterialTheme.colorScheme.onBackground
                     } else {
                         playerColor
                     }

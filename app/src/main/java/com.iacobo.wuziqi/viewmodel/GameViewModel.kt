@@ -263,7 +263,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Place the tile normally
         placeTile(row, col)
     }
-    
+        
     /**
      * Makes a computer move based on the current game type
      */
