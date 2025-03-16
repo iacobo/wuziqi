@@ -189,6 +189,10 @@ fun TicTacToeBoard(
     val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
     val gridLineWidth = 4.dp // Thicker grid lines for tic-tac-toe
     
+    // Get color scheme values from MaterialTheme upfront in the Composable context
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    
     Box(
         modifier = Modifier
             .aspectRatio(1f)
@@ -265,7 +269,7 @@ fun TicTacToeBoard(
                         ) {
                             when (gameState.board[row][col]) {
                                 GameState.PLAYER_ONE -> {
-                                    // Draw X with lines - using BLACK to match standard pieces
+                                    // Draw X with lines - using theme primary color
                                     Canvas(
                                         modifier = Modifier
                                             .size(60.dp) // Larger size
@@ -275,9 +279,9 @@ fun TicTacToeBoard(
                                         val canvasHeight = size.height
                                         val strokeWidth = 14f // Increased from 10f to make X more bold
                                         
-                                        // Draw X using two lines
+                                        // Draw X using two lines with the primary color passed from outside
                                         drawLine(
-                                            color = MaterialTheme.colorScheme.primary, // Pure black like standard pieces
+                                            color = primaryColor,
                                             start = Offset(0f, 0f),
                                             end = Offset(canvasWidth, canvasHeight),
                                             strokeWidth = strokeWidth,
@@ -285,7 +289,7 @@ fun TicTacToeBoard(
                                         )
                                         
                                         drawLine(
-                                            color = MaterialTheme.colorScheme.primary,
+                                            color = primaryColor,
                                             start = Offset(canvasWidth, 0f),
                                             end = Offset(0f, canvasHeight),
                                             strokeWidth = strokeWidth,
@@ -294,7 +298,7 @@ fun TicTacToeBoard(
                                     }
                                 }
                                 GameState.PLAYER_TWO -> {
-                                    // Draw O as a circle - using WHITE to match standard pieces
+                                    // Draw O as a circle - using theme secondary color
                                     Canvas(
                                         modifier = Modifier
                                             .size(60.dp) // Larger size
@@ -304,9 +308,9 @@ fun TicTacToeBoard(
                                         val canvasHeight = size.height
                                         val strokeWidth = 10f // Thicker stroke
                                         
-                                        // Draw O as a circle with stroke
+                                        // Draw O as a circle with stroke using the secondary color passed from outside
                                         drawCircle(
-                                            color = MaterialTheme.colorScheme.secondary, // Pure white like standard pieces
+                                            color = secondaryColor,
                                             radius = (canvasWidth / 2) - (strokeWidth / 2),
                                             style = Stroke(width = strokeWidth)
                                         )
@@ -315,18 +319,6 @@ fun TicTacToeBoard(
                                 else -> {
                                     // Empty cell
                                 }
-                            }
-                            
-                            // Subtle indicator for last placed position (instead of box highlight)
-                            if (lastPlacedPosition?.row == row && lastPlacedPosition.col == col) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(60.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
-                                            shape = CircleShape
-                                        )
-                                )
                             }
                         }
                     }

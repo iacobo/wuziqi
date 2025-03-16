@@ -30,19 +30,20 @@ import com.iacobo.wuziqi.viewmodel.Position
 fun Connect4Board(
     gameState: GameState,
     lastPlacedPosition: Position?,
+    isDarkTheme: Boolean,
     isGameFrozen: Boolean,
     onColumnClick: (Int) -> Unit
 ) {
     val boardColor = Color(0xFF1565C0) // Connect 4 blue board color
     val boardSize = gameState.boardSize
     val boardHeight = 6 // 6 rows for Connect 4 (7x6 grid)
-
+    
     // Track animation states for "dropping" pieces
     val droppingAnimations = remember { mutableStateMapOf<Pair<Int, Int>, Animatable<Float, AnimationVector1D>>() }
-
+    
     // Track if an animation is currently in progress
     val isAnimating = remember { mutableStateOf(false) }
-
+    
     Box(
         modifier = Modifier
             .aspectRatio(7f/6f) // Aspect ratio for 7x6 board
@@ -55,6 +56,17 @@ fun Connect4Board(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            // Column highlight animation (drawn behind the board)
+            if (lastPlacedPosition != null && !isAnimating.value) {
+                val highlightCol = lastPlacedPosition.col
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(1f.div(boardSize).times(100).dp)
+                        .offset(x = (highlightCol * (1f.div(boardSize) * 100)).dp)
+                        .background(Color.LightGray.copy(alpha = 0.2f))
+                )
+            }
             // Game pieces are positioned here and will be visible through the holes
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -75,15 +87,15 @@ fun Connect4Board(
                                 // Only render pieces that exist in the game state
                                 if (gameState.board[row][col] != GameState.EMPTY) {
                                     val cellPosition = row to col
-
+                                    
                                     // Set up animation for newly placed pieces
                                     LaunchedEffect(key1 = lastPlacedPosition, key2 = gameState.board[row][col]) {
-                                        if (lastPlacedPosition?.col == col &&
+                                        if (lastPlacedPosition?.col == col && 
                                             !droppingAnimations.containsKey(cellPosition)) {
                                             // Create new animation
                                             droppingAnimations[cellPosition] = Animatable(0f)
                                             isAnimating.value = true
-
+                                            
                                             // Animate directly in a LaunchedEffect
                                             droppingAnimations[cellPosition]?.animateTo(
                                                 targetValue = 1f,
@@ -92,22 +104,22 @@ fun Connect4Board(
                                                     easing = BounceEasing
                                                 )
                                             )
-
+                                            
                                             // Animation complete
                                             isAnimating.value = false
                                         }
                                     }
-
+                                    
                                     // Calculate animation offset
                                     val yOffset = droppingAnimations[cellPosition]?.value ?: 1f
-
+                                    
                                     // Determine piece color
                                     val pieceColor = when (gameState.board[row][col]) {
                                         GameState.PLAYER_ONE -> Color.Red
                                         else -> Color(0xFFFFD700) // Gold/Yellow
                                     }
-
-                                    // The actual game piece with animation
+                                    
+                                    // The actual game piece with animation and edge ring
                                     Box(
                                         modifier = Modifier
                                             .size(32.dp)
@@ -119,8 +131,23 @@ fun Connect4Board(
                                                 }
                                             )
                                             .clip(CircleShape)
-                                            .background(pieceColor)
-                                    )
+                                            .background(
+                                                // Add a slightly darker ring effect with a gradient 
+                                                color = when (gameState.board[row][col]) {
+                                                    GameState.PLAYER_ONE -> Color.Red.copy(alpha = 0.85f) // Lighter red for main piece
+                                                    else -> Color(0xFFFFD700).copy(alpha = 0.85f) // Lighter gold for main piece
+                                                }
+                                            )
+                                    ) {
+                                        // Inner part of piece (creates a ring effect)
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .align(Alignment.Center)
+                                                .clip(CircleShape)
+                                                .background(pieceColor)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -128,7 +155,7 @@ fun Connect4Board(
                 }
             }
         }
-
+        
         // Layer 2: Board with cutout holes
         Box(
             modifier = Modifier
@@ -139,27 +166,27 @@ fun Connect4Board(
                 .background(boardColor)
                 .drawWithContent {
                     drawContent()
-
+                    
                     // Define hole dimensions
                     val columns = boardSize
                     val rows = boardHeight
                     val boardWidth = size.width
                     val boardHeight = size.height
-
+                    
                     val hPadding = boardWidth * 0.05f // 5% padding
                     val vPadding = boardHeight * 0.05f // 5% padding
-
+                    
                     val cellWidth = (boardWidth - (2 * hPadding)) / columns
                     val cellHeight = (boardHeight - (2 * vPadding)) / rows
-
+                    
                     val holeRadius = minOf(cellWidth, cellHeight) * 0.4f
-
+                    
                     // Cut out holes from the board
                     for (row in 0 until rows) {
                         for (col in 0 until columns) {
                             val centerX = hPadding + (col * cellWidth) + (cellWidth / 2)
                             val centerY = vPadding + (row * cellHeight) + (cellHeight / 2)
-
+                            
                             // Draw a circle that will be cut out with BlendMode.DstOut
                             drawCircle(
                                 color = Color.White, // Color doesn't matter for cutout
@@ -171,7 +198,7 @@ fun Connect4Board(
                     }
                 }
         )
-
+        
         // Layer 3: Clickable column overlays (invisible)
         Row(
             modifier = Modifier.fillMaxSize()

@@ -246,7 +246,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
     * Places a Connect4 tile in the specified column
-    * Updated to handle a 7x6 board (width x height)
+    * Updated to handle a 7x6 board (width x height) and check for draw conditions
     */
     fun placeConnect4Tile(col: Int) {
         if (winner != null || isLoading) {
@@ -258,7 +258,67 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (row == -1) return // Column is full
         
         // Place the tile normally
-        placeTile(row, col)
+        val currentPlayer = gameState.currentPlayer
+
+        // Save the move to history before making it
+        moveHistory = moveHistory + Move(row, col, currentPlayer)
+
+        // Place the tile
+        gameState.placeTile(row, col)
+        lastPlacedPosition = Position(row, col)
+
+        // Play sound effect if enabled
+        if (soundEnabled) {
+            playTileSound()
+        }
+
+        // Check for win
+        if (gameState.checkWin(row, col, currentPlayer)) {
+            winner = currentPlayer
+
+            // Play win sound if enabled
+            if (soundEnabled) {
+                playWinSound()
+            }
+            
+            // Clear saved state if game is over
+            viewModelScope.launch {
+                gameState.clearSavedState(getApplication())
+            }
+            
+            return
+        }
+        
+        // Check for draw - for Connect4, we need to check if all columns are full
+        // Since we have a 7x6 board, we need to check if all 42 spaces are filled
+        var isFull = true
+        for (c in 0 until gameState.boardSize) {
+            if (findBottomEmptyRow(c) != -1) {
+                isFull = false
+                break
+            }
+        }
+        
+        if (isFull) {
+            winner = DRAW
+            
+            // Clear saved state if game is over
+            viewModelScope.launch {
+                gameState.clearSavedState(getApplication())
+            }
+            
+            return
+        }
+        
+        // Save state after move
+        viewModelScope.launch {
+            gameState.saveState(getApplication())
+        }
+        
+        // Make computer move if playing against computer
+        if (gameState.againstComputer && winner == null) {
+            makeComputerMove()
+        }
     }
     
     /**
