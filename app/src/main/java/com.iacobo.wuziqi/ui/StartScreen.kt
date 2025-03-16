@@ -5,11 +5,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Apps
-import androidx.compose.material.icons.outlined.Grid3x3
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Resize
-import androidx.compose.material.icons.outlined.ShelfAutoHide
 import androidx.compose.material.icons.outlined.SmartToy
+import androidx.compose.material.icons.outlined.VerticalDistribute
+import androidx.compose.material.icons.outlined.ViewComfy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -93,7 +93,7 @@ fun StartScreen(
             
             Spacer(modifier = Modifier.height(48.dp))
             
-            // Game mode buttons
+            // Standard Wuziqi icon
             GameModeButton(
                 title = stringResource(R.string.standard_wuziqi),
                 description = stringResource(R.string.standard_wuziqi_desc),
@@ -106,10 +106,11 @@ fun StartScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             
+            // Custom game icon 
             GameModeButton(
                 title = stringResource(R.string.custom_game),
                 description = stringResource(R.string.custom_game_desc),
-                icon = Icons.Outlined.Resize,
+                icon = Icons.Outlined.ViewComfy, // Using ViewComfy instead of Resize which is unavailable
                 onClick = { showCustomDialog = true }
             )
             
@@ -117,25 +118,26 @@ fun StartScreen(
             if (discoveredEasterEggs.contains("tictactoe")) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Tic-tac-toe (X's and O's) icon
                 GameModeButton(
                     title = "X's & O's",
                     description = "Classic 3×3 tic-tac-toe game",
-                    icon = Icons.Outlined.Grid3x3,
+                    icon = Icons.Outlined.GridView, // Using GridView instead of Grid3x3 which is unavailable
                     onClick = { 
                         // Launch directly with 3x3 board and 3-in-a-row
                         currentMode = "tictactoe"
                         showOpponentDialog = true
                     }
                 )
-            }
-            
+                            
             if (discoveredEasterEggs.contains("connect4")) {
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Connect4 icon
                 GameModeButton(
                     title = "Connect 4",
                     description = "Classic Connect 4 game with vertical drops",
-                    icon = Icons.Outlined.ShelfAutoHide,
+                    icon = Icons.Outlined.VerticalDistribute, // Using VerticalDistribute instead of ShelfAutoHide which is unavailable
                     onClick = { 
                         // Launch with 7x6 board and 4-in-a-row
                         currentMode = "connect4"
@@ -271,18 +273,63 @@ fun OpponentSelectionDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OpponentButton(
-                    title = stringResource(R.string.play_against_human),
-                    icon = Icons.Default.Person,
-                    onClick = { onSelectOpponent(Opponent.HUMAN) }
-                )
+                // Changed "Play against human" to "Over the board"
+                Button(
+                    onClick = { onSelectOpponent(Opponent.HUMAN) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Text(
+                            text = "Over the board", // Changed from Play against human
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
                 
-                OpponentButton(
-                    title = stringResource(R.string.play_against_computer),
-                    icon = Icons.Default.Computer,
+                Button(
                     onClick = { onSelectOpponent(Opponent.COMPUTER) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                    ),
                     enabled = isAISupported
-                )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.SmartToy,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+                        
+                        Text(
+                            text = stringResource(R.string.play_against_computer),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
                 
                 if (!isAISupported) {
                     Text(
