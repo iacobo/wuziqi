@@ -2,7 +2,6 @@ package com.iacobo.wuziqi.ui
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -13,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.viewmodel.Position
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Connect 4 board implementation (7x6 Easter Egg).
- * This is a separate file to fix compilation issues.
+ * Now featuring actual holes in the board and proper animations.
  */
 @Composable
 fun Connect4Board(
@@ -31,16 +31,21 @@ fun Connect4Board(
     onColumnClick: (Int) -> Unit
 ) {
     val boardColor = Color(0xFF1565C0) // Connect 4 blue board color
-    val emptySlotColor = MaterialTheme.colorScheme.background
-    val pieceSize = 36.dp
-    val boardWidth = gameState.boardSize
+    val boardSize = gameState.boardSize
     val boardHeight = 6 // 6 rows for Connect4 (7x6 grid)
     
-    // Use a coroutine scope
-    val coroutineScope = rememberCoroutineScope()
+    // Piece size calculation based on available space
+    val density = LocalDensity.current
+    val pieceSize = 36.dp
     
     // Track animation states for "dropping" pieces
     val droppingAnimations = remember { mutableStateMapOf<Pair<Int, Int>, Animatable<Float, AnimationVector1D>>() }
+    
+    // Track if an animation is currently in progress
+    val isAnimating = remember { mutableStateOf(false) }
+    
+    // Use a coroutine scope for animations
+    val coroutineScope = rememberCoroutineScope()
     
     Box(
         modifier = Modifier
@@ -49,135 +54,157 @@ fun Connect4Board(
             .clip(RoundedCornerShape(8.dp))
             .background(boardColor)
     ) {
-        // Main grid with pieces BEHIND the holes
-        Column(
+        // Main board structure with hole cutouts to see background
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(8.dp)
         ) {
-            // Rows (only use 6 rows for Connect4)
-            for (row in 0 until boardHeight) {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Columns
-                    for (col in 0 until boardWidth) {
-                        val cellPosition = row to col
-                        
-                        // Create animation if it's a newly placed piece
-                        LaunchedEffect(key1 = lastPlacedPosition, key2 = gameState.board[row][col]) {
-                            if (gameState.board[row][col] != GameState.EMPTY && 
-                                !droppingAnimations.containsKey(cellPosition) &&
-                                lastPlacedPosition?.col == col) {
-                                droppingAnimations[cellPosition] = Animatable(0f)
-                                
-                                // Animate directly in a LaunchedEffect
-                                droppingAnimations[cellPosition]?.animateTo(
-                                    targetValue = 1f,
-                                    animationSpec = tween(
-                                        durationMillis = 500,
-                                        easing = BounceEasing
-                                    )
-                                )
-                            }
-                        }
-                        
-                        // Calculate offset for animation
-                        val yOffset = droppingAnimations[cellPosition]?.value ?: 1f
-                        
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Game piece (if not empty) - this appears BEHIND the holes
+            // Board background - the material behind the holes
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.background)
+            )
+            
+            // Game pieces - fall BEHIND the board front panel
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                for (row in 0 until boardHeight) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        for (col in 0 until boardSize) {
+                            val cellPosition = row to col
+                            
+                            // Only create animations for pieces that exist
                             if (gameState.board[row][col] != GameState.EMPTY) {
-                                val pieceColor = when (gameState.board[row][col]) {
-                                    GameState.PLAYER_ONE -> Color.Red
-                                    else -> Color(0xFFFFD700) // Gold/Yellow
+                                // Create animations for newly placed pieces
+                                LaunchedEffect(key1 = lastPlacedPosition, key2 = gameState.board[row][col]) {
+                                    if (lastPlacedPosition?.col == col && 
+                                        !droppingAnimations.containsKey(cellPosition)) {
+                                        // Create new animation
+                                        droppingAnimations[cellPosition] = Animatable(0f)
+                                        isAnimating.value = true
+                                        
+                                        // Animate directly in a LaunchedEffect
+                                        droppingAnimations[cellPosition]?.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = tween(
+                                                durationMillis = 500,
+                                                easing = BounceEasing
+                                            )
+                                        )
+                                        
+                                        // Animation complete
+                                        isAnimating.value = false
+                                    }
                                 }
                                 
                                 Box(
                                     modifier = Modifier
-                                        .size(pieceSize)
-                                        .offset(
-                                            y = if (yOffset < 1f) {
-                                                (-pieceSize.value * (1f - yOffset) * boardHeight).dp
-                                            } else {
-                                                0.dp
-                                            }
-                                        )
-                                        .clip(CircleShape)
-                                        .background(pieceColor)
+                                        .weight(1f)
+                                        .aspectRatio(1f)
+                                        .padding(4.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    // Calculate offset for animation
+                                    val yOffset = droppingAnimations[cellPosition]?.value ?: 1f
+                                    
+                                    // Game piece
+                                    val pieceColor = when (gameState.board[row][col]) {
+                                        GameState.PLAYER_ONE -> Color.Red
+                                        else -> Color(0xFFFFD700) // Gold/Yellow
+                                    }
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .size(pieceSize)
+                                            .offset(
+                                                y = if (yOffset < 1f) {
+                                                    (-pieceSize.value * (1f - yOffset) * boardHeight).dp
+                                                } else {
+                                                    0.dp
+                                                }
+                                            )
+                                            .clip(CircleShape)
+                                            .background(pieceColor)
+                                    )
+                                }
+                            } else {
+                                // Empty space for empty cells
+                                Spacer(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f)
                                 )
                             }
                         }
                     }
                 }
             }
-        }
-        
-        // Overlay with "holes" (using transparent circles with borders)
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Rows of holes
-            for (row in 0 until boardHeight) {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    // Columns of holes
-                    for (col in 0 until boardWidth) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            // Cut-out hole (transparent circle with border)
+            
+            // Board front panel with holes cut out
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                for (row in 0 until boardHeight) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        for (col in 0 until boardSize) {
                             Box(
                                 modifier = Modifier
-                                    .size(pieceSize)
-                                    .border(
-                                        width = 2.dp,
-                                        color = boardColor.copy(alpha = 0.7f),
-                                        shape = CircleShape
-                                    )
-                                    .clip(CircleShape)
-                            )
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Create a board piece with a circular hole cut out
+                                Box(
+                                    modifier = Modifier
+                                        .size(pieceSize)
+                                        .clip(CircleShape)
+                                        .background(boardColor)
+                                        .padding(1.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        // Clickable columns (on top)
-        Row(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            for (col in 0 until boardWidth) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable(enabled = !isGameFrozen) {
-                            onColumnClick(col)
-                        }
-                )
+            
+            // Clickable column overlays (on top)
+            Row(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                for (col in 0 until boardSize) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clickable(
+                                enabled = !isGameFrozen && !isAnimating.value
+                            ) {
+                                if (!isAnimating.value) {
+                                    onColumnClick(col)
+                                }
+                            }
+                    )
+                }
             }
+            
+            // Drop indicator for hover effect could be added here
         }
     }
 }
