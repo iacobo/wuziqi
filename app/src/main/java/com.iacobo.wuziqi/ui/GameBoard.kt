@@ -212,7 +212,7 @@ fun TicTacToeBoard(
                     .fillMaxHeight()
                     .width(gridLineWidth)
                     .align(Alignment.CenterStart)
-                    .offset(x = (LocalDensity.current.density * 33).dp)
+                    .offset(x = with(LocalDensity.current) { (size.width / 3).toDp() })
                     .background(gridLineColor)
             )
             
@@ -221,7 +221,7 @@ fun TicTacToeBoard(
                     .fillMaxHeight()
                     .width(gridLineWidth)
                     .align(Alignment.CenterEnd)
-                    .offset(x = -(LocalDensity.current.density * 33).dp)
+                    .offset(x = with(LocalDensity.current) { -(size.width / 3).toDp() })
                     .background(gridLineColor)
             )
             
@@ -231,7 +231,7 @@ fun TicTacToeBoard(
                     .fillMaxWidth()
                     .height(gridLineWidth)
                     .align(Alignment.TopCenter)
-                    .offset(y = (LocalDensity.current.density * 33).dp)
+                    .offset(y = with(LocalDensity.current) { (size.height / 3).toDp() })
                     .background(gridLineColor)
             )
             
@@ -240,7 +240,7 @@ fun TicTacToeBoard(
                     .fillMaxWidth()
                     .height(gridLineWidth)
                     .align(Alignment.BottomCenter)
-                    .offset(y = -(LocalDensity.current.density * 33).dp)
+                    .offset(y = with(LocalDensity.current) { -(size.height / 3).toDp() })
                     .background(gridLineColor)
             )
         }
