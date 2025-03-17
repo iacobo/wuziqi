@@ -162,40 +162,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Places a tile at the specified position if valid.
-     * Updates state and checks for win condition.
-     */
-    fun placeTile(row: Int, col: Int) {
-        // Guard clause to prevent invalid moves
-        if (winner != null || !gameState.isTileEmpty(row, col) || isLoading) {
-            // Debug: Log rejected move
-            println("DEBUG: Move rejected - winner: $winner, isEmpty: ${gameState.isTileEmpty(row, col)}, isLoading: $isLoading")
+    * Places a tile at the specified position if valid.
+    * Updates state and checks for win condition.
+    * 
+    * @param row The row position
+    * @param col The column position
+    * @param bypassLoading Set to true for AI moves to bypass the isLoading check
+    */
+    fun placeTile(row: Int, col: Int, bypassLoading: Boolean = false) {
+        // Skip the isLoading check if bypassLoading is true (AI move)
+        if (!bypassLoading && (winner != null || !gameState.isTileEmpty(row, col) || isLoading)) {
+            return
+        }
+        
+        // Still check the other conditions even for AI moves
+        if (winner != null || !gameState.isTileEmpty(row, col)) {
             return
         }
 
-        // Capture who is making this move
         val currentPlayer = gameState.currentPlayer
-        val isComputerPlayer = gameState.againstComputer && currentPlayer == GameState.PLAYER_TWO
-        
-        // Debug: Log the move attempt
-        println("DEBUG: placeTile($row, $col) by player $currentPlayer, isComputerPlayer: $isComputerPlayer")
 
         // Save the move to history before making it
         moveHistory = moveHistory + Move(row, col, currentPlayer)
 
-        // Place the tile - this will also switch the current player
-        val placedSuccessfully = gameState.placeTile(row, col)
-        
-        // Debug: Log placement result
-        println("DEBUG: Placement success: $placedSuccessfully, new currentPlayer: ${gameState.currentPlayer}")
-        
-        if (!placedSuccessfully) {
-            // If placement failed, remove from history and exit
-            moveHistory = moveHistory.dropLast(1)
-            return
-        }
-        
-        // Update last placed position - critical for UI recomposition
+        // Place the tile
+        gameState.placeTile(row, col)
         lastPlacedPosition = Position(row, col)
 
         // Play sound effect if enabled
@@ -206,7 +197,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Check for win
         if (gameState.checkWin(row, col, currentPlayer)) {
             winner = currentPlayer
-            println("DEBUG: Winner detected: $winner")
 
             // Play win sound if enabled
             if (soundEnabled) {
@@ -224,7 +214,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Check for draw
         if (gameState.isBoardFull()) {
             winner = DRAW
-            println("DEBUG: Draw detected")
             
             // Clear saved state if game is over
             viewModelScope.launch {
@@ -239,10 +228,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             gameState.saveState(getApplication())
         }
         
-        // FIXED: Only trigger computer move if this was a human move
-        // This prevents infinite recursion of AI moves
-        if (gameState.againstComputer && winner == null && !isComputerPlayer) {
-            println("DEBUG: Triggering computer move after human move")
+        // Only trigger computer move if this wasn't already a computer move
+        // This prevents infinite recursion
+        if (gameState.againstComputer && winner == null && !bypassLoading) {
             makeComputerMove()
         }
     }
@@ -269,10 +257,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
     * Places a Connect4 tile in the specified column
-    * Updated to handle a 7x6 board (width x height) and check for draw conditions
+    * Updated with bypassLoading parameter for AI moves
     */
-    fun placeConnect4Tile(col: Int) {
-        if (winner != null || isLoading) {
+    fun placeConnect4Tile(col: Int, bypassLoading: Boolean = false) {
+        // Skip the isLoading check if bypassLoading is true (AI move)
+        if (!bypassLoading && (winner != null || isLoading)) {
+            return
+        }
+        
+        // Other checks still apply even for AI moves
+        if (winner != null) {
             return
         }
         
@@ -313,7 +307,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         // Check for draw - for Connect4, we need to check if all columns are full
-        // Since we have a 7x6 board, we need to check if all 42 spaces are filled
         var isFull = true
         for (c in 0 until gameState.boardSize) {
             if (findBottomEmptyRow(c) != -1) {
@@ -339,62 +332,40 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         // Make computer move if playing against computer
-        if (gameState.againstComputer && winner == null) {
+        // Only do this for human moves (not AI moves)
+        if (gameState.againstComputer && winner == null && !bypassLoading) {
             makeComputerMove()
         }
     }
     
     /**
-     * Makes a computer move based on the current game type
-     */
+    * Makes a computer move based on the current game type.
+    */
     private fun makeComputerMove() {
-        // Prevent moving if the game is over or already thinking
-        if (winner != null || isLoading) {
-            println("DEBUG: Computer move rejected - winner: $winner, isLoading: $isLoading")
-            return
-        }
+        if (winner != null || isLoading) return
         
-        // Verify it's actually the computer's turn
-        if (gameState.currentPlayer != GameState.PLAYER_TWO) {
-            println("DEBUG: Computer move rejected - not computer's turn: ${gameState.currentPlayer}")
-            return
-        }
-        
-        println("DEBUG: Starting computer move with player: ${gameState.currentPlayer}")
         isLoading = true
         
         viewModelScope.launch {
             // Short delay to simulate thinking (and avoid UI flicker)
             kotlinx.coroutines.delay(700)
             
-            // Use the existing AI move methods but with extra error checking
-            try {
-                when {
-                    // Perfect play for Tic Tac Toe (3x3)
-                    gameState.boardSize == 3 && gameState.winCondition == 3 -> {
-                        println("DEBUG: Using TicTacToe AI")
-                        makeComputerMoveTicTacToe()
-                    }
-                    // Basic AI for Connect 4 (7x7)
-                    gameState.boardSize == 7 && gameState.winCondition == 4 -> {
-                        println("DEBUG: Using Connect4 AI")
-                        makeComputerMoveConnect4()
-                    }
-                    // Advanced heuristic-based AI for Wuziqi
-                    else -> {
-                        println("DEBUG: Using Wuziqi AI")
-                        makeComputerMoveWuziqi()
-                    }
+            when {
+                // Perfect play for Tic Tac Toe (3x3)
+                gameState.boardSize == 3 && gameState.winCondition == 3 -> {
+                    makeComputerMoveTicTacToe()
                 }
-                println("DEBUG: Computer move completed")
-            } catch (e: Exception) {
-                // Log any exceptions that might occur during AI move
-                println("DEBUG: Error in computer move: ${e.message}")
-                e.printStackTrace()
-            } finally {
-                // Ensure isLoading is always reset even if an error occurs
-                isLoading = false
+                // Basic AI for Connect 4 (7x7)
+                gameState.boardSize == 7 && gameState.winCondition == 4 -> {
+                    makeComputerMoveConnect4()
+                }
+                // Advanced heuristic-based AI for Wuziqi
+                else -> {
+                    makeComputerMoveWuziqi()
+                }
             }
+            
+            isLoading = false
         }
     }
     
@@ -493,21 +464,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val computerPlayer = GameState.PLAYER_TWO
         val humanPlayer = GameState.PLAYER_ONE
         
-        // First, try to win - use temporary board
+        // First, try to win
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Create a temporary board with this move
-                    val tempBoard = gameState.getBoardWithMove(row, col, computerPlayer)
-                    
-                    // Check win on temporary board
-                    val wouldWin = checkWinOnTempBoard(tempBoard, row, col, computerPlayer)
-                    if (wouldWin) {
-                        // We can win with this move
-                        println("DEBUG: AI found winning move at $row,$col")
-                        placeTile(row, col)
+                if (gameState.board[row][col] == GameState.EMPTY) {
+                    // Try this move
+                    gameState.board[row][col] = computerPlayer
+                    if (gameState.checkWin(row, col, computerPlayer)) {
+                        // We can win, make this move
+                        gameState.board[row][col] = GameState.EMPTY // Reset for proper handling
+                        placeTile(row, col, bypassLoading = true)  // Use bypassLoading
                         return
                     }
+                    // Undo try
+                    gameState.board[row][col] = GameState.EMPTY
                 }
             }
         }
@@ -515,52 +485,48 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Next, block the human from winning
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Create a temporary board with human move
-                    val tempBoard = gameState.getBoardWithMove(row, col, humanPlayer)
-                    
-                    // Check if human would win with this move
-                    val wouldBlock = checkWinOnTempBoard(tempBoard, row, col, humanPlayer)
-                    if (wouldBlock) {
+                if (gameState.board[row][col] == GameState.EMPTY) {
+                    // Try this move for the human
+                    gameState.board[row][col] = humanPlayer
+                    if (gameState.checkWin(row, col, humanPlayer)) {
                         // Block this winning move
-                        println("DEBUG: AI blocking human win at $row,$col")
-                        placeTile(row, col)
+                        gameState.board[row][col] = GameState.EMPTY // Reset for proper handling
+                        placeTile(row, col, bypassLoading = true)  // Use bypassLoading
                         return
                     }
+                    // Undo try
+                    gameState.board[row][col] = GameState.EMPTY
                 }
             }
         }
         
         // Take center if available
-        if (gameState.isTileEmpty(1, 1)) {
-            println("DEBUG: AI taking center")
-            placeTile(1, 1)
+        if (gameState.board[1][1] == GameState.EMPTY) {
+            placeTile(1, 1, bypassLoading = true)  // Use bypassLoading
             return
         }
         
         // Take a corner if available
         val corners = listOf(Pair(0, 0), Pair(0, 2), Pair(2, 0), Pair(2, 2))
         val availableCorners = corners.filter { (row, col) -> 
-            gameState.isTileEmpty(row, col) 
+            gameState.board[row][col] == GameState.EMPTY 
         }
         
         if (availableCorners.isNotEmpty()) {
             val (row, col) = availableCorners[random.nextInt(availableCorners.size)]
-            println("DEBUG: AI taking corner at $row,$col")
-            placeTile(row, col)
+            placeTile(row, col, bypassLoading = true)  // Use bypassLoading
             return
         }
         
         // Take any available edge
         val edges = listOf(Pair(0, 1), Pair(1, 0), Pair(1, 2), Pair(2, 1))
         val availableEdges = edges.filter { (row, col) -> 
-            gameState.isTileEmpty(row, col)
+            gameState.board[row][col] == GameState.EMPTY 
         }
         
         if (availableEdges.isNotEmpty()) {
             val (row, col) = availableEdges[random.nextInt(availableEdges.size)]
-            println("DEBUG: AI taking edge at $row,$col")
-            placeTile(row, col)
+            placeTile(row, col, bypassLoading = true)  // Use bypassLoading
             return
         }
     }
@@ -715,7 +681,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 if (gameState.checkWin(row, col, computerPlayer)) {
                     // We can win with this move
                     gameState.board[row][col] = GameState.EMPTY
-                    placeConnect4Tile(col)
+                    placeConnect4Tile(col, bypassLoading = true)  // Add bypassLoading parameter
                     return
                 }
                 gameState.board[row][col] = GameState.EMPTY
@@ -731,7 +697,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 if (gameState.checkWin(row, col, humanPlayer)) {
                     // Block this winning move
                     gameState.board[row][col] = GameState.EMPTY
-                    placeConnect4Tile(col)
+                    placeConnect4Tile(col, bypassLoading = true)  // Add bypassLoading parameter
                     return
                 }
                 gameState.board[row][col] = GameState.EMPTY
@@ -741,7 +707,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Favor center column
         val centerCol = boardSize / 2
         if (findBottomEmptyRow(centerCol) != -1) {
-            placeConnect4Tile(centerCol)
+            placeConnect4Tile(centerCol, bypassLoading = true)  // Add bypassLoading parameter
             return
         }
         
@@ -749,7 +715,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val colPriorities = (0 until boardSize).sortedBy { abs(it - centerCol) }
         for (col in colPriorities) {
             if (findBottomEmptyRow(col) != -1) {
-                placeConnect4Tile(col)
+                placeConnect4Tile(col, bypassLoading = true)  // Add bypassLoading parameter
                 return
             }
         }
@@ -773,7 +739,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // If no candidate moves (empty board), place in center
         if (candidates.isEmpty()) {
             val center = boardSize / 2
-            placeTile(center, center)
+            placeTile(center, center, bypassLoading = true)  // Add bypassLoading parameter
             return
         }
         
@@ -799,7 +765,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         // Make the best move
         bestMove?.let { (row, col) ->
-            placeTile(row, col)
+            placeTile(row, col, bypassLoading = true)  // Add bypassLoading parameter
         } ?: run {
             // Fall back to any valid move if no best move found
             val emptyPositions = mutableListOf<Pair<Int, Int>>()
@@ -813,7 +779,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             
             if (emptyPositions.isNotEmpty()) {
                 val (row, col) = emptyPositions[random.nextInt(emptyPositions.size)]
-                placeTile(row, col)
+                placeTile(row, col, bypassLoading = true)  // Add bypassLoading parameter
             }
         }
     }
