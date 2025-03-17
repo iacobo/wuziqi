@@ -55,95 +55,87 @@ fun Connect4Board(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Game pieces are positioned here using absolute positioning to match hole coordinates exactly
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxSize()
+            // Game pieces are positioned with Row/Column layout to simplify positioning
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceEvenly
             ) {
-                // Access the constraints to get the actual size of the container
-                val widthPx = constraints.maxWidth.toFloat()
-                val heightPx = constraints.maxHeight.toFloat()
-                val hPaddingPx = widthPx * 0.1f
-                val vPaddingPx = heightPx * 0.1f
-                val cellWidthPx = (widthPx - (2 * hPaddingPx)) / boardSize
-                val cellHeightPx = (heightPx - (2 * vPaddingPx)) / boardHeight
-                val pieceDiameterPx = minOf(cellWidthPx, cellHeightPx) * 0.8f
-                val pieceDiameterDp = with(LocalDensity.current) { pieceDiameterPx.toDp() }
-
                 for (row in 0 until boardHeight) {
-                    for (col in 0 until boardSize) {
-                        // Only render pieces that exist in the game state
-                        if (gameState.board[row][col] != GameState.EMPTY) {
-                            val cellPosition = row to col
-                            
-                            // Calculate exact center position matching the hole cutouts
-                            val centerX = with(LocalDensity.current) { 
-                                (hPaddingPx + (col * cellWidthPx) + (cellWidthPx / 2)).toDp() 
-                            }
-                            val centerY = with(LocalDensity.current) { 
-                                (vPaddingPx + (row * cellHeightPx) + (cellHeightPx / 2)).toDp() 
-                            }
-                            
-                            // Set up animation for newly placed pieces
-                            LaunchedEffect(key1 = lastPlacedPosition, key2 = gameState.board[row][col]) {
-                                if (lastPlacedPosition?.col == col && 
-                                    !droppingAnimations.containsKey(cellPosition)) {
-                                    // Create new animation
-                                    droppingAnimations[cellPosition] = Animatable(0f)
-                                    isAnimating.value = true
-                                    
-                                    // Animate directly in a LaunchedEffect
-                                    droppingAnimations[cellPosition]?.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = tween(
-                                            durationMillis = 500,
-                                            easing = BounceEasing
-                                        )
-                                    )
-                                    
-                                    // Animation complete
-                                    isAnimating.value = false
-                                }
-                            }
-                            
-                            // Calculate animation offset
-                            val yOffset = droppingAnimations[cellPosition]?.value ?: 1f
-                            
-                            // Determine piece color
-                            val pieceColor = when (gameState.board[row][col]) {
-                                GameState.PLAYER_ONE -> Color.Red
-                                else -> Color(0xFFFFD700) // Gold/Yellow
-                            }
-                            
-                            // Position piece exactly at the hole center using absoluteOffset
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        for (col in 0 until boardSize) {
                             Box(
                                 modifier = Modifier
-                                    .size(pieceDiameterDp)
-                                    .absoluteOffset(
-                                        x = centerX - (pieceDiameterDp / 2),
-                                        y = if (yOffset < 1f) {
-                                            centerY - (pieceDiameterDp / 2) - 
-                                            with(LocalDensity.current) { (300f * (1f - yOffset)).toDp() }
-                                        } else {
-                                            centerY - (pieceDiameterDp / 2)
-                                        }
-                                    )
-                                    .clip(CircleShape)
-                                    .background(
-                                        // Add a slightly darker ring effect with a gradient 
-                                        color = when (gameState.board[row][col]) {
-                                            GameState.PLAYER_ONE -> Color.Red.copy(alpha = 0.85f) // Lighter red for main piece
-                                            else -> Color(0xFFFFD700).copy(alpha = 0.85f) // Lighter gold for main piece
-                                        }
-                                    )
+                                    .weight(1f)
+                                    .aspectRatio(1f),
+                                contentAlignment = Alignment.Center
                             ) {
-                                // Inner part of piece (creates a ring effect)
-                                Box(
-                                    modifier = Modifier
-                                        .size(pieceDiameterDp * 0.9f)
-                                        .align(Alignment.Center)
-                                        .clip(CircleShape)
-                                        .background(pieceColor)
-                                )
+                                // Only render pieces that exist in the game state
+                                if (gameState.board[row][col] != GameState.EMPTY) {
+                                    val cellPosition = row to col
+                                    
+                                    // Set up animation for newly placed pieces
+                                    LaunchedEffect(lastPlacedPosition, gameState.board[row][col]) {
+                                        if (lastPlacedPosition?.col == col && 
+                                            !droppingAnimations.containsKey(cellPosition)) {
+                                            // Create new animation
+                                            droppingAnimations[cellPosition] = Animatable(0f)
+                                            isAnimating.value = true
+                                            
+                                            // Animate directly in a LaunchedEffect
+                                            droppingAnimations[cellPosition]?.animateTo(
+                                                targetValue = 1f,
+                                                animationSpec = tween(
+                                                    durationMillis = 500,
+                                                    easing = BounceEasing
+                                                )
+                                            )
+                                            
+                                            // Animation complete
+                                            isAnimating.value = false
+                                        }
+                                    }
+                                    
+                                    // Calculate animation offset
+                                    val yOffset = droppingAnimations[cellPosition]?.value ?: 1f
+                                    
+                                    // Determine piece color
+                                    val pieceColor = when (gameState.board[row][col]) {
+                                        GameState.PLAYER_ONE -> Color.Red
+                                        else -> Color(0xFFFFD700) // Gold/Yellow
+                                    }
+                                    
+                                    // The actual game piece with animation
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .offset(
+                                                y = if (yOffset < 1f) {
+                                                    (-300 * (1f - yOffset)).dp
+                                                } else {
+                                                    0.dp
+                                                }
+                                            )
+                                            .clip(CircleShape)
+                                            .background(
+                                                color = when (gameState.board[row][col]) {
+                                                    GameState.PLAYER_ONE -> Color.Red.copy(alpha = 0.85f)
+                                                    else -> Color(0xFFFFD700).copy(alpha = 0.85f)
+                                                }
+                                            )
+                                    ) {
+                                        // Inner part of piece (creates a ring effect)
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .align(Alignment.Center)
+                                                .clip(CircleShape)
+                                                .background(pieceColor)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -168,13 +160,14 @@ fun Connect4Board(
                     val boardWidth = size.width
                     val boardHeight = size.height
                     
-                    // FIX: Increase padding to better align pieces with holes
-                    val hPadding = boardWidth * 0.1f // Increased from 0.05f to 0.1f (10% padding)
-                    val vPadding = boardHeight * 0.1f // Increased from 0.05f to 0.1f (10% padding)
+                    // Use exact 10% padding on all sides
+                    val hPadding = boardWidth * 0.1f
+                    val vPadding = boardHeight * 0.1f
                     
                     val cellWidth = (boardWidth - (2 * hPadding)) / columns
                     val cellHeight = (boardHeight - (2 * vPadding)) / rows
                     
+                    // 40% of cell size for hole radius to leave good borders
                     val holeRadius = minOf(cellWidth, cellHeight) * 0.4f
                     
                     // Cut out holes from the board
