@@ -187,20 +187,12 @@ fun GameScreen(
                             MaterialTheme.colorScheme.secondary
                     }
                     
-                    // Ensure good contrast in dark theme
-                    val displayColor = if (isDarkTheme && (winner == GameState.PLAYER_TWO && !isConnect4 || 
-                                                        winner == GameState.PLAYER_ONE && !isConnect4 && !isXandO)) {
-                        MaterialTheme.colorScheme.onBackground
-                    } else {
-                        winnerColor
-                    }
-                    
                     Text(
                         text = winnerText,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = displayColor
+                        color = winnerColor
                     )
                 } else {
                     // Show current player
@@ -234,18 +226,10 @@ fun GameScreen(
                             MaterialTheme.colorScheme.secondary
                     }
                     
-                    // Ensure good contrast in dark theme
-                    val displayColor = if (isDarkTheme && (gameState.currentPlayer == GameState.PLAYER_TWO && !isConnect4 || 
-                                                          gameState.currentPlayer == GameState.PLAYER_ONE && !isConnect4 && !isXandO)) {
-                        MaterialTheme.colorScheme.onBackground
-                    } else {
-                        playerColor
-                    }
-                    
                     Text(
                         text = playerText,
                         style = MaterialTheme.typography.titleMedium,
-                        color = displayColor
+                        color = playerColor
                     )
                 }
             }

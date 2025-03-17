@@ -175,8 +175,82 @@ fun Tile(
 }
 
 /**
+ * Tic-Tac-Toe tile composable that draws either X or O based on state.
+ * Extracted to a separate function for better reusability and debugging.
+ */
+@Composable
+fun TicTacToeTile(
+    state: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    // Get color scheme values directly from MaterialTheme
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val secondaryColor = MaterialTheme.colorScheme.secondary
+    
+    Box(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        when (state) {
+            GameState.PLAYER_ONE -> {
+                // Draw X with fixed, highly visible colors
+                Canvas(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .padding(6.dp)
+                ) {
+                    val canvasWidth = size.width
+                    val canvasHeight = size.height
+                    val strokeWidth = 14f
+                    
+                    // Use the primary color from MaterialTheme directly
+                    drawLine(
+                        color = primaryColor,
+                        start = Offset(0f, 0f),
+                        end = Offset(canvasWidth, canvasHeight),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                    
+                    drawLine(
+                        color = primaryColor,
+                        start = Offset(canvasWidth, 0f),
+                        end = Offset(0f, canvasHeight),
+                        strokeWidth = strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                }
+            }
+            GameState.PLAYER_TWO -> {
+                // Draw O with fixed, highly visible colors
+                Canvas(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .padding(6.dp)
+                ) {
+                    val canvasWidth = size.width
+                    val strokeWidth = 10f
+                    
+                    // Use the secondary color from MaterialTheme directly
+                    drawCircle(
+                        color = secondaryColor,
+                        radius = (canvasWidth / 2) - (strokeWidth / 2),
+                        style = Stroke(width = strokeWidth)
+                    )
+                }
+            }
+            // GameState.EMPTY is handled by having no content
+        }
+    }
+}
+
+/**
  * Tic-Tac-Toe board implementation (3x3 Easter Egg).
  * Now with transparent background and no edge lines.
+ * MODIFIED: Using the extracted TicTacToeTile composable for better traceability
  */
 @Composable
 fun TicTacToeBoard(
@@ -188,10 +262,6 @@ fun TicTacToeBoard(
 ) {
     val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
     val gridLineWidth = 4.dp // Thicker grid lines for tic-tac-toe
-    
-    // Get color scheme values directly from MaterialTheme
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
     
     Box(
         modifier = Modifier
@@ -256,70 +326,16 @@ fun TicTacToeBoard(
                 ) {
                     // 3 columns
                     for (col in 0 until 3) {
-                        // Cell without border
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .clickable(enabled = !isGameFrozen) {
+                        // Use the extracted TicTacToeTile composable
+                        TicTacToeTile(
+                            state = gameState.board[row][col],
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                if (!isGameFrozen) {
                                     onTileClick(row, col)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            when (gameState.board[row][col]) {
-                                GameState.PLAYER_ONE -> {
-                                    // Draw X with fixed, highly visible colors
-                                    Canvas(
-                                        modifier = Modifier
-                                            .size(60.dp) // Larger size
-                                            .padding(6.dp)
-                                    ) {
-                                        val canvasWidth = size.width
-                                        val canvasHeight = size.height
-                                        val strokeWidth = 14f
-                                        
-                                        // Draw X using two lines
-                                        drawLine(
-                                            color = primaryColor,
-                                            start = Offset(0f, 0f),
-                                            end = Offset(canvasWidth, canvasHeight),
-                                            strokeWidth = strokeWidth,
-                                            cap = StrokeCap.Round
-                                        )
-                                        
-                                        drawLine(
-                                            color = primaryColor,
-                                            start = Offset(canvasWidth, 0f),
-                                            end = Offset(0f, canvasHeight),
-                                            strokeWidth = strokeWidth,
-                                            cap = StrokeCap.Round
-                                        )
-                                    }
-                                }
-                                GameState.PLAYER_TWO -> {
-                                    // Draw O with fixed, highly visible colors
-                                    Canvas(
-                                        modifier = Modifier
-                                            .size(60.dp) // Larger size
-                                            .padding(6.dp)
-                                    ) {
-                                        val canvasWidth = size.width
-                                        val canvasHeight = size.height
-                                        val strokeWidth = 14f // Thicker stroke
-                                        
-                                        // Draw O as a circle with stroke
-                                        drawCircle(
-                                            color = secondaryColor,
-                                            radius = (canvasWidth / 2) - (strokeWidth / 2),
-                                            style = Stroke(width = strokeWidth)
-                                        )
-                                    }
-                                }
-                                else -> {
-                                    // Empty cell
                                 }
                             }
-                        }
+                        )
                     }
                 }
             }
