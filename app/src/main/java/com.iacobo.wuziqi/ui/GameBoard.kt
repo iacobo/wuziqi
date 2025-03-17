@@ -178,12 +178,10 @@ fun Tile(
  * Tic-Tac-Toe board implementation (3x3 Easter Egg).
  * Now with transparent background and no edge lines.
  */
-// The issue is in the TicTacToeBoard function in GameBoard.kt
-// Here's the complete fix for the function:
-
 @Composable
 fun TicTacToeBoard(
     gameState: GameState,
+    lastPlacedPosition: Position?,
     isDarkTheme: Boolean,
     isGameFrozen: Boolean,
     onTileClick: (Int, Int) -> Unit
@@ -201,47 +199,46 @@ fun TicTacToeBoard(
             .padding(16.dp)
             .background(Color.Transparent)
     ) {
-        // Vertical inner lines (2)
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize()
+        // Draw just the internal grid lines, not the outer edges
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
         ) {
-            // First vertical line (1/3 from left)
+            // Vertical inner lines (2)
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(gridLineWidth)
                     .align(Alignment.CenterStart)
-                    .offset(x = maxWidth / 3)
+                    .offset(x = (LocalDensity.current.density * 33).dp)
                     .background(gridLineColor)
             )
             
-            // Second vertical line (2/3 from left)
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(gridLineWidth)
-                    .align(Alignment.CenterStart)
-                    .offset(x = maxWidth * 2 / 3)
+                    .align(Alignment.CenterEnd)
+                    .offset(x = -(LocalDensity.current.density * 33).dp)
                     .background(gridLineColor)
             )
             
-            // First horizontal line (1/3 from top)
+            // Horizontal inner lines (2)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(gridLineWidth)
                     .align(Alignment.TopCenter)
-                    .offset(y = maxHeight / 3)
+                    .offset(y = (LocalDensity.current.density * 33).dp)
                     .background(gridLineColor)
             )
             
-            // Second horizontal line (2/3 from top)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(gridLineWidth)
-                    .align(Alignment.TopCenter)
-                    .offset(y = maxHeight * 2 / 3)
+                    .align(Alignment.BottomCenter)
+                    .offset(y = -(LocalDensity.current.density * 33).dp)
                     .background(gridLineColor)
             )
         }
@@ -274,14 +271,14 @@ fun TicTacToeBoard(
                                     // Draw X with fixed, highly visible colors
                                     Canvas(
                                         modifier = Modifier
-                                            .size(60.dp)
+                                            .size(60.dp) // Larger size
                                             .padding(6.dp)
                                     ) {
                                         val canvasWidth = size.width
                                         val canvasHeight = size.height
                                         val strokeWidth = 14f
                                         
-                                        // Use the primary color from MaterialTheme directly
+                                        // Draw X using two lines
                                         drawLine(
                                             color = primaryColor,
                                             start = Offset(0f, 0f),
@@ -303,13 +300,14 @@ fun TicTacToeBoard(
                                     // Draw O with fixed, highly visible colors
                                     Canvas(
                                         modifier = Modifier
-                                            .size(60.dp)
+                                            .size(60.dp) // Larger size
                                             .padding(6.dp)
                                     ) {
                                         val canvasWidth = size.width
-                                        val strokeWidth = 10f
+                                        val canvasHeight = size.height
+                                        val strokeWidth = 14f // Thicker stroke
                                         
-                                        // Use the secondary color from MaterialTheme directly
+                                        // Draw O as a circle with stroke
                                         drawCircle(
                                             color = secondaryColor,
                                             radius = (canvasWidth / 2) - (strokeWidth / 2),
