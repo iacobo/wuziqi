@@ -17,6 +17,8 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.viewmodel.Position
@@ -36,38 +38,50 @@ fun Connect4Board(
     val boardColor = Color(0xFF1565C0) // Connect 4 blue board color
     val boardSize = gameState.boardSize
     val boardHeight = 6 // 6 rows for Connect 4 (7x6 grid)
-    
+
     // Track animation states for "dropping" pieces
     val droppingAnimations = remember { mutableStateMapOf<Pair<Int, Int>, Animatable<Float, AnimationVector1D>>() }
-    
+
     // Track if an animation is currently in progress
     val isAnimating = remember { mutableStateOf(false) }
-    
+
     // Define the padding percentage for both holes and pieces
     val paddingPercent = 0.05f
-    
+
+    // Track board dimensions for calculating the padding in dp
+    var boardWidthPx by remember { mutableIntStateOf(0) }
+    var boardHeightPx by remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+
     Box(
         modifier = Modifier
             .aspectRatio(7f/6f) // Aspect ratio for 7x6 board
             .padding(16.dp)
             .clip(RoundedCornerShape(8.dp))
+            .onGloballyPositioned { coordinates ->
+                boardWidthPx = coordinates.size.width
+                boardHeightPx = coordinates.size.height
+            }
     ) {
+        // Calculate padding in dp based on board size
+        val horizontalPaddingDp = with(density) { (boardWidthPx * paddingPercent).toDp() }
+        val verticalPaddingDp = with(density) { (boardHeightPx * paddingPercent).toDp() }
+
         // Layer 1: Background and pieces layer
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Game pieces are positioned with Row/Column layout
-            // Using Box with padding fraction that matches hole padding
+            // Game pieces are positioned with Row/Column layout with proper padding
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(
-                        start = paddingPercent * 100.dp,
-                        end = paddingPercent * 100.dp,
-                        top = paddingPercent * 100.dp,
-                        bottom = paddingPercent * 100.dp
+                        start = horizontalPaddingDp,
+                        end = horizontalPaddingDp,
+                        top = verticalPaddingDp,
+                        bottom = verticalPaddingDp
                     )
             ) {
                 Column(
@@ -89,15 +103,15 @@ fun Connect4Board(
                                     // Only render pieces that exist in the game state
                                     if (gameState.board[row][col] != GameState.EMPTY) {
                                         val cellPosition = row to col
-                                        
+
                                         // Set up animation for newly placed pieces
                                         LaunchedEffect(lastPlacedPosition, gameState.board[row][col]) {
-                                            if (lastPlacedPosition?.col == col && 
+                                            if (lastPlacedPosition?.col == col &&
                                                 !droppingAnimations.containsKey(cellPosition)) {
                                                 // Create new animation
                                                 droppingAnimations[cellPosition] = Animatable(0f)
                                                 isAnimating.value = true
-                                                
+
                                                 // Animate directly in a LaunchedEffect
                                                 droppingAnimations[cellPosition]?.animateTo(
                                                     targetValue = 1f,
@@ -106,21 +120,21 @@ fun Connect4Board(
                                                         easing = BounceEasing
                                                     )
                                                 )
-                                                
+
                                                 // Animation complete
                                                 isAnimating.value = false
                                             }
                                         }
-                                        
+
                                         // Calculate animation offset
                                         val yOffset = droppingAnimations[cellPosition]?.value ?: 1f
-                                        
+
                                         // Determine piece color
                                         val pieceColor = when (gameState.board[row][col]) {
                                             GameState.PLAYER_ONE -> Color.Red
                                             else -> Color(0xFFFFD700) // Gold/Yellow
                                         }
-                                        
+
                                         // The actual game piece with animation
                                         Box(
                                             modifier = Modifier
@@ -157,7 +171,7 @@ fun Connect4Board(
                 }
             }
         }
-        
+
         // Layer 2: Board with cutout holes
         Box(
             modifier = Modifier
@@ -168,29 +182,29 @@ fun Connect4Board(
                 .background(boardColor)
                 .drawWithContent {
                     drawContent()
-                    
+
                     // Define hole dimensions
                     val columns = boardSize
                     val rows = boardHeight
                     val boardWidth = size.width
                     val boardHeight = size.height
-                    
+
                     // Use the same padding percentage as pieces
                     val hPadding = boardWidth * paddingPercent
                     val vPadding = boardHeight * paddingPercent
-                    
+
                     val cellWidth = (boardWidth - (2 * hPadding)) / columns
                     val cellHeight = (boardHeight - (2 * vPadding)) / rows
-                    
+
                     // 40% of cell size for hole radius to leave good borders
                     val holeRadius = minOf(cellWidth, cellHeight) * 0.4f
-                    
+
                     // Cut out holes from the board
                     for (row in 0 until rows) {
                         for (col in 0 until columns) {
                             val centerX = hPadding + (col * cellWidth) + (cellWidth / 2)
                             val centerY = vPadding + (row * cellHeight) + (cellHeight / 2)
-                            
+
                             // Draw a circle that will be cut out with BlendMode.DstOut
                             drawCircle(
                                 color = Color.White, // Color doesn't matter for cutout
@@ -202,7 +216,7 @@ fun Connect4Board(
                     }
                 }
         )
-        
+
         // Layer 3: Clickable column overlays (invisible)
         Row(
             modifier = Modifier.fillMaxSize()
