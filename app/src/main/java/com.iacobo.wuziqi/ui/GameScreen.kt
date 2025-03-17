@@ -270,7 +270,6 @@ fun GameScreen(
                     isConnect4 -> Connect4Board(
                         gameState = gameState,
                         lastPlacedPosition = lastPlacedPosition,
-                        isDarkTheme = isDarkTheme,
                         isGameFrozen = winner != null || isLoading,
                         onColumnClick = { col ->
                             viewModel.placeConnect4Tile(col)

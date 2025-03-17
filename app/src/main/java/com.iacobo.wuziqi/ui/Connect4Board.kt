@@ -161,8 +161,8 @@ fun Connect4Board(
                     val boardHeight = size.height
                     
                     // Use exact 10% padding on all sides
-                    val hPadding = boardWidth * 0.1f
-                    val vPadding = boardHeight * 0.1f
+                    val hPadding = boardWidth * 0.05f
+                    val vPadding = boardHeight * 0.05f
                     
                     val cellWidth = (boardWidth - (2 * hPadding)) / columns
                     val cellHeight = (boardHeight - (2 * vPadding)) / rows
