@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Random
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 
 /**
@@ -664,232 +666,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-    * Implementation of Connect4 AI using bitboards and alpha-beta pruning.
-    * Based on the optimizations described in the article.
-    */
-
-    // Constants for the bitboard representation
-    private const val BOARD_WIDTH = 7
-    private const val BOARD_HEIGHT = 6
-    private const val BOARD_SIZE = BOARD_WIDTH * BOARD_HEIGHT
-
-    // Scoring constants
-    private const val WIN_SCORE = 1000000
-    private const val DRAW_SCORE = 0
-    private const val LOSE_SCORE = -WIN_SCORE
-
-    // Search depth (adjust as needed for performance)
-    private const val SEARCH_DEPTH = 7
-
-    /**
-    * BitboardConnect4 encapsulates the Connect4 game logic using bitboards
-    * for efficient representation and move generation.
-    */
-    class BitboardConnect4 {
-        // Two bitboards - one for each player
-        private var bitboards = LongArray(2) { 0L }
-        
-        // Counter for tracking whose turn it is
-        private var counter = 0
-        
-        // Heights array - tracks the next available position in each column
-        private var heights = IntArray(BOARD_WIDTH) { col -> col * (BOARD_HEIGHT + 1) }
-        
-        // Top positions for each column - used to check if a column is full
-        private val topPositions = IntArray(BOARD_WIDTH) { col -> col * (BOARD_HEIGHT + 1) + BOARD_HEIGHT }
-        
-        // Scoring map for heuristic evaluation
-        private val scoreMap = arrayOf(
-            intArrayOf(3, 4, 5, 7, 5, 4, 3),
-            intArrayOf(4, 6, 8, 9, 8, 6, 4),
-            intArrayOf(5, 8, 11, 13, 11, 8, 5),
-            intArrayOf(5, 8, 11, 13, 11, 8, 5),
-            intArrayOf(4, 6, 8, 9, 8, 6, 4),
-            intArrayOf(3, 4, 5, 7, 5, 4, 3)
-        )
-        
-        /**
-        * Reset the game state
-        */
-        fun reset() {
-            bitboards[0] = 0L
-            bitboards[1] = 0L
-            counter = 0
-            for (i in 0 until BOARD_WIDTH) {
-                heights[i] = i * (BOARD_HEIGHT + 1)
-            }
-        }
-        
-        /**
-        * Get a copy of the current game state
-        */
-        fun copy(): BitboardConnect4 {
-            val copy = BitboardConnect4()
-            copy.bitboards[0] = bitboards[0]
-            copy.bitboards[1] = bitboards[1]
-            copy.counter = counter
-            System.arraycopy(heights, 0, copy.heights, 0, BOARD_WIDTH)
-            return copy
-        }
-        
-        /**
-        * Check if a column is valid for a move
-        */
-        fun isValidMove(col: Int): Boolean {
-            return col in 0 until BOARD_WIDTH && heights[col] < topPositions[col]
-        }
-        
-        /**
-        * Make a move for the current player in the specified column
-        */
-        fun makeMove(col: Int): Boolean {
-            if (!isValidMove(col)) return false
-            
-            // Set the appropriate bit for the current player
-            val currentPlayer = counter and 1
-            bitboards[currentPlayer] = bitboards[currentPlayer] or (1L shl heights[col])
-            
-            // Update the counter and the height of the column
-            counter++
-            heights[col]++
-            
-            return true
-        }
-        
-        /**
-        * Undo the last move
-        */
-        fun undoMove(col: Int): Boolean {
-            if (counter == 0 || heights[col] <= col * (BOARD_HEIGHT + 1)) return false
-            
-            // Decrement the counter and height
-            counter--
-            heights[col]--
-            
-            // Clear the appropriate bit for the player who just moved
-            val currentPlayer = counter and 1
-            bitboards[currentPlayer] = bitboards[currentPlayer] and (1L shl heights[col]).inv()
-            
-            return true
-        }
-        
-        /**
-        * Check if the last move resulted in a win
-        */
-        fun checkWin(col: Int): Boolean {
-            val player = (counter - 1) and 1
-            val board = bitboards[player]
-            
-            // Check horizontal
-            if ((board and (board shr 1) and (board shr 2) and (board shr 3)) != 0L) return true
-            
-            // Check vertical
-            if ((board and (board shr (BOARD_HEIGHT + 1)) and (board shr (2 * (BOARD_HEIGHT + 1))) and (board shr (3 * (BOARD_HEIGHT + 1)))) != 0L) return true
-            
-            // Check positive diagonal
-            if ((board and (board shr (BOARD_HEIGHT + 2)) and (board shr (2 * (BOARD_HEIGHT + 2))) and (board shr (3 * (BOARD_HEIGHT + 2)))) != 0L) return true
-            
-            // Check negative diagonal
-            if ((board and (board shr BOARD_HEIGHT) and (board shr (2 * BOARD_HEIGHT)) and (board shr (3 * BOARD_HEIGHT))) != 0L) return true
-            
-            return false
-        }
-        
-        /**
-        * Check if the board is full
-        */
-        fun isFull(): Boolean {
-            for (col in 0 until BOARD_WIDTH) {
-                if (heights[col] < topPositions[col]) return false
-            }
-            return true
-        }
-        
-        /**
-        * Convert the bitboard to a standard 2D array board representation
-        */
-        fun toBoardArray(): Array<IntArray> {
-            val board = Array(BOARD_HEIGHT) { IntArray(BOARD_WIDTH) }
-            
-            for (row in 0 until BOARD_HEIGHT) {
-                for (col in 0 until BOARD_WIDTH) {
-                    val bitPosition = col * (BOARD_HEIGHT + 1) + row
-                    val bit1 = (bitboards[0] shr bitPosition) and 1L
-                    val bit2 = (bitboards[1] shr bitPosition) and 1L
-                    
-                    board[row][col] = when {
-                        bit1 == 1L -> 1 // Player 1
-                        bit2 == 1L -> 2 // Player 2
-                        else -> 0      // Empty
-                    }
-                }
-            }
-            
-            return board
-        }
-        
-        /**
-        * Evaluate the current board position using the heuristic from the article
-        */
-        fun evaluate(): Int {
-            // Check for terminal states first
-            for (col in 0 until BOARD_WIDTH) {
-                if (heights[col] > col * (BOARD_HEIGHT + 1)) {
-                    val prevHeight = heights[col] - 1
-                    val prevRow = prevHeight % (BOARD_HEIGHT + 1)
-                    val prevCol = prevHeight / (BOARD_HEIGHT + 1)
-                    
-                    // Temporarily decrement to check the last move
-                    heights[col]--
-                    counter--
-                    
-                    if (checkWin(prevCol)) {
-                        // Restore the state
-                        heights[col]++
-                        counter++
-                        
-                        // Return the win/loss score
-                        val winner = (counter - 1) and 1
-                        return if (winner == 0) WIN_SCORE else -WIN_SCORE
-                    }
-                    
-                    // Restore the state
-                    heights[col]++
-                    counter++
-                }
-            }
-            
-            // If the board is full, it's a draw
-            if (isFull()) return DRAW_SCORE
-            
-            // Use the heuristic from the article
-            var score = 0
-            
-            // Convert to 2D array for easier heuristic calculation
-            val board = toBoardArray()
-            
-            // Calculate the score for each player
-            var player1Score = 0
-            var player2Score = 0
-            
-            for (row in 0 until BOARD_HEIGHT) {
-                for (col in 0 until BOARD_WIDTH) {
-                    when (board[row][col]) {
-                        1 -> player1Score += scoreMap[row][col] // Player 1 (White)
-                        2 -> player2Score += scoreMap[row][col] // Player 2 (Black)
-                    }
-                }
-            }
-            
-            // Return the score difference
-            score = player1Score - player2Score
-            
-            // Adjust based on current player
-            return if (counter and 1 == 0) score else -score
-        }
-    }
-    
-    /**
     * Connect4 AI that uses the bitboard representation and alpha-beta pruning
     */
     fun makeComputerMoveConnect4WithBitboard() {
@@ -939,7 +715,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Fallback to the original Connect4 AI in case of errors
                 makeComputerMoveConnect4()
             } finally {
@@ -1538,5 +1314,231 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (line.contains("---o-")) score -= 40        // Single stone with several ways to extend (1,4)
         
         return score
+    }
+}
+
+/**
+ * Implementation of Connect4 AI using bitboards and alpha-beta pruning.
+ * Based on the optimizations described in the article.
+ */
+
+// Constants for the bitboard representation
+private const val BOARD_WIDTH = 7
+private const val BOARD_HEIGHT = 6
+private const val BOARD_SIZE = BOARD_WIDTH * BOARD_HEIGHT
+
+// Scoring constants
+private const val WIN_SCORE = 1000000
+private const val DRAW_SCORE = 0
+private const val LOSE_SCORE = -WIN_SCORE
+
+// Search depth (adjust as needed for performance)
+private const val SEARCH_DEPTH = 7
+
+/**
+ * BitboardConnect4 encapsulates the Connect4 game logic using bitboards
+ * for efficient representation and move generation.
+ */
+class BitboardConnect4 {
+    // Two bitboards - one for each player
+    private var bitboards = LongArray(2) { 0L }
+
+    // Counter for tracking whose turn it is
+    private var counter = 0
+
+    // Heights array - tracks the next available position in each column
+    private var heights = IntArray(BOARD_WIDTH) { col -> col * (BOARD_HEIGHT + 1) }
+
+    // Top positions for each column - used to check if a column is full
+    private val topPositions = IntArray(BOARD_WIDTH) { col -> col * (BOARD_HEIGHT + 1) + BOARD_HEIGHT }
+
+    // Scoring map for heuristic evaluation
+    private val scoreMap = arrayOf(
+        intArrayOf(3, 4, 5, 7, 5, 4, 3),
+        intArrayOf(4, 6, 8, 9, 8, 6, 4),
+        intArrayOf(5, 8, 11, 13, 11, 8, 5),
+        intArrayOf(5, 8, 11, 13, 11, 8, 5),
+        intArrayOf(4, 6, 8, 9, 8, 6, 4),
+        intArrayOf(3, 4, 5, 7, 5, 4, 3)
+    )
+
+    /**
+     * Reset the game state
+     */
+    fun reset() {
+        bitboards[0] = 0L
+        bitboards[1] = 0L
+        counter = 0
+        for (i in 0 until BOARD_WIDTH) {
+            heights[i] = i * (BOARD_HEIGHT + 1)
+        }
+    }
+
+    /**
+     * Get a copy of the current game state
+     */
+    fun copy(): BitboardConnect4 {
+        val copy = BitboardConnect4()
+        copy.bitboards[0] = bitboards[0]
+        copy.bitboards[1] = bitboards[1]
+        copy.counter = counter
+        System.arraycopy(heights, 0, copy.heights, 0, BOARD_WIDTH)
+        return copy
+    }
+
+    /**
+     * Check if a column is valid for a move
+     */
+    fun isValidMove(col: Int): Boolean {
+        return col in 0 until BOARD_WIDTH && heights[col] < topPositions[col]
+    }
+
+    /**
+     * Make a move for the current player in the specified column
+     */
+    fun makeMove(col: Int): Boolean {
+        if (!isValidMove(col)) return false
+
+        // Set the appropriate bit for the current player
+        val currentPlayer = counter and 1
+        bitboards[currentPlayer] = bitboards[currentPlayer] or (1L shl heights[col])
+
+        // Update the counter and the height of the column
+        counter++
+        heights[col]++
+
+        return true
+    }
+
+    /**
+     * Undo the last move
+     */
+    fun undoMove(col: Int): Boolean {
+        if (counter == 0 || heights[col] <= col * (BOARD_HEIGHT + 1)) return false
+
+        // Decrement the counter and height
+        counter--
+        heights[col]--
+
+        // Clear the appropriate bit for the player who just moved
+        val currentPlayer = counter and 1
+        bitboards[currentPlayer] = bitboards[currentPlayer] and (1L shl heights[col]).inv()
+
+        return true
+    }
+
+    /**
+     * Check if the last move resulted in a win
+     */
+    fun checkWin(col: Int): Boolean {
+        val player = (counter - 1) and 1
+        val board = bitboards[player]
+
+        // Check horizontal
+        if ((board and (board shr 1) and (board shr 2) and (board shr 3)) != 0L) return true
+
+        // Check vertical
+        if ((board and (board shr (BOARD_HEIGHT + 1)) and (board shr (2 * (BOARD_HEIGHT + 1))) and (board shr (3 * (BOARD_HEIGHT + 1)))) != 0L) return true
+
+        // Check positive diagonal
+        if ((board and (board shr (BOARD_HEIGHT + 2)) and (board shr (2 * (BOARD_HEIGHT + 2))) and (board shr (3 * (BOARD_HEIGHT + 2)))) != 0L) return true
+
+        // Check negative diagonal
+        if ((board and (board shr BOARD_HEIGHT) and (board shr (2 * BOARD_HEIGHT)) and (board shr (3 * BOARD_HEIGHT))) != 0L) return true
+
+        return false
+    }
+
+    /**
+     * Check if the board is full
+     */
+    fun isFull(): Boolean {
+        for (col in 0 until BOARD_WIDTH) {
+            if (heights[col] < topPositions[col]) return false
+        }
+        return true
+    }
+
+    /**
+     * Convert the bitboard to a standard 2D array board representation
+     */
+    fun toBoardArray(): Array<IntArray> {
+        val board = Array(BOARD_HEIGHT) { IntArray(BOARD_WIDTH) }
+
+        for (row in 0 until BOARD_HEIGHT) {
+            for (col in 0 until BOARD_WIDTH) {
+                val bitPosition = col * (BOARD_HEIGHT + 1) + row
+                val bit1 = (bitboards[0] shr bitPosition) and 1L
+                val bit2 = (bitboards[1] shr bitPosition) and 1L
+
+                board[row][col] = when {
+                    bit1 == 1L -> 1 // Player 1
+                    bit2 == 1L -> 2 // Player 2
+                    else -> 0      // Empty
+                }
+            }
+        }
+
+        return board
+    }
+
+    /**
+     * Evaluate the current board position using the heuristic from the article
+     */
+    fun evaluate(): Int {
+        // Check for terminal states first
+        for (col in 0 until BOARD_WIDTH) {
+            if (heights[col] > col * (BOARD_HEIGHT + 1)) {
+                val prevHeight = heights[col] - 1
+                val prevRow = prevHeight % (BOARD_HEIGHT + 1)
+                val prevCol = prevHeight / (BOARD_HEIGHT + 1)
+
+                // Temporarily decrement to check the last move
+                heights[col]--
+                counter--
+
+                if (checkWin(prevCol)) {
+                    // Restore the state
+                    heights[col]++
+                    counter++
+
+                    // Return the win/loss score
+                    val winner = (counter - 1) and 1
+                    return if (winner == 0) WIN_SCORE else -WIN_SCORE
+                }
+
+                // Restore the state
+                heights[col]++
+                counter++
+            }
+        }
+
+        // If the board is full, it's a draw
+        if (isFull()) return DRAW_SCORE
+
+        // Use the heuristic from the article
+        var score = 0
+
+        // Convert to 2D array for easier heuristic calculation
+        val board = toBoardArray()
+
+        // Calculate the score for each player
+        var player1Score = 0
+        var player2Score = 0
+
+        for (row in 0 until BOARD_HEIGHT) {
+            for (col in 0 until BOARD_WIDTH) {
+                when (board[row][col]) {
+                    1 -> player1Score += scoreMap[row][col] // Player 1 (White)
+                    2 -> player2Score += scoreMap[row][col] // Player 2 (Black)
+                }
+            }
+        }
+
+        // Return the score difference
+        score = player1Score - player2Score
+
+        // Adjust based on current player
+        return if (counter and 1 == 0) score else -score
     }
 }
