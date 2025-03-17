@@ -1120,29 +1120,61 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         // Winning threats
         if (line.contains("ooooo")) score -= 10000000  // Five in a row (opponent win)
-        if (line.contains("-oooo-")) score -= 9000000  // Open four (opponent win)
-        if (line.contains("oo-oo")) score -= 9000000   // Split open four (opponent win)
-        if (line.contains("ooo-o")) score -= 9000000   // Non-standard open four
-        if (line.contains("o-ooo")) score -= 9000000   // Non-standard open four
         
-        // Forcing threats
+        // Open Four (4,2) - guaranteed win next move
+        if (line.contains("-oooo-")) score -= 9000000  // Standard open four
+        if (line.contains("oo-oo")) score -= 9000000   // Split open four
+        if (line.contains("ooo-o")) score -= 9000000   // Non-standard open four with gap
+        if (line.contains("o-ooo")) score -= 9000000   // Non-standard open four with gap
+        
+        // FORCING THREATS - require immediate response
+        
+        // Simple Four (4,1) - one way to make 5
         if (line.contains("oooo-")) score -= 900000    // Simple four (one side)
         if (line.contains("-oooo")) score -= 900000    // Simple four (other side)
+        if (line.contains("oo-oo-")) score -= 900000   // Non-standard four (blocked on one side)
+        if (line.contains("-oo-oo")) score -= 900000   // Non-standard four (blocked on one side)
+        if (line.contains("ooo-o-")) score -= 900000   // Non-standard four (blocked on one side)
+        if (line.contains("-ooo-o")) score -= 900000   // Non-standard four (blocked on one side)
+        if (line.contains("o-ooo-")) score -= 900000   // Non-standard four (blocked on one side)
+        if (line.contains("-o-ooo")) score -= 900000   // Non-standard four (blocked on one side)
+        
+        // Open Three (3,3) - three ways to complete
         if (line.contains("--ooo--")) score -= 90000   // Standard open three
-        if (line.contains("-o-oo-")) score -= 90000    // Non-standard open three
-        if (line.contains("-oo-o-")) score -= 90000    // Non-standard open three
-        if (line.contains("-o--o-o--")) score -= 90000 // Beautiful pattern from article
+        if (line.contains("-o-oo-")) score -= 90000    // Non-standard open three, as in article example
+        if (line.contains("-oo-o-")) score -= 90000    // Non-standard open three, as in article example
+        if (line.contains("-o--o-o--")) score -= 90000 // Beautiful pattern from article example
         
-        // Broken three (weaker forcing threat)
-        if (line.contains("-ooo-x")) score -= 9000     // Broken three
-        if (line.contains("x-ooo-")) score -= 9000     // Broken three
+        // Broken Three (3,2) - two ways to complete, mentioned as weaker than open three
+        if (line.contains("-ooo-x")) score -= 9000     // Broken three, blocked on one side
+        if (line.contains("x-ooo-")) score -= 9000     // Broken three, blocked on one side
+        if (line.contains("-oo-o")) score -= 9000      // Non-standard broken three
+        if (line.contains("o-oo-")) score -= 9000      // Non-standard broken three
+        if (line.contains("-o-oo")) score -= 9000      // Non-standard broken three
+        if (line.contains("oo-o-")) score -= 9000      // Non-standard broken three
         
-        // Non-forcing threats
-        if (line.contains("ooo--x")) score -= 900      // Simple three
-        if (line.contains("x--ooo")) score -= 900      // Simple three
-        if (line.contains("--oo--")) score -= 90       // Two (2,4)
-        if (line.contains("-oo---")) score -= 80       // Two (2,3)
-        if (line.contains("---oo-")) score -= 80       // Two (2,3)
+        // NON-FORCING THREATS - don't require immediate response but still valuable
+        
+        // Simple Three (3,1) - one way to complete
+        if (line.contains("ooo--x")) score -= 900      // Simple three, blocked on one side
+        if (line.contains("x--ooo")) score -= 900      // Simple three, blocked on one side
+        if (line.contains("oo-o--x")) score -= 900     // Non-standard simple three
+        if (line.contains("x--o-oo")) score -= 900     // Non-standard simple three
+        
+        // Two (2,n) - two stones that can be extended n ways to five
+        if (line.contains("--oo--")) score -= 90       // Two that can be extended in 4 ways (2,4)
+        if (line.contains("-oo---")) score -= 80       // Two that can be extended in 3 ways (2,3)
+        if (line.contains("---oo-")) score -= 80       // Two that can be extended in 3 ways (2,3)
+        if (line.contains("-o-o--")) score -= 80       // Split two that can be extended in 3 ways
+        if (line.contains("--o-o-")) score -= 80       // Split two that can be extended in 3 ways
+        if (line.contains("-oo--x")) score -= 70       // Two that can be extended in 2 ways (2,2)
+        if (line.contains("x--oo-")) score -= 70       // Two that can be extended in 2 ways (2,2)
+        if (line.contains("x-oo--x")) score -= 60      // Two that can be extended in 1 way (2,1)
+        
+        // Single (1,n) - single stone with n ways to make 5
+        if (line.contains("--o--")) score -= 50        // Single stone with many ways to extend (1,5)
+        if (line.contains("-o---")) score -= 40        // Single stone with several ways to extend (1,4)
+        if (line.contains("---o-")) score -= 40        // Single stone with several ways to extend (1,4)
         
         return score
     }
