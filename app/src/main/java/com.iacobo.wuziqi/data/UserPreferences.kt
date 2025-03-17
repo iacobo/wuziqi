@@ -47,7 +47,7 @@ class UserPreferencesRepository(private val context: Context) {
         val themeMode = preferences[THEME_MODE]?.let { 
             try {
                 ThemeMode.valueOf(it)
-            } catch (e: IllegalArgumentException) {
+            } catch (_: IllegalArgumentException) {
                 ThemeMode.SYSTEM
             }
         } ?: ThemeMode.SYSTEM

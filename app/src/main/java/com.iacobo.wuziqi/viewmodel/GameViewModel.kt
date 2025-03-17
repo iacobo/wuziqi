@@ -450,17 +450,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // First, try to win
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
-                if (gameState.board[row][col] == GameState.EMPTY) {
-                    // Try this move
-                    gameState.board[row][col] = computerPlayer
-                    if (gameState.checkWin(row, col, computerPlayer)) {
+                if (gameState.isTileEmpty(row, col)) {
+                    // Try this move using a temporary board without changing state
+                    val tempBoard = gameState.getBoardWithMove(row, col, computerPlayer)
+                    
+                    // Check on the temporary board
+                    if (checkWinOnBoard(tempBoard, row, col, computerPlayer, gameState.winCondition)) {
                         // We can win, make this move
-                        gameState.board[row][col] = GameState.EMPTY // Reset for proper handling
                         placeTile(row, col)
                         return
                     }
-                    // Undo try
-                    gameState.board[row][col] = GameState.EMPTY
                 }
             }
         }
@@ -468,23 +467,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Next, block the human from winning
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
-                if (gameState.board[row][col] == GameState.EMPTY) {
-                    // Try this move for the human
-                    gameState.board[row][col] = humanPlayer
-                    if (gameState.checkWin(row, col, humanPlayer)) {
+                if (gameState.isTileEmpty(row, col)) {
+                    // Try this move for the human using a temporary board
+                    val tempBoard = gameState.getBoardWithMove(row, col, humanPlayer)
+                    
+                    // Check on the temporary board
+                    if (checkWinOnBoard(tempBoard, row, col, humanPlayer, gameState.winCondition)) {
                         // Block this winning move
-                        gameState.board[row][col] = GameState.EMPTY // Reset for proper handling
                         placeTile(row, col)
                         return
                     }
-                    // Undo try
-                    gameState.board[row][col] = GameState.EMPTY
                 }
             }
         }
         
         // Take center if available
-        if (gameState.board[1][1] == GameState.EMPTY) {
+        if (gameState.isTileEmpty(1, 1)) {
             placeTile(1, 1)
             return
         }
@@ -492,7 +490,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Take a corner if available
         val corners = listOf(Pair(0, 0), Pair(0, 2), Pair(2, 0), Pair(2, 2))
         val availableCorners = corners.filter { (row, col) -> 
-            gameState.board[row][col] == GameState.EMPTY 
+            gameState.isTileEmpty(row, col)
         }
         
         if (availableCorners.isNotEmpty()) {
@@ -504,7 +502,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Take any available edge
         val edges = listOf(Pair(0, 1), Pair(1, 0), Pair(1, 2), Pair(2, 1))
         val availableEdges = edges.filter { (row, col) -> 
-            gameState.board[row][col] == GameState.EMPTY 
+            gameState.isTileEmpty(row, col)
         }
         
         if (availableEdges.isNotEmpty()) {
@@ -512,6 +510,73 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             placeTile(row, col)
             return
         }
+    }
+
+    /**
+    * Helper method to check for a win on a temporary board without modifying game state.
+    * This prevents state mutation issues during AI trial moves.
+    */
+    private fun checkWinOnBoard(
+        board: Array<IntArray>,
+        row: Int,
+        col: Int,
+        playerValue: Int,
+        winLength: Int
+    ): Boolean {
+        // Check horizontal, vertical, diagonal \, and diagonal /
+        return checkDirectionOnBoard(board, row, col, 1, 0, playerValue, winLength) || // Horizontal
+            checkDirectionOnBoard(board, row, col, 0, 1, playerValue, winLength) || // Vertical
+            checkDirectionOnBoard(board, row, col, 1, 1, playerValue, winLength) || // Diagonal \
+            checkDirectionOnBoard(board, row, col, 1, -1, playerValue, winLength)   // Diagonal /
+    }
+
+    /**
+    * Counts pieces in a direction on a temporary board
+    */
+    private fun checkDirectionOnBoard(
+        board: Array<IntArray>,
+        row: Int,
+        col: Int,
+        deltaRow: Int,
+        deltaCol: Int,
+        playerValue: Int,
+        winLength: Int
+    ): Boolean {
+        val boardSize = board.size
+        var count = 1 // Start with 1 for the piece itself
+
+        // Check in positive direction
+        count += countInDirectionOnBoard(board, row, col, deltaRow, deltaCol, playerValue, boardSize)
+        
+        // Check in negative direction
+        count += countInDirectionOnBoard(board, row, col, -deltaRow, -deltaCol, playerValue, boardSize)
+
+        return count >= winLength
+    }
+
+    /**
+    * Helper method to count consecutive pieces in a direction on a temporary board
+    */
+    private fun countInDirectionOnBoard(
+        board: Array<IntArray>,
+        row: Int,
+        col: Int,
+        deltaRow: Int,
+        deltaCol: Int,
+        playerValue: Int,
+        boardSize: Int
+    ): Int {
+        var count = 0
+        var r = row + deltaRow
+        var c = col + deltaCol
+
+        while (r in 0 until boardSize && c in 0 until boardSize && board[r][c] == playerValue) {
+            count++
+            r += deltaRow
+            c += deltaCol
+        }
+
+        return count
     }
     
     /**

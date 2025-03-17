@@ -2,6 +2,7 @@ package com.iacobo.wuziqi.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.core.content.edit
@@ -33,20 +34,21 @@ class GameState// Constructor with custom board size and win condition
         private const val KEY_EASTER_EGGS = "easter_eggs"
     }
 
+    // Changed board to use mutableStateOf for proper observation
+    private val _boardState = mutableStateOf(Array(boardSize) { IntArray(boardSize) { EMPTY } })
+    
+    // Property for access to the board
     var board: Array<IntArray>
+        get() = _boardState.value
+        private set(value) {
+            _boardState.value = value
+        }
+        
     var currentPlayer: Int = PLAYER_ONE
-
-    // Initialize with default values
-    init {
-        board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
-    }
-
-    init {
-        this.board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
-    }
 
     /**
      * Places a tile on the board and switches the current player.
+     * FIXED to create a new array for proper reactivity in Compose.
      *
      * @param row The row position
      * @param col The column position
@@ -55,7 +57,17 @@ class GameState// Constructor with custom board size and win condition
     fun placeTile(row: Int, col: Int): Boolean {
         if (!isTileEmpty(row, col)) return false
         
-        board[row][col] = currentPlayer
+        // Create a new array to trigger state changes
+        val newBoard = Array(boardSize) { r ->
+            IntArray(boardSize) { c ->
+                if (r == row && c == col) currentPlayer else board[r][c]
+            }
+        }
+        
+        // Update the board state with new array
+        board = newBoard
+        
+        // Switch player
         currentPlayer = if (currentPlayer == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
         return true
     }
@@ -71,6 +83,7 @@ class GameState// Constructor with custom board size and win condition
 
     /**
      * Resets the game state to initial values.
+     * FIXED to create a new array for proper reactivity.
      */
     fun reset() {
         board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
@@ -146,6 +159,26 @@ class GameState// Constructor with custom board size and win condition
     }
     
     /**
+     * Creates a new board with a specific value at the specified position
+     * Useful for trial moves in AI without affecting state
+     */
+    fun getBoardWithMove(row: Int, col: Int, value: Int): Array<IntArray> {
+        return Array(boardSize) { r ->
+            IntArray(boardSize) { c ->
+                if (r == row && c == col) value else board[r][c]
+            }
+        }
+    }
+    
+    /**
+     * Directly sets a value at a position without creating a new board
+     * Use ONLY for temporary trial moves that won't be displayed
+     */
+    fun setValueDirect(row: Int, col: Int, value: Int) {
+        board[row][col] = value
+    }
+    
+    /**
      * Saves the current game state to persistent storage
      */
     suspend fun saveState(context: Context) = withContext(Dispatchers.IO) {
@@ -184,14 +217,17 @@ class GameState// Constructor with custom board size and win condition
         againstComputer = prefs.getBoolean(KEY_AGAINST_COMPUTER, false)
         
         // Parse board from string
-        board = Array(boardSize) { IntArray(boardSize) { EMPTY } }
+        val newBoard = Array(boardSize) { IntArray(boardSize) { EMPTY } }
         val rows = boardStr.split(";")
         for (i in rows.indices) {
             val cols = rows[i].split(",")
             for (j in cols.indices) {
-                board[i][j] = cols[j].toInt()
+                newBoard[i][j] = cols[j].toInt()
             }
         }
+        
+        // Update board through the property to trigger state update
+        board = newBoard
         
         currentPlayer = prefs.getInt(KEY_CURRENT_PLAYER, PLAYER_ONE)
         true
