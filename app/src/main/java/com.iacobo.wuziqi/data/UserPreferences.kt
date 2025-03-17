@@ -1,6 +1,8 @@
 package com.iacobo.wuziqi.data
 
+import android.app.LocaleManager
 import android.content.Context
+import android.os.LocaleList
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -82,5 +84,8 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[LANGUAGE_CODE] = languageCode
         }
+
+        val localeManager = context.getSystemService(LocaleManager::class.java)
+        localeManager.applicationLocales = LocaleList.forLanguageTags(languageCode)
     }
 }

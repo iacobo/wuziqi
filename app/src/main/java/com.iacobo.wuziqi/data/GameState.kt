@@ -3,9 +3,9 @@ package com.iacobo.wuziqi.data
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import androidx.core.content.edit
 
 /**
  * Represents the state of a Wuziqi game.
@@ -157,27 +157,7 @@ class GameState// Constructor with custom board size and win condition
     fun isValidPosition(row: Int, col: Int): Boolean {
         return row in 0 until boardSize && col in 0 until boardSize
     }
-    
-    /**
-     * Creates a new board with a specific value at the specified position
-     * Useful for trial moves in AI without affecting state
-     */
-    fun getBoardWithMove(row: Int, col: Int, value: Int): Array<IntArray> {
-        return Array(boardSize) { r ->
-            IntArray(boardSize) { c ->
-                if (r == row && c == col) value else board[r][c]
-            }
-        }
-    }
-    
-    /**
-     * Directly sets a value at a position without creating a new board
-     * Use ONLY for temporary trial moves that won't be displayed
-     */
-    fun setValueDirect(row: Int, col: Int, value: Int) {
-        board[row][col] = value
-    }
-    
+
     /**
      * Saves the current game state to persistent storage
      */

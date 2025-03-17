@@ -1,13 +1,32 @@
 package com.iacobo.wuziqi.ui
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +40,11 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
+import com.iacobo.wuziqi.ui.theme.Connect4BoardBlue
+import com.iacobo.wuziqi.ui.theme.Connect4PieceRed
+import com.iacobo.wuziqi.ui.theme.Connect4PieceRedBright
+import com.iacobo.wuziqi.ui.theme.Connect4PieceYellow
+import com.iacobo.wuziqi.ui.theme.Connect4PieceYellowBright
 import com.iacobo.wuziqi.viewmodel.Position
 
 /**
@@ -35,7 +59,6 @@ fun Connect4Board(
     isGameFrozen: Boolean,
     onColumnClick: (Int) -> Unit
 ) {
-    val boardColor = Color(0xFF1565C0) // Connect 4 blue board color
     val boardSize = gameState.boardSize
     val boardHeight = 6 // 6 rows for Connect 4 (7x6 grid)
 
@@ -129,10 +152,16 @@ fun Connect4Board(
                                         // Calculate animation offset
                                         val yOffset = droppingAnimations[cellPosition]?.value ?: 1f
 
-                                        // Determine piece color
+                                        // Determine piece color using resources instead of hardcoded values
                                         val pieceColor = when (gameState.board[row][col]) {
-                                            GameState.PLAYER_ONE -> Color.Red
-                                            else -> Color(0xFFFFD700) // Gold/Yellow
+                                            GameState.PLAYER_ONE -> Connect4PieceRed
+                                            else -> Connect4PieceYellow
+                                        }
+
+                                        // Inner color slightly more saturated for contrast
+                                        val innerPieceColor = when (gameState.board[row][col]) {
+                                            GameState.PLAYER_ONE -> Connect4PieceRedBright
+                                            else -> Connect4PieceYellowBright
                                         }
 
                                         // The actual game piece with animation
@@ -148,10 +177,7 @@ fun Connect4Board(
                                                 )
                                                 .clip(CircleShape)
                                                 .background(
-                                                    color = when (gameState.board[row][col]) {
-                                                        GameState.PLAYER_ONE -> Color.Red.copy(alpha = 0.85f)
-                                                        else -> Color(0xFFFFD700).copy(alpha = 0.85f)
-                                                    }
+                                                    color = pieceColor.copy(alpha = 0.85f)
                                                 )
                                         ) {
                                             // Inner part of piece (creates a ring effect)
@@ -160,7 +186,7 @@ fun Connect4Board(
                                                     .size(28.dp)
                                                     .align(Alignment.Center)
                                                     .clip(CircleShape)
-                                                    .background(pieceColor)
+                                                    .background(innerPieceColor)
                                             )
                                         }
                                     }
@@ -179,7 +205,7 @@ fun Connect4Board(
                 .graphicsLayer {
                     compositingStrategy = CompositingStrategy.Offscreen
                 }
-                .background(boardColor)
+                .background(Connect4BoardBlue)
                 .drawWithContent {
                     drawContent()
 

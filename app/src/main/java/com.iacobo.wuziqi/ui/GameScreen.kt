@@ -1,23 +1,42 @@
 package com.iacobo.wuziqi.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.ThemeMode
+import com.iacobo.wuziqi.ui.theme.Connect4PieceRed
+import com.iacobo.wuziqi.ui.theme.Connect4PieceYellow
 import com.iacobo.wuziqi.viewmodel.DRAW
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 
@@ -158,8 +177,20 @@ fun GameScreen(
                 } else if (winner != null) {
                     // Show winner with fireworks emoji
                     val winnerText = when {
-                        isXandO -> if (winner == GameState.PLAYER_ONE) "X Wins! 🎆" else "O Wins! 🎆"
-                        isConnect4 -> if (winner == GameState.PLAYER_ONE) "Red Wins! 🎆" else "Yellow Wins! 🎆"
+                        isXandO -> stringResource(
+                            R.string.winner_format,
+                            if (winner == GameState.PLAYER_ONE)
+                                stringResource(R.string.player_x)
+                            else
+                                stringResource(R.string.player_o)
+                        )
+                        isConnect4 -> stringResource(
+                            R.string.winner_format,
+                            if (winner == GameState.PLAYER_ONE)
+                                stringResource(R.string.player_red)
+                            else
+                                stringResource(R.string.player_yellow)
+                        )
                         else -> {
                             // Handle computer opponent case
                             if (gameState.againstComputer) {
@@ -180,7 +211,7 @@ fun GameScreen(
                     }
                     
                     val winnerColor = when {
-                        isConnect4 -> if (winner == GameState.PLAYER_ONE) Color.Red else Color(0xFFFFD700) // Gold
+                        isConnect4 -> if (winner == GameState.PLAYER_ONE) Connect4PieceRed else Connect4PieceYellow
                         else -> if (winner == GameState.PLAYER_ONE) 
                             MaterialTheme.colorScheme.primary
                         else 
@@ -197,29 +228,41 @@ fun GameScreen(
                 } else {
                     // Show current player
                     val playerText = when {
-                        isXandO -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "X's Turn" else "O's Turn"
-                        isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) "Red's Turn" else "Yellow's Turn"
+                        isXandO -> stringResource(
+                            R.string.player_turn_format,
+                            if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                stringResource(R.string.player_x)
+                            else
+                                stringResource(R.string.player_o)
+                        )
+                        isConnect4 -> stringResource(
+                            R.string.player_turn_format,
+                            if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                stringResource(R.string.player_red)
+                            else
+                                stringResource(R.string.player_yellow)
+                        )
                         else -> {
                             // Handle computer opponent case
                             if (gameState.againstComputer) {
-                                if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
                                     stringResource(R.string.your_turn)
-                                else 
+                                else
                                     stringResource(R.string.computer_thinking)
                             } else {
                                 stringResource(
                                     R.string.player_turn_format,
-                                    if (gameState.currentPlayer == GameState.PLAYER_ONE) 
+                                    if (gameState.currentPlayer == GameState.PLAYER_ONE)
                                         stringResource(R.string.player_black)
-                                    else 
+                                    else
                                         stringResource(R.string.player_white)
                                 )
                             }
                         }
                     }
-                    
+
                     val playerColor = when {
-                        isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Color.Red else Color(0xFFFFD700) // Gold
+                        isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Connect4PieceRed else Connect4PieceYellow
                         else -> if (gameState.currentPlayer == GameState.PLAYER_ONE) 
                             MaterialTheme.colorScheme.primary
                         else 

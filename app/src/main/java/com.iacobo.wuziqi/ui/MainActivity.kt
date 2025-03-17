@@ -1,7 +1,8 @@
 package com.iacobo.wuziqi.ui
 
-import android.content.Context
+import android.app.LocaleManager
 import android.os.Bundle
+import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -12,16 +13,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
 import com.iacobo.wuziqi.data.ThemeMode
 import com.iacobo.wuziqi.data.UserPreferences
 import com.iacobo.wuziqi.ui.theme.WuziqiTheme
 import com.iacobo.wuziqi.viewmodel.SettingsViewModel
-import java.util.Locale
-import androidx.core.view.WindowCompat
 
 /**
  * Main entry point for the Wuziqi application.
@@ -84,23 +83,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ApplyLanguageSettings(preferences: UserPreferences) {
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
 
+    // Set up the locale when preferences change
     LaunchedEffect(preferences.languageCode) {
-        updateLanguage(context, preferences.languageCode)
+        val localeManager = context.getSystemService(LocaleManager::class.java)
+        localeManager.applicationLocales = LocaleList.forLanguageTags(preferences.languageCode)
     }
-}
-
-/**
- * Updates the app's language configuration.
- */
-fun updateLanguage(context: Context, languageCode: String) {
-    val locale = when (languageCode) {
-        "zh" -> Locale.SIMPLIFIED_CHINESE
-        else -> Locale.ENGLISH
-    }
-
-    val config = context.resources.configuration
-    config.setLocale(locale)
-    context.resources.updateConfiguration(config, context.resources.displayMetrics)
 }

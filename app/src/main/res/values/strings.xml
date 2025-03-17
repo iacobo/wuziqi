@@ -6,6 +6,10 @@
     <string name="player_turn_format">%s\'s Turn</string>
     <string name="player_black">Black</string>
     <string name="player_white">White</string>
+    <string name="player_red">Red</string>
+    <string name="player_yellow">Yellow</string>
+    <string name="player_x">X</string>
+    <string name="player_o">O</string>
     <string name="draw">Draw</string>
     <string name="home">Home</string>
     <string name="computer_thinking">Thinking…</string>
@@ -52,6 +56,11 @@
     <string name="standard_wuziqi_desc">15×15 board with 5-in-a-row to win</string>
     <string name="custom_game">Custom Game</string>
     <string name="custom_game_desc">Choose your own board size and win condition</string>
+    <string name="connect4_title">Connect 4</string>
+    <string name="connect4_description">Classic Connect 4 game with vertical drops</string>
+    <string name="tictactoe_title">X\'s &amp; O\'s</string>
+    <string name="tictactoe_description">Classic 3×3 tic-tac-toe game</string>
+
     <string name="choose_opponent">Choose your opponent</string>
     <string name="play_against_human">Over the board</string>
     <string name="play_against_computer">Play against Computer</string>

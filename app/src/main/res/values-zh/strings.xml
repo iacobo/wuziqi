@@ -29,6 +29,16 @@
     <string name="player_turn_format">%s子</string>
     <string name="player_black">黑</string>
     <string name="player_white">白</string>
+    <string name="player_red">红</string>
+    <string name="player_yellow">黄</string>
+    <string name="player_x">✕</string>
+    <string name="player_o">◯</string>
+
+    <!-- Game Titles -->
+    <string name="connect4_title">四子连线</string>
+    <string name="connect4_description">经典四子连线游戏</string>
+    <string name="tictactoe_title">井字棋</string>
+    <string name="tictactoe_description">经典3×3井字棋游戏</string>
 
     <!-- Computer player text -->
     <string name="your_turn">你的回合</string>

@@ -19,3 +19,10 @@ val BoardLightColor = Color(0xFFE6C47A) // Wood-like color
 val BoardDarkColor = Color(0xFF2A2A2A) // Dark board color
 val GridLightColor = Color(0xDD333333) // Dark lines for light theme
 val GridDarkColor = Color(0xDDCCCCCC) // Light lines for dark theme
+val Connect4BoardBlue = Color(0xFF1565C0)
+
+// Game pieces colors
+val Connect4PieceRed = Color(0xFFE53935)
+val Connect4PieceRedBright = Color(0xFFEF5350)
+val Connect4PieceYellow = Color(0xFFFFC107)
+val Connect4PieceYellowBright= Color(0xFFFFD600)
