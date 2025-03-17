@@ -748,10 +748,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      */
     private fun hasOpenThree(row: Int, col: Int, playerValue: Int): Boolean {
         return checkForPatterns(row, col, playerValue, listOf(
-            "-xxx-",    // Standard open three
+            "--xxx-",    // Standard open three
+            "-xxx--",    // Standard open three
             "-x-xx-",     // Non-standard open three
             "-xx-x-",     // Non-standard open three
-            "-x--x-x--"   // Beautiful pattern from article
+            "-x--x-x--",  // Beautiful pattern from article
+            "--x-x--x-"   // Beautiful pattern from article
         ))
     }
 
@@ -1053,7 +1055,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (line.contains("-x-xxx")) score += 900000   // Non-standard four (blocked on one side)
         
         // Open Three (3,3) - three ways to complete
-        if (line.contains("--xxx--")) score += 90000   // Standard open three
+        if (line.contains("--xxx-")) score += 90000   // Standard open three
+        if (line.contains("-xxx--")) score += 90000   // Standard open three
         if (line.contains("-x-xx-")) score += 90000    // Non-standard open three, as in article example
         if (line.contains("-xx-x-")) score += 90000    // Non-standard open three, as in article example
         if (line.contains("-x--x-x--")) score += 90000 // Beautiful pattern from article example
@@ -1114,7 +1117,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (line.contains("-o-ooo")) score -= 900000   // Non-standard four (blocked on one side)
         
         // Open Three (3,3) - three ways to complete
-        if (line.contains("--ooo--")) score -= 90000   // Standard open three
+        if (line.contains("-ooo--")) score -= 90000   // Standard open three
+        if (line.contains("--ooo-")) score -= 90000   // Standard open three
         if (line.contains("-o-oo-")) score -= 90000    // Non-standard open three, as in article example
         if (line.contains("-oo-o-")) score -= 90000    // Non-standard open three, as in article example
         if (line.contains("-o--o-o--")) score -= 90000 // Beautiful pattern from article example
