@@ -748,7 +748,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      */
     private fun hasOpenThree(row: Int, col: Int, playerValue: Int): Boolean {
         return checkForPatterns(row, col, playerValue, listOf(
-            "--xxx--",    // Standard open three
+            "-xxx-",    // Standard open three
             "-x-xx-",     // Non-standard open three
             "-xx-x-",     // Non-standard open three
             "-x--x-x--"   // Beautiful pattern from article
