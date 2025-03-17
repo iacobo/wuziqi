@@ -16,8 +16,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.Random
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
+import kotlin.math.pow
 
 /**
  * Represents a move in the game with position and player information.
@@ -564,7 +563,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         // Check diagonal \
         count = 0
-        val minDiag1 = Math.min(row, col)
+        val minDiag1 = row.coerceAtMost(col)
         var r = row - minDiag1
         var c = col - minDiag1
         while (r < board.size && c < board.size) {
@@ -580,7 +579,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         // Check diagonal /
         count = 0
-        val minDiag2 = Math.min(row, board.size - 1 - col)
+        val minDiag2 = row.coerceAtMost(board.size - 1 - col)
         r = row - minDiag2
         c = col + minDiag2
         while (r < board.size && c >= 0) {
@@ -729,7 +728,81 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val computerPlayer = GameState.PLAYER_TWO
         val humanPlayer = GameState.PLAYER_ONE
         
-        // 1. Find the best move based on the heuristic pattern evaluation
+        // First check for immediate win or forced defense
+        
+        // 1. Look for winning moves (five or open four)
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.isTileEmpty(row, col)) {
+                    // Temporarily place computer's stone
+                    gameState.board[row][col] = computerPlayer
+                    
+                    // Check for an immediate win
+                    if (gameState.checkWin(row, col, computerPlayer)) {
+                        // Win found, make this move
+                        gameState.board[row][col] = GameState.EMPTY // Reset for proper handling
+                        placeTile(row, col, bypassLoading = true)
+                        return
+                    }
+                    
+                    // Look for open four (which guarantees a win next move)
+                    if (hasOpenFour(row, col, computerPlayer)) {
+                        // Open four found, make this move
+                        gameState.board[row][col] = GameState.EMPTY
+                        placeTile(row, col, bypassLoading = true)
+                        return
+                    }
+                    
+                    // Reset board
+                    gameState.board[row][col] = GameState.EMPTY
+                }
+            }
+        }
+        
+        // 2. Check if opponent has a winning move that we must block
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.isTileEmpty(row, col)) {
+                    // Check if opponent would win here
+                    gameState.board[row][col] = humanPlayer
+                    if (gameState.checkWin(row, col, humanPlayer) || hasOpenFour(row, col, humanPlayer)) {
+                        // Must block this threat
+                        gameState.board[row][col] = GameState.EMPTY
+                        placeTile(row, col, bypassLoading = true)
+                        return
+                    }
+                    gameState.board[row][col] = GameState.EMPTY
+                }
+            }
+        }
+        
+        // 3. Look for forcing threats (simple four, open three, broken three)
+        var bestForcingMove: Pair<Int, Int>? = null
+        var bestForcingScore = Int.MIN_VALUE
+        
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.isTileEmpty(row, col)) {
+                    // Temporarily place stone and evaluate
+                    gameState.board[row][col] = computerPlayer
+                    val score = evaluatePosition(computerPlayer)
+                    gameState.board[row][col] = GameState.EMPTY
+                    
+                    // For forcing threats, we're looking for scores above a certain threshold
+                    if (score > 900000 && score > bestForcingScore) {
+                        bestForcingScore = score
+                        bestForcingMove = Pair(row, col)
+                    }
+                }
+            }
+        }
+        
+        if (bestForcingMove != null) {
+            placeTile(bestForcingMove.first, bestForcingMove.second, bypassLoading = true)
+            return
+        }
+        
+        // 4. Find the best move based on the heuristic pattern evaluation
         var bestScore = Int.MIN_VALUE
         var bestMove: Pair<Int, Int>? = null
         
@@ -739,23 +812,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // If no candidate moves (empty board), place in center
         if (candidates.isEmpty()) {
             val center = boardSize / 2
-            placeTile(center, center, bypassLoading = true)  // Add bypassLoading parameter
+            placeTile(center, center, bypassLoading = true)
             return
         }
         
         // Evaluate each candidate position
         for ((row, col) in candidates) {
-            if (gameState.board[row][col] == GameState.EMPTY) {
-                // Simulate placing the piece
+            if (gameState.isTileEmpty(row, col)) {
+                // Temporarily place stone and evaluate
                 gameState.board[row][col] = computerPlayer
-                
-                // Evaluate the position
-                val score = evaluatePosition(computerPlayer)
-                
-                // Restore the board
+                val computerScore = evaluatePosition(computerPlayer)
+                val humanScore = evaluatePosition(humanPlayer)
                 gameState.board[row][col] = GameState.EMPTY
                 
-                // Update best move
+                // Final score is the difference (how good for computer minus how good for human)
+                val score = computerScore - humanScore
+                
                 if (score > bestScore) {
                     bestScore = score
                     bestMove = Pair(row, col)
@@ -765,13 +837,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         // Make the best move
         bestMove?.let { (row, col) ->
-            placeTile(row, col, bypassLoading = true)  // Add bypassLoading parameter
+            placeTile(row, col, bypassLoading = true)
         } ?: run {
             // Fall back to any valid move if no best move found
             val emptyPositions = mutableListOf<Pair<Int, Int>>()
             for (row in 0 until boardSize) {
                 for (col in 0 until boardSize) {
-                    if (gameState.board[row][col] == GameState.EMPTY) {
+                    if (gameState.isTileEmpty(row, col)) {
                         emptyPositions.add(Pair(row, col))
                     }
                 }
@@ -779,11 +851,66 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             
             if (emptyPositions.isNotEmpty()) {
                 val (row, col) = emptyPositions[random.nextInt(emptyPositions.size)]
-                placeTile(row, col, bypassLoading = true)  // Add bypassLoading parameter
+                placeTile(row, col, bypassLoading = true)
             }
         }
     }
-    
+
+    /**
+    * Helper function to check for open four at a position
+    */
+    private fun hasOpenFour(row: Int, col: Int, playerValue: Int): Boolean {
+        val directions = listOf(
+            Pair(1, 0),    // Horizontal
+            Pair(0, 1),    // Vertical
+            Pair(1, 1),    // Diagonal \
+            Pair(1, -1)    // Diagonal /
+        )
+        
+        for ((deltaRow, deltaCol) in directions) {
+            if (hasOpenFourInDirection(row, col, deltaRow, deltaCol, playerValue)) {
+                return true
+            }
+        }
+        
+        return false
+    }
+
+    /**
+    * Check for open four in a specific direction
+    */
+    private fun hasOpenFourInDirection(row: Int, col: Int, deltaRow: Int, deltaCol: Int, playerValue: Int): Boolean {
+        val boardSize = gameState.boardSize
+        val opponent = if (playerValue == GameState.PLAYER_ONE) GameState.PLAYER_TWO else GameState.PLAYER_ONE
+        
+        // Extract the line in this direction
+        val line = StringBuilder()
+        
+        // Look 5 spaces in each direction
+        for (i in -5..5) {
+            val r = row + i * deltaRow
+            val c = col + i * deltaCol
+            
+            if (r in 0 until boardSize && c in 0 until boardSize) {
+                when (gameState.board[r][c]) {
+                    playerValue -> line.append("x")
+                    opponent -> line.append("o")
+                    else -> line.append("-")
+                }
+            } else {
+                // Off-board positions are treated as blocked
+                line.append("o")
+            }
+        }
+        
+        // Check for open four patterns
+        val lineStr = line.toString()
+        return lineStr.contains("-xxxx-") || 
+            lineStr.contains("xx-xx") || 
+            lineStr.contains("xxx-x") || 
+            lineStr.contains("x-xxx")
+    }
+        
     /**
      * Finds candidate moves for the Wuziqi AI (positions adjacent to existing pieces)
      */
@@ -821,126 +948,201 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     /**
-     * Evaluates a board position for the given player using pattern-based heuristics
-     */
-    private fun evaluatePosition(player: Int): Int {
-        val opponent = if (player == GameState.PLAYER_ONE) GameState.PLAYER_TWO else GameState.PLAYER_ONE
+    * Improved evaluation for checking all lines on the board.
+    * This follows the approach described in the article where we evaluate 
+    * each empty intersection and consider the two best threats in any direction.
+    */
+    private fun evaluatePosition(playerValue: Int): Int {
+        val opponent = if (playerValue == GameState.PLAYER_ONE) GameState.PLAYER_TWO else GameState.PLAYER_ONE
         var totalScore = 0
         
-        // Evaluate horizontal, vertical, and diagonal lines
-        totalScore += evaluateLines(player, opponent)
+        // For each empty intersection
+        for (row in 0 until gameState.boardSize) {
+            for (col in 0 until gameState.boardSize) {
+                if (gameState.board[row][col] == GameState.EMPTY) {
+                    // Calculate threat values if player places a stone here
+                    val threatValues = mutableListOf<Int>()
+                    
+                    // Temporarily place player's stone to evaluate position
+                    gameState.board[row][col] = playerValue
+                    
+                    // Check all 4 directions
+                    threatValues.add(evaluateDirectionFromPosition(row, col, 1, 0, playerValue))  // Horizontal
+                    threatValues.add(evaluateDirectionFromPosition(row, col, 0, 1, playerValue))  // Vertical
+                    threatValues.add(evaluateDirectionFromPosition(row, col, 1, 1, playerValue))  // Diagonal \
+                    threatValues.add(evaluateDirectionFromPosition(row, col, 1, -1, playerValue)) // Diagonal /
+                    
+                    // Remove temporary stone
+                    gameState.board[row][col] = GameState.EMPTY
+                    
+                    // Sort threat values in descending order
+                    threatValues.sortDescending()
+                    
+                    // Take the two best threats
+                    val bestThreat = threatValues.getOrElse(0) { 0 }
+                    val secondBestThreat = threatValues.getOrElse(1) { 0 }
+                    
+                    // Using the formula from the article: 1.5 * 1.8^a + 1.8^b
+                    // where a and b are the threat values
+                    if (bestThreat > 0 || secondBestThreat > 0) {
+                        // Scale down the original threat values to work with the formula
+                        val a = 16.coerceAtMost(bestThreat / 10000)
+                        val b = 16.coerceAtMost(secondBestThreat / 10000)
+                        
+                        totalScore += (1.5 * 1.8.pow(a.toDouble()) + 1.8.pow(b.toDouble())).toInt()
+                    }
+                }
+            }
+        }
+        
+        // Add a bonus for the side to move as mentioned in the article
+        if (gameState.currentPlayer == playerValue) {
+            totalScore += 100
+        }
         
         return totalScore
     }
-    
+
     /**
-     * Evaluates a line for pattern matching
-     * Using the pattern-based approach described in requirements:
-     * x = player's stone, o = opponent's stone, - = empty position
-     */
-    private fun evaluateLinePatterns(line: String): Int {
-        var score = 0
+    * Evaluates threats in a single direction from a position.
+    * This extracts the line around the position and evaluates patterns.
+    */
+    private fun evaluateDirectionFromPosition(row: Int, col: Int, deltaRow: Int, deltaCol: Int, playerValue: Int): Int {
+        val opponent = if (playerValue == GameState.PLAYER_ONE) GameState.PLAYER_TWO else GameState.PLAYER_ONE
+        val boardSize = gameState.boardSize
         
-        // Player patterns (offensive)
-        if (line.contains("xxxxx")) score += 10000000  // Five in a row (win)
-        if (line.contains("-xxxx-")) score += 9999999  // Open four
-        if (line.contains("xxxx-")) score += 999999    // Closed four (one side)
-        if (line.contains("-xxxx")) score += 999999    // Closed four (other side)
-        if (line.contains("-xxx-")) score += 50000     // Open three
-        if (line.contains("-xx-")) score += 500        // Open two
+        // Extract the line in this direction (with current player's stone at center)
+        val line = StringBuilder()
         
-        // Opponent patterns (defensive - negative scores)
-        if (line.contains("ooooo")) score -= 10000000  // Five in a row (opponent win)
-        if (line.contains("-oooo-")) score -= 9999999  // Open four (urgent defense needed)
-        if (line.contains("oooo-")) score -= 999999    // Closed four (one side)
-        if (line.contains("-oooo")) score -= 999999    // Closed four (other side)
-        if (line.contains("-ooo-")) score -= 999999    // Open three (urgent threat)
-        if (line.contains("-ooo--")) score -= 999999   // Open three (with extra space)
-        if (line.contains("--ooo-")) score -= 999999   // Open three (with extra space other side)
-        if (line.contains("-oo-")) score -= 2000       // Open two
+        // Look 5 spaces in each direction
+        for (i in -5..5) {
+            val r = row + i * deltaRow
+            val c = col + i * deltaCol
+            
+            if (r in 0 until boardSize && c in 0 until boardSize) {
+                when (gameState.board[r][c]) {
+                    playerValue -> line.append("x")
+                    opponent -> line.append("o")
+                    else -> line.append("-")
+                }
+            } else {
+                // Off-board positions are treated as opponent stones (can't make five)
+                line.append("o")
+            }
+        }
         
-        return score
+        // Evaluate patterns on this line
+        return evaluateLinePatterns(line.toString())
     }
     
     /**
-     * Evaluates all lines on the board (horizontal, vertical, diagonals)
-     */
-    private fun evaluateLines(player: Int, opponent: Int): Int {
+    * Evaluates a line for pattern matching using the threat classification from the article.
+    * Each threat has a severity (number of stones out of 5) and a completion count (ways to make 5).
+    * 
+    * Threat categories from most to least severe:
+    * - Winning threats:
+    *   - Five (5,1): immediate win with 5 in a row
+    *   - Open Four (4,2): two ways to make 5, can't be defended
+    * - Forcing threats (require response):
+    *   - Simple Four (4,1): one way to make 5, can be blocked
+    *   - Open Three (3,3): three ways to complete, but only two are valid defenses
+    *   - Broken Three (3,2): two ways to complete
+    * - Non-forcing threats:
+    *   - Simple Three (3,1): one way to complete
+    *   - Various Twos (2,n): n ways to complete
+    *   - Various Singles (1,n): n ways to complete
+    */
+    private fun evaluateLinePatterns(line: String): Int {
         var score = 0
-        val boardSize = gameState.boardSize
-        val winLength = gameState.winCondition
         
-        // Horizontal lines
-        for (row in 0 until boardSize) {
-            val line = StringBuilder()
-            for (col in 0 until boardSize) {
-                line.append(when (gameState.board[row][col]) {
-                    player -> 'x'
-                    opponent -> 'o'
-                    else -> '-'
-                })
-            }
-            score += evaluateLinePatterns(line.toString())
-        }
+        // WINNING THREATS - highest priority
         
-        // Vertical lines
-        for (col in 0 until boardSize) {
-            val line = StringBuilder()
-            for (row in 0 until boardSize) {
-                line.append(when (gameState.board[row][col]) {
-                    player -> 'x'
-                    opponent -> 'o'
-                    else -> '-'
-                })
-            }
-            score += evaluateLinePatterns(line.toString())
-        }
+        // Five (5,1) - immediate win
+        if (line.contains("xxxxx")) score += 10000000  // Five in a row (win)
         
-        // Diagonal lines (top-left to bottom-right)
-        for (start in 0 until 2 * boardSize - 1) {
-            val line = StringBuilder()
-            val row = max(0, start - boardSize + 1)
-            val col = min(start, boardSize - 1)
-            
-            var r = row
-            var c = col
-            while (r < boardSize && c >= 0) {
-                line.append(when (gameState.board[r][c]) {
-                    player -> 'x'
-                    opponent -> 'o'
-                    else -> '-'
-                })
-                r++
-                c--
-            }
-            
-            if (line.length >= winLength) {
-                score += evaluateLinePatterns(line.toString())
-            }
-        }
+        // Open Four (4,2) - guaranteed win next move
+        if (line.contains("-xxxx-")) score += 9000000  // Standard open four
+        if (line.contains("xx-xx")) score += 9000000   // Split open four
+        if (line.contains("xxx-x")) score += 9000000   // Non-standard open four with gap
+        if (line.contains("x-xxx")) score += 9000000   // Non-standard open four with gap
         
-        // Diagonal lines (top-right to bottom-left)
-        for (start in 0 until 2 * boardSize - 1) {
-            val line = StringBuilder()
-            val row = max(0, start - boardSize + 1)
-            val col = max(0, boardSize - 1 - start)
-            
-            var r = row
-            var c = col
-            while (r < boardSize && c < boardSize) {
-                line.append(when (gameState.board[r][c]) {
-                    player -> 'x'
-                    opponent -> 'o'
-                    else -> '-'
-                })
-                r++
-                c++
-            }
-            
-            if (line.length >= winLength) {
-                score += evaluateLinePatterns(line.toString())
-            }
-        }
+        // FORCING THREATS - require immediate response
+        
+        // Simple Four (4,1) - one way to make 5
+        if (line.contains("xxxx-")) score += 900000    // Simple four (one side)
+        if (line.contains("-xxxx")) score += 900000    // Simple four (other side)
+        if (line.contains("xx-xx-")) score += 900000   // Non-standard four (blocked on one side)
+        if (line.contains("-xx-xx")) score += 900000   // Non-standard four (blocked on one side)
+        if (line.contains("xxx-x-")) score += 900000   // Non-standard four (blocked on one side)
+        if (line.contains("-xxx-x")) score += 900000   // Non-standard four (blocked on one side)
+        if (line.contains("x-xxx-")) score += 900000   // Non-standard four (blocked on one side)
+        if (line.contains("-x-xxx")) score += 900000   // Non-standard four (blocked on one side)
+        
+        // Open Three (3,3) - three ways to complete
+        if (line.contains("--xxx--")) score += 90000   // Standard open three
+        if (line.contains("-x-xx-")) score += 90000    // Non-standard open three, as in article example
+        if (line.contains("-xx-x-")) score += 90000    // Non-standard open three, as in article example
+        if (line.contains("-x--x-x--")) score += 90000 // Beautiful pattern from article example
+        
+        // Broken Three (3,2) - two ways to complete, mentioned as weaker than open three
+        if (line.contains("-xxx-o")) score += 9000     // Broken three, blocked on one side
+        if (line.contains("o-xxx-")) score += 9000     // Broken three, blocked on one side
+        if (line.contains("-xx-x")) score += 9000      // Non-standard broken three
+        if (line.contains("x-xx-")) score += 9000      // Non-standard broken three
+        if (line.contains("-x-xx")) score += 9000      // Non-standard broken three
+        if (line.contains("xx-x-")) score += 9000      // Non-standard broken three
+        
+        // NON-FORCING THREATS - don't require immediate response but still valuable
+        
+        // Simple Three (3,1) - one way to complete
+        if (line.contains("xxx--o")) score += 900      // Simple three, blocked on one side
+        if (line.contains("o--xxx")) score += 900      // Simple three, blocked on one side
+        if (line.contains("xx-x--o")) score += 900     // Non-standard simple three
+        if (line.contains("o--x-xx")) score += 900     // Non-standard simple three
+        
+        // Two (2,n) - two stones that can be extended n ways to five
+        if (line.contains("--xx--")) score += 90       // Two that can be extended in 4 ways (2,4)
+        if (line.contains("-xx---")) score += 80       // Two that can be extended in 3 ways (2,3)
+        if (line.contains("---xx-")) score += 80       // Two that can be extended in 3 ways (2,3)
+        if (line.contains("-x-x--")) score += 80       // Split two that can be extended in 3 ways
+        if (line.contains("--x-x-")) score += 80       // Split two that can be extended in 3 ways
+        if (line.contains("-xx--o")) score += 70       // Two that can be extended in 2 ways (2,2)
+        if (line.contains("o--xx-")) score += 70       // Two that can be extended in 2 ways (2,2)
+        if (line.contains("o-xx--o")) score += 60      // Two that can be extended in 1 way (2,1)
+        
+        // Single (1,n) - single stone with n ways to make 5
+        if (line.contains("--x--")) score += 50        // Single stone with many ways to extend (1,5)
+        if (line.contains("-x---")) score += 40        // Single stone with several ways to extend (1,4)
+        if (line.contains("---x-")) score += 40        // Single stone with several ways to extend (1,4)
+        
+        // OPPONENT PATTERNS (defensive - negative scores)
+        // Same patterns as above but for opponent (mirrored scores)
+        
+        // Winning threats
+        if (line.contains("ooooo")) score -= 10000000  // Five in a row (opponent win)
+        if (line.contains("-oooo-")) score -= 9000000  // Open four (opponent win)
+        if (line.contains("oo-oo")) score -= 9000000   // Split open four (opponent win)
+        if (line.contains("ooo-o")) score -= 9000000   // Non-standard open four
+        if (line.contains("o-ooo")) score -= 9000000   // Non-standard open four
+        
+        // Forcing threats
+        if (line.contains("oooo-")) score -= 900000    // Simple four (one side)
+        if (line.contains("-oooo")) score -= 900000    // Simple four (other side)
+        if (line.contains("--ooo--")) score -= 90000   // Standard open three
+        if (line.contains("-o-oo-")) score -= 90000    // Non-standard open three
+        if (line.contains("-oo-o-")) score -= 90000    // Non-standard open three
+        if (line.contains("-o--o-o--")) score -= 90000 // Beautiful pattern from article
+        
+        // Broken three (weaker forcing threat)
+        if (line.contains("-ooo-x")) score -= 9000     // Broken three
+        if (line.contains("x-ooo-")) score -= 9000     // Broken three
+        
+        // Non-forcing threats
+        if (line.contains("ooo--x")) score -= 900      // Simple three
+        if (line.contains("x--ooo")) score -= 900      // Simple three
+        if (line.contains("--oo--")) score -= 90       // Two (2,4)
+        if (line.contains("-oo---")) score -= 80       // Two (2,3)
+        if (line.contains("---oo-")) score -= 80       // Two (2,3)
         
         return score
     }
