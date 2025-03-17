@@ -166,17 +166,36 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      * Updates state and checks for win condition.
      */
     fun placeTile(row: Int, col: Int) {
+        // Guard clause to prevent invalid moves
         if (winner != null || !gameState.isTileEmpty(row, col) || isLoading) {
+            // Debug: Log rejected move
+            println("DEBUG: Move rejected - winner: $winner, isEmpty: ${gameState.isTileEmpty(row, col)}, isLoading: $isLoading")
             return
         }
 
+        // Capture who is making this move
         val currentPlayer = gameState.currentPlayer
+        val isComputerPlayer = gameState.againstComputer && currentPlayer == GameState.PLAYER_TWO
+        
+        // Debug: Log the move attempt
+        println("DEBUG: placeTile($row, $col) by player $currentPlayer, isComputerPlayer: $isComputerPlayer")
 
         // Save the move to history before making it
         moveHistory = moveHistory + Move(row, col, currentPlayer)
 
-        // Place the tile
-        gameState.placeTile(row, col)
+        // Place the tile - this will also switch the current player
+        val placedSuccessfully = gameState.placeTile(row, col)
+        
+        // Debug: Log placement result
+        println("DEBUG: Placement success: $placedSuccessfully, new currentPlayer: ${gameState.currentPlayer}")
+        
+        if (!placedSuccessfully) {
+            // If placement failed, remove from history and exit
+            moveHistory = moveHistory.dropLast(1)
+            return
+        }
+        
+        // Update last placed position - critical for UI recomposition
         lastPlacedPosition = Position(row, col)
 
         // Play sound effect if enabled
@@ -187,6 +206,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Check for win
         if (gameState.checkWin(row, col, currentPlayer)) {
             winner = currentPlayer
+            println("DEBUG: Winner detected: $winner")
 
             // Play win sound if enabled
             if (soundEnabled) {
@@ -204,6 +224,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Check for draw
         if (gameState.isBoardFull()) {
             winner = DRAW
+            println("DEBUG: Draw detected")
             
             // Clear saved state if game is over
             viewModelScope.launch {
@@ -218,8 +239,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             gameState.saveState(getApplication())
         }
         
-        // Make computer move if playing against computer
-        if (gameState.againstComputer && winner == null) {
+        // FIXED: Only trigger computer move if this was a human move
+        // This prevents infinite recursion of AI moves
+        if (gameState.againstComputer && winner == null && !isComputerPlayer) {
+            println("DEBUG: Triggering computer move after human move")
             makeComputerMove()
         }
     }
@@ -325,30 +348,53 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      * Makes a computer move based on the current game type
      */
     private fun makeComputerMove() {
-        if (winner != null || isLoading) return
+        // Prevent moving if the game is over or already thinking
+        if (winner != null || isLoading) {
+            println("DEBUG: Computer move rejected - winner: $winner, isLoading: $isLoading")
+            return
+        }
         
+        // Verify it's actually the computer's turn
+        if (gameState.currentPlayer != GameState.PLAYER_TWO) {
+            println("DEBUG: Computer move rejected - not computer's turn: ${gameState.currentPlayer}")
+            return
+        }
+        
+        println("DEBUG: Starting computer move with player: ${gameState.currentPlayer}")
         isLoading = true
         
         viewModelScope.launch {
             // Short delay to simulate thinking (and avoid UI flicker)
             kotlinx.coroutines.delay(700)
             
-            when {
-                // Perfect play for Tic Tac Toe (3x3)
-                gameState.boardSize == 3 && gameState.winCondition == 3 -> {
-                    makeComputerMoveTicTacToe()
+            // Use the existing AI move methods but with extra error checking
+            try {
+                when {
+                    // Perfect play for Tic Tac Toe (3x3)
+                    gameState.boardSize == 3 && gameState.winCondition == 3 -> {
+                        println("DEBUG: Using TicTacToe AI")
+                        makeComputerMoveTicTacToe()
+                    }
+                    // Basic AI for Connect 4 (7x7)
+                    gameState.boardSize == 7 && gameState.winCondition == 4 -> {
+                        println("DEBUG: Using Connect4 AI")
+                        makeComputerMoveConnect4()
+                    }
+                    // Advanced heuristic-based AI for Wuziqi
+                    else -> {
+                        println("DEBUG: Using Wuziqi AI")
+                        makeComputerMoveWuziqi()
+                    }
                 }
-                // Basic AI for Connect 4 (7x7)
-                gameState.boardSize == 7 && gameState.winCondition == 4 -> {
-                    makeComputerMoveConnect4()
-                }
-                // Advanced heuristic-based AI for Wuziqi
-                else -> {
-                    makeComputerMoveWuziqi()
-                }
+                println("DEBUG: Computer move completed")
+            } catch (e: Exception) {
+                // Log any exceptions that might occur during AI move
+                println("DEBUG: Error in computer move: ${e.message}")
+                e.printStackTrace()
+            } finally {
+                // Ensure isLoading is always reset even if an error occurs
+                isLoading = false
             }
-            
-            isLoading = false
         }
     }
     
@@ -447,16 +493,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val computerPlayer = GameState.PLAYER_TWO
         val humanPlayer = GameState.PLAYER_ONE
         
-        // First, try to win
+        // First, try to win - use temporary board
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (gameState.isTileEmpty(row, col)) {
-                    // Try this move using a temporary board without changing state
+                    // Create a temporary board with this move
                     val tempBoard = gameState.getBoardWithMove(row, col, computerPlayer)
                     
-                    // Check on the temporary board
-                    if (checkWinOnBoard(tempBoard, row, col, computerPlayer, gameState.winCondition)) {
-                        // We can win, make this move
+                    // Check win on temporary board
+                    val wouldWin = checkWinOnTempBoard(tempBoard, row, col, computerPlayer)
+                    if (wouldWin) {
+                        // We can win with this move
+                        println("DEBUG: AI found winning move at $row,$col")
                         placeTile(row, col)
                         return
                     }
@@ -468,12 +516,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (gameState.isTileEmpty(row, col)) {
-                    // Try this move for the human using a temporary board
+                    // Create a temporary board with human move
                     val tempBoard = gameState.getBoardWithMove(row, col, humanPlayer)
                     
-                    // Check on the temporary board
-                    if (checkWinOnBoard(tempBoard, row, col, humanPlayer, gameState.winCondition)) {
+                    // Check if human would win with this move
+                    val wouldBlock = checkWinOnTempBoard(tempBoard, row, col, humanPlayer)
+                    if (wouldBlock) {
                         // Block this winning move
+                        println("DEBUG: AI blocking human win at $row,$col")
                         placeTile(row, col)
                         return
                     }
@@ -483,6 +533,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         // Take center if available
         if (gameState.isTileEmpty(1, 1)) {
+            println("DEBUG: AI taking center")
             placeTile(1, 1)
             return
         }
@@ -490,11 +541,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Take a corner if available
         val corners = listOf(Pair(0, 0), Pair(0, 2), Pair(2, 0), Pair(2, 2))
         val availableCorners = corners.filter { (row, col) -> 
-            gameState.isTileEmpty(row, col)
+            gameState.isTileEmpty(row, col) 
         }
         
         if (availableCorners.isNotEmpty()) {
             val (row, col) = availableCorners[random.nextInt(availableCorners.size)]
+            println("DEBUG: AI taking corner at $row,$col")
             placeTile(row, col)
             return
         }
@@ -507,9 +559,76 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         
         if (availableEdges.isNotEmpty()) {
             val (row, col) = availableEdges[random.nextInt(availableEdges.size)]
+            println("DEBUG: AI taking edge at $row,$col")
             placeTile(row, col)
             return
         }
+    }
+
+    /**
+    * Helper method to check win condition on a temporary board
+    */
+    private fun checkWinOnTempBoard(
+        board: Array<IntArray>,
+        row: Int,
+        col: Int,
+        playerValue: Int
+    ): Boolean {
+        // Check horizontal
+        var count = 0
+        for (c in 0 until board.size) {
+            if (board[row][c] == playerValue) {
+                count++
+                if (count >= gameState.winCondition) return true
+            } else {
+                count = 0
+            }
+        }
+        
+        // Check vertical
+        count = 0
+        for (r in 0 until board.size) {
+            if (board[r][col] == playerValue) {
+                count++
+                if (count >= gameState.winCondition) return true
+            } else {
+                count = 0
+            }
+        }
+        
+        // Check diagonal \
+        count = 0
+        val minDiag1 = Math.min(row, col)
+        var r = row - minDiag1
+        var c = col - minDiag1
+        while (r < board.size && c < board.size) {
+            if (board[r][c] == playerValue) {
+                count++
+                if (count >= gameState.winCondition) return true
+            } else {
+                count = 0
+            }
+            r++
+            c++
+        }
+        
+        // Check diagonal /
+        count = 0
+        val minDiag2 = Math.min(row, board.size - 1 - col)
+        r = row - minDiag2
+        c = col + minDiag2
+        while (r < board.size && c >= 0) {
+            if (board[r][c] == playerValue) {
+                count++
+                if (count >= gameState.winCondition) return true
+            } else {
+                count = 0
+            }
+            r++
+            c--
+        }
+        
+        return false
     }
 
     /**
