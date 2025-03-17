@@ -447,13 +447,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             gameState.clearSavedState(getApplication())
         }
     }
-
-    /**
-     * Dismisses the winner dialog without resetting the game.
-     */
-    fun dismissWinnerDialog() {
-        winner = null
-    }
     
     /**
      * Makes an optimal computer move for Tic Tac Toe using minimax algorithm
@@ -530,54 +523,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-    * Counts pieces in a direction on a temporary board
-    */
-    private fun checkDirectionOnBoard(
-        board: Array<IntArray>,
-        row: Int,
-        col: Int,
-        deltaRow: Int,
-        deltaCol: Int,
-        playerValue: Int,
-        winLength: Int
-    ): Boolean {
-        val boardSize = board.size
-        var count = 1 // Start with 1 for the piece itself
 
-        // Check in positive direction
-        count += countInDirectionOnBoard(board, row, col, deltaRow, deltaCol, playerValue, boardSize)
-        
-        // Check in negative direction
-        count += countInDirectionOnBoard(board, row, col, -deltaRow, -deltaCol, playerValue, boardSize)
-
-        return count >= winLength
-    }
-
-    /**
-    * Helper method to count consecutive pieces in a direction on a temporary board
-    */
-    private fun countInDirectionOnBoard(
-        board: Array<IntArray>,
-        row: Int,
-        col: Int,
-        deltaRow: Int,
-        deltaCol: Int,
-        playerValue: Int,
-        boardSize: Int
-    ): Int {
-        var count = 0
-        var r = row + deltaRow
-        var c = col + deltaCol
-
-        while (r in 0 until boardSize && c in 0 until boardSize && board[r][c] == playerValue) {
-            count++
-            r += deltaRow
-            c += deltaCol
-        }
-
-        return count
-    }
     
     /**
      * Makes a reasonable computer move for Connect 4
@@ -635,68 +581,102 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    
+
     /**
-     * Makes a strategic computer move for Wuziqi using the pattern-based heuristic approach
+     * Makes a strategic computer move for Wuziqi with MANDATORY responses
+     * to any forcing patterns from the opponent.
      */
     private fun makeComputerMoveWuziqi() {
-        val boardSize = gameState.boardSize
         val computerPlayer = GameState.PLAYER_TWO
         val humanPlayer = GameState.PLAYER_ONE
 
-        // IMPROVED: First check if human has any immediate winning threats that must be blocked
-        // We prioritize this check to ensure we don't miss any immediate threats
-        val humanWinningMove = findImmediateWinningMove(humanPlayer)
-        if (humanWinningMove != null) {
-            val (row, col) = humanWinningMove
-            placeTile(row, col, bypassLoading = true)
-            return
+        // Define threat types in order of priority
+        val threatTypes = listOf(
+            ThreatType.FIVE,           // Immediate win
+            ThreatType.OPEN_FOUR,      // Two ways to make five (guaranteed win)
+            ThreatType.SIMPLE_FOUR,    // One way to make five (forcing)
+            ThreatType.OPEN_THREE,     // Three ways to complete (forcing)
+            ThreatType.BROKEN_THREE    // Two ways to complete (forcing)
+        )
+
+        // Check for threats in priority order
+        // First try to win, then block opponent
+        for (threatType in threatTypes) {
+            // 1. Check if computer can create this threat to win
+            val computerMove = findThreateningMove(computerPlayer, threatType)
+            if (computerMove != null) {
+                placeTile(computerMove.first, computerMove.second, bypassLoading = true)
+                return
+            }
+
+            // 2. Check if we need to block human's threat of this type
+            val humanMove = findThreateningMove(humanPlayer, threatType)
+            if (humanMove != null) {
+                placeTile(humanMove.first, humanMove.second, bypassLoading = true)
+                return
+            }
         }
 
-        // 1. Look for immediate computer win (five or open four)
-        val immediateWin = findImmediateWinningMove(computerPlayer)
-        if (immediateWin != null) {
-            val (row, col) = immediateWin
-            placeTile(row, col, bypassLoading = true)
-            return
-        }
+        // If no forcing moves, use regular strategic play
+        makeStrategicMove(computerPlayer, humanPlayer)
+    }
 
-        // 2. IMPROVED: Check for human forcing threats with enhanced detection
-        // This ensures we catch all types of forcing threats (four, open three, etc.)
-        val humanForcingThreat = findForcingThreat(humanPlayer)
-        if (humanForcingThreat != null) {
-            val (row, col) = humanForcingThreat
-            placeTile(row, col, bypassLoading = true)
-            return
-        }
+    /**
+     * Enum to categorize different threat types
+     */
+    private enum class ThreatType {
+        FIVE,           // Immediate win
+        OPEN_FOUR,      // Two ways to make five
+        SIMPLE_FOUR,    // One way to make five
+        OPEN_THREE,     // Three ways to complete
+        BROKEN_THREE    // Two ways to complete
+    }
 
-        // 3. Look for computer's forcing threats (if human has none)
+    /**
+     * Finds a move that creates a specific threat type for the given player
+     * @return Pair<Int, Int> representing row, col or null if no such move exists
+     */
+    private fun findThreateningMove(playerValue: Int, threatType: ThreatType): Pair<Int, Int>? {
+        val boardSize = gameState.boardSize
+
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (gameState.isTileEmpty(row, col)) {
-                    // Temporarily place computer's stone
-                    gameState.board[row][col] = computerPlayer
+                    // Temporarily place the stone
+                    gameState.board[row][col] = playerValue
 
-                    // Check for open four or other high-value forcing threats
-                    if (hasOpenFour(row, col, computerPlayer) ||
-                        hasForcingThreat(row, col, computerPlayer)) {
-                        // Force found, make this move
-                        gameState.board[row][col] = GameState.EMPTY
-                        placeTile(row, col, bypassLoading = true)
-                        return
+                    // Check if this creates the desired threat
+                    val hasDesiredThreat = when (threatType) {
+                        ThreatType.FIVE -> gameState.checkWin(row, col, playerValue)
+                        ThreatType.OPEN_FOUR -> hasOpenFour(row, col, playerValue)
+                        ThreatType.SIMPLE_FOUR -> hasSimpleFour(row, col, playerValue)
+                        ThreatType.OPEN_THREE -> hasOpenThree(row, col, playerValue)
+                        ThreatType.BROKEN_THREE -> hasBrokenThree(row, col, playerValue)
                     }
 
-                    // Reset board
+                    // Remove the temporary stone
                     gameState.board[row][col] = GameState.EMPTY
+
+                    // Return this move if it creates the desired threat
+                    if (hasDesiredThreat) {
+                        return Pair(row, col)
+                    }
                 }
             }
         }
 
-        // 4. Use the existing heuristic evaluation for non-forcing moves
+        return null
+    }
+
+    /**
+     * Makes a strategic move when no forcing moves are available
+     */
+    private fun makeStrategicMove(computerPlayer: Int, humanPlayer: Int) {
+        val boardSize = gameState.boardSize
         var bestScore = Int.MIN_VALUE
         var bestMove: Pair<Int, Int>? = null
 
-        // Only consider positions near existing pieces to reduce search space
+        // Only consider positions near existing pieces
         val candidates = findCandidateMoves()
 
         // If no candidate moves (empty board), place in center
@@ -706,20 +686,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        // Evaluate each candidate position with improved heuristic
+        // Evaluate each candidate position
         for ((row, col) in candidates) {
             if (gameState.isTileEmpty(row, col)) {
                 // Temporarily place stone and evaluate
                 gameState.board[row][col] = computerPlayer
-
-                // IMPROVED: Modified evaluation that weighs defensive moves more heavily
-                // when human player has potential threats developing
                 val computerScore = evaluatePosition(computerPlayer)
-                val humanScore = evaluatePosition(humanPlayer) * 1.2 // Increase weight of human threats
+                val humanScore = evaluatePosition(humanPlayer)
                 gameState.board[row][col] = GameState.EMPTY
 
-                // Final score is the difference (how good for computer minus how good for human)
-                val score = computerScore - humanScore.toInt()
+                val score = computerScore - humanScore
 
                 if (score > bestScore) {
                     bestScore = score
@@ -749,178 +725,54 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * NEW FUNCTION: Finds an immediate winning move (five or open four)
-     * for the specified player.
-     *
-     * @param playerValue The player to check for
-     * @return A position to play, or null if no immediate win exists
-     */
-    private fun findImmediateWinningMove(playerValue: Int): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
 
-        // First check for immediate five
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Try this position
-                    gameState.board[row][col] = playerValue
-
-                    // Check if this makes a five
-                    if (gameState.checkWin(row, col, playerValue)) {
-                        gameState.board[row][col] = GameState.EMPTY
-                        return Pair(row, col)
-                    }
-
-                    // Check if this makes an open four (guaranteed win next move)
-                    if (hasOpenFour(row, col, playerValue)) {
-                        gameState.board[row][col] = GameState.EMPTY
-                        return Pair(row, col)
-                    }
-
-                    // Reset
-                    gameState.board[row][col] = GameState.EMPTY
-                }
-            }
-        }
-
-        return null
-    }
 
     /**
-     * NEW FUNCTION: Finds any forcing threat for the specified player
-     * that should be addressed immediately.
-     *
-     * @param playerValue The player to check for
-     * @return A position to defend, or null if no forcing threat exists
-     */
-    private fun findForcingThreat(playerValue: Int): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
-
-        // Check for simple four (one way to make five)
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    gameState.board[row][col] = playerValue
-
-                    // Check for a simple four in any direction
-                    if (hasSimpleFour(row, col, playerValue)) {
-                        gameState.board[row][col] = GameState.EMPTY
-                        return Pair(row, col)
-                    }
-
-                    gameState.board[row][col] = GameState.EMPTY
-                }
-            }
-        }
-
-        // Check for open three (three ways to complete)
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    gameState.board[row][col] = playerValue
-
-                    // Check for open three
-                    if (hasOpenThree(row, col, playerValue)) {
-                        gameState.board[row][col] = GameState.EMPTY
-                        return Pair(row, col)
-                    }
-
-                    gameState.board[row][col] = GameState.EMPTY
-                }
-            }
-        }
-
-        // Check for broken three (two ways to complete)
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    gameState.board[row][col] = playerValue
-
-                    // Check for broken three
-                    if (hasBrokenThree(row, col, playerValue)) {
-                        gameState.board[row][col] = GameState.EMPTY
-                        return Pair(row, col)
-                    }
-
-                    gameState.board[row][col] = GameState.EMPTY
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * NEW FUNCTION: Checks if a move creates a forcing threat (any of simple four,
-     * open three, or broken three).
-     */
-    private fun hasForcingThreat(row: Int, col: Int, playerValue: Int): Boolean {
-        return hasSimpleFour(row, col, playerValue) ||
-                hasOpenThree(row, col, playerValue) ||
-                hasBrokenThree(row, col, playerValue)
-    }
-
-    /**
-     * NEW FUNCTION: Checks for a simple four pattern at the given position.
+     * Checks if a move creates a simple four (one way to make five).
      */
     private fun hasSimpleFour(row: Int, col: Int, playerValue: Int): Boolean {
-        val directions = listOf(
-            Pair(1, 0),    // Horizontal
-            Pair(0, 1),    // Vertical
-            Pair(1, 1),    // Diagonal \
-            Pair(1, -1)    // Diagonal /
-        )
-
-        for ((deltaRow, deltaCol) in directions) {
-            val linePattern = extractLinePattern(row, col, deltaRow, deltaCol, playerValue)
-
-            // Check simple four patterns
-            if (linePattern.contains("xxxx-") ||
-                linePattern.contains("-xxxx") ||
-                linePattern.contains("xx-xx-") ||
-                linePattern.contains("-xx-xx") ||
-                linePattern.contains("xxx-x-") ||
-                linePattern.contains("-xxx-x") ||
-                linePattern.contains("x-xxx-") ||
-                linePattern.contains("-x-xxx")) {
-                return true
-            }
-        }
-
-        return false
+        return checkForPatterns(row, col, playerValue, listOf(
+            "xxxx-",   // Simple four (one side)
+            "-xxxx",   // Simple four (other side)
+            "xx-xx-",  // Non-standard four (blocked on one side)
+            "-xx-xx",  // Non-standard four (blocked on one side)
+            "xxx-x-",  // Non-standard four (blocked on one side)
+            "-xxx-x",  // Non-standard four (blocked on one side)
+            "x-xxx-",  // Non-standard four (blocked on one side)
+            "-x-xxx"   // Non-standard four (blocked on one side)
+        ))
     }
 
     /**
-     * NEW FUNCTION: Checks for an open three pattern at the given position.
+     * Checks if a move creates an open three (creates two potential four-threats).
      */
     private fun hasOpenThree(row: Int, col: Int, playerValue: Int): Boolean {
-        val directions = listOf(
-            Pair(1, 0),    // Horizontal
-            Pair(0, 1),    // Vertical
-            Pair(1, 1),    // Diagonal \
-            Pair(1, -1)    // Diagonal /
-        )
-
-        for ((deltaRow, deltaCol) in directions) {
-            val linePattern = extractLinePattern(row, col, deltaRow, deltaCol, playerValue)
-
-            // Check open three patterns
-            if (linePattern.contains("--xxx--") ||
-                linePattern.contains("-x-xx-") ||
-                linePattern.contains("-xx-x-") ||
-                linePattern.contains("-x--x-x--")) {
-                return true
-            }
-        }
-
-        return false
+        return checkForPatterns(row, col, playerValue, listOf(
+            "--xxx--",    // Standard open three
+            "-x-xx-",     // Non-standard open three
+            "-xx-x-",     // Non-standard open three
+            "-x--x-x--"   // Beautiful pattern from article
+        ))
     }
 
     /**
-     * NEW FUNCTION: Checks for a broken three pattern at the given position.
+     * Checks if a move creates a broken three threat.
      */
     private fun hasBrokenThree(row: Int, col: Int, playerValue: Int): Boolean {
+        return checkForPatterns(row, col, playerValue, listOf(
+            "-xxx-o",  // Broken three, blocked on one side
+            "o-xxx-",  // Broken three, blocked on one side
+            "-xx-x",   // Non-standard broken three
+            "x-xx-",   // Non-standard broken three
+            "-x-xx",   // Non-standard broken three
+            "xx-x-"    // Non-standard broken three
+        ))
+    }
+
+    /**
+     * Helper function to check for any pattern from a list in any direction
+     */
+    private fun checkForPatterns(row: Int, col: Int, playerValue: Int, patterns: List<String>): Boolean {
         val directions = listOf(
             Pair(1, 0),    // Horizontal
             Pair(0, 1),    // Vertical
@@ -931,19 +783,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         for ((deltaRow, deltaCol) in directions) {
             val linePattern = extractLinePattern(row, col, deltaRow, deltaCol, playerValue)
 
-            // Check broken three patterns
-            if (linePattern.contains("-xxx-o") ||
-                linePattern.contains("o-xxx-") ||
-                linePattern.contains("-xx-x") ||
-                linePattern.contains("x-xx-") ||
-                linePattern.contains("-x-xx") ||
-                linePattern.contains("xx-x-")) {
-                return true
+            // Check if any pattern is present
+            for (pattern in patterns) {
+                if (linePattern.contains(pattern)) {
+                    return true
+                }
             }
         }
 
         return false
     }
+
+
+
 
     /**
      * NEW FUNCTION: Extracts a line pattern in a specific direction.
