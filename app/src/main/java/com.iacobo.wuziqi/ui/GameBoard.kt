@@ -201,46 +201,47 @@ fun TicTacToeBoard(
             .padding(16.dp)
             .background(Color.Transparent)
     ) {
-        // Draw just the internal grid lines, not the outer edges
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
+        // Vertical inner lines (2)
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize()
         ) {
-            // Vertical inner lines (2)
+            // First vertical line (1/3 from left)
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(gridLineWidth)
                     .align(Alignment.CenterStart)
-                    .offset(x = with(LocalDensity.current) { (size.width / 3).toDp() })
+                    .offset(x = maxWidth / 3)
                     .background(gridLineColor)
             )
             
+            // Second vertical line (2/3 from left)
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
                     .width(gridLineWidth)
-                    .align(Alignment.CenterEnd)
-                    .offset(x = with(LocalDensity.current) { -(size.width / 3).toDp() })
+                    .align(Alignment.CenterStart)
+                    .offset(x = maxWidth * 2 / 3)
                     .background(gridLineColor)
             )
             
-            // Horizontal inner lines (2)
+            // First horizontal line (1/3 from top)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(gridLineWidth)
                     .align(Alignment.TopCenter)
-                    .offset(y = with(LocalDensity.current) { (size.height / 3).toDp() })
+                    .offset(y = maxHeight / 3)
                     .background(gridLineColor)
             )
             
+            // Second horizontal line (2/3 from top)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(gridLineWidth)
-                    .align(Alignment.BottomCenter)
-                    .offset(y = with(LocalDensity.current) { -(size.height / 3).toDp() })
+                    .align(Alignment.TopCenter)
+                    .offset(y = maxHeight * 2 / 3)
                     .background(gridLineColor)
             )
         }

@@ -55,14 +55,6 @@ fun Connect4Board(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Store reference values for hole calculations to ensure perfect alignment
-            // These must match the exact values used for the holes in the board layer
-            val hPadding = size.width * 0.1f
-            val vPadding = size.height * 0.1f
-            val cellWidth = (size.width - (2 * hPadding)) / boardSize
-            val cellHeight = (size.height - (2 * vPadding)) / boardHeight
-            val pieceRadius = minOf(cellWidth, cellHeight) * 0.4f
-
             // Game pieces are positioned here using absolute positioning to match hole coordinates exactly
             BoxWithConstraints(
                 modifier = Modifier.fillMaxSize()
@@ -130,7 +122,7 @@ fun Connect4Board(
                                         x = centerX - (pieceDiameterDp / 2),
                                         y = if (yOffset < 1f) {
                                             centerY - (pieceDiameterDp / 2) - 
-                                            with(LocalDensity.current) { (300 * (1f - yOffset)).toDp() }
+                                            with(LocalDensity.current) { (300f * (1f - yOffset)).toDp() }
                                         } else {
                                             centerY - (pieceDiameterDp / 2)
                                         }
