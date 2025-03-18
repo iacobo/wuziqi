@@ -148,11 +148,60 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                     return Pair(center, center)
                 }
             }
+        } else if (stoneCount < 5) {
+            // For early game (but not first 2 moves), prefer central area
+            // Get coordinates within a reasonable distance from center
+            val minDist = 2  // Minimum distance from center
+            val maxDist = 5  // Maximum distance from center
+            
+            val candidates = mutableListOf<Pair<Int, Int>>()
+            
+            // First, check if any threats need to be handled before playing positionally
+            val threatResponse = handleThreatsOrCreateOwn(gameState, computerPlayer, humanPlayer)
+            if (threatResponse != null) {
+                return threatResponse
+            }
+            
+            // If no threats, collect candidate moves near existing stones
+            // but not too close to the board edge
+            val edgeDistance = 3  // Stay at least this far from the edge
+            
+            for (row in edgeDistance until boardSize - edgeDistance) {
+                for (col in edgeDistance until boardSize - edgeDistance) {
+                    if (gameState.isTileEmpty(row, col)) {
+                        // Calculate Manhattan distance from center
+                        val distFromCenter = Math.abs(row - center) + Math.abs(col - center)
+                        
+                        // Consider positions that are at a good distance from center
+                        if (distFromCenter in minDist..maxDist) {
+                            candidates.add(Pair(row, col))
+                        }
+                    }
+                }
+            }
+            
+            // If we have candidates, choose one randomly
+            if (candidates.isNotEmpty()) {
+                return candidates[random.nextInt(candidates.size)]
+            }
         }
-
+        
+        // Handle threats or proceed with standard evaluation
+        return handleThreatsOrCreateOwn(gameState, computerPlayer, humanPlayer)
+    }
+    
+    /**
+     * Handles all threat checking logic in the correct order.
+     * This helps avoid duplicating code in multiple places.
+     */
+    private fun handleThreatsOrCreateOwn(
+        gameState: GameState,
+        computerPlayer: Int,
+        humanPlayer: Int
+    ): Pair<Int, Int>? {
         // 1. Check for immediate win (five)
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
+        for (row in 0 until gameState.boardSize) {
+            for (col in 0 until gameState.boardSize) {
                 if (gameState.isTileEmpty(row, col)) {
                     gameState.board[row][col] = computerPlayer
                     if (gameState.checkWin(row, col, computerPlayer)) {
@@ -165,8 +214,8 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         }
 
         // 2. Check for opponent's immediate win and block it
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
+        for (row in 0 until gameState.boardSize) {
+            for (col in 0 until gameState.boardSize) {
                 if (gameState.isTileEmpty(row, col)) {
                     gameState.board[row][col] = humanPlayer
                     if (gameState.checkWin(row, col, humanPlayer)) {
@@ -306,9 +355,14 @@ class WuziqiAIEngine(private val random: Random = Random()) {
      */
     private fun findOpenThreeBlock(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
-        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
         
-        // Specifically look for "--xxx--" pattern and block one of the critical positions
+        // Key insight: In extractLinePattern, when we pass playerValue, the function maps:
+        // - playerValue stones to 'o'
+        // - opponent stones to 'x'
+        // - empty spaces to '-'
+        // So we need to look for "ooo" patterns, not "xxx" patterns!
+        
+        // Look specifically for open three patterns (critical threat)
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (gameState.board[row][col] == playerValue) {
@@ -317,8 +371,8 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                             gameState, row, col, deltaRow, deltaCol, playerValue
                         )
                         
-                        // Look for the standard open three pattern
-                        val pattern = "--xxx--"
+                        // Look for the standard open three pattern - key fix: using "ooo" not "xxx"
+                        val pattern = "--ooo--"
                         val idx = linePattern.lineString.indexOf(pattern)
                         if (idx != -1) {
                             // The most critical positions to block are adjacent to the three stones
@@ -355,7 +409,7 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                         }
                         
                         // Also check for non-standard open three patterns with gaps
-                        val gapPatterns = arrayOf("-x-xx-", "-xx-x-")
+                        val gapPatterns = arrayOf("-o-oo-", "-oo-o-")
                         for (gapPattern in gapPatterns) {
                             val gapIdx = linePattern.lineString.indexOf(gapPattern)
                             if (gapIdx != -1) {
@@ -386,9 +440,8 @@ class WuziqiAIEngine(private val random: Random = Random()) {
      */
     private fun findBrokenThreeBlock(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
-        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
         
-        // Look for patterns like "-xxx-o" or "o-xxx-"
+        // Look for patterns like "-ooo-x" or "x-ooo-" - note the pattern is from the player's perspective
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (gameState.board[row][col] == playerValue) {
@@ -397,15 +450,15 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                             gameState, row, col, deltaRow, deltaCol, playerValue
                         )
                         
-                        // Check both standard broken three patterns
-                        val patterns = arrayOf("-xxx-o", "o-xxx-")
+                        // Check both standard broken three patterns - key fix: using "ooo" not "xxx"
+                        val patterns = arrayOf("-ooo-x", "x-ooo-")
                         for (pattern in patterns) {
                             val idx = linePattern.lineString.indexOf(pattern)
                             if (idx != -1) {
                                 // The critical position to block is the open side
-                                val blockPos = if (pattern == "-xxx-o") {
+                                val blockPos = if (pattern == "-ooo-x") {
                                     linePattern.getPositionAt(idx)
-                                } else { // "o-xxx-"
+                                } else { // "x-ooo-"
                                     linePattern.getPositionAt(idx + 5)
                                 }
                                 
@@ -417,8 +470,8 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                             }
                         }
                         
-                        // Check broken three patterns with gaps
-                        val gapPatterns = arrayOf("x-xx-", "-xx-x", "-x-xx", "xx-x-")
+                        // Check broken three patterns with gaps - key fix: using "o" not "x"
+                        val gapPatterns = arrayOf("o-oo-", "-oo-o", "-o-oo", "oo-o-")
                         for (gapPattern in gapPatterns) {
                             val gapIdx = linePattern.lineString.indexOf(gapPattern)
                             if (gapIdx != -1) {
@@ -426,8 +479,8 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                                 for (i in gapPattern.indices) {
                                     if (gapPattern[i] == '-' && 
                                         ((i > 0 && i < gapPattern.length - 1) || // Internal gap
-                                         (i == 0 && gapPattern[1] == 'x') ||     // Left edge if next is 'x'
-                                         (i == gapPattern.length - 1 && gapPattern[i-1] == 'x'))) { // Right edge if prev is 'x'
+                                         (i == 0 && gapPattern[1] == 'o') ||     // Left edge if next is 'o'
+                                         (i == gapPattern.length - 1 && gapPattern[i-1] == 'o'))) { // Right edge if prev is 'o'
                                         
                                         val blockPos = linePattern.getPositionAt(gapIdx + i)
                                         if (blockPos != null && 
@@ -516,39 +569,37 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         val boardSize = gameState.boardSize
         val computerPlayer = PLAYER_TWO
         val humanPlayer = PLAYER_ONE
+        val center = boardSize / 2
 
-        // If the board is nearly empty, play near the center
-        if (countStones(gameState) < 5) {
-            // Get the center and consider positions in a 5x5 area around it
-            val center = boardSize / 2
-            val radius = 2
+        // If the board is nearly empty, play near the center but avoid edges
+        if (countStones(gameState) < 10) {
+            // Avoid playing too close to the edge
+            val edgeBuffer = 3
             
-            // Generate positions starting from center and moving outward
-            val candidates = mutableListOf<Pair<Int, Int>>()
+            // Generate positions that are not too close to the edge and prioritize those near the center
+            val candidates = mutableListOf<Pair<Pair<Int, Int>, Int>>() // Pair of (position, score)
             
-            // Start with the center
-            candidates.add(Pair(center, center))
-            
-            // Add positions in concentric rings around the center
-            for (r in 1..radius) {
-                // Top and bottom rows of the ring
-                for (c in center-r..center+r) {
-                    candidates.add(Pair(center-r, c))
-                    candidates.add(Pair(center+r, c))
-                }
-                
-                // Left and right columns of the ring (excluding corners already added)
-                for (rr in center-r+1..center+r-1) {
-                    candidates.add(Pair(rr, center-r))
-                    candidates.add(Pair(rr, center+r))
+            for (row in edgeBuffer until boardSize - edgeBuffer) {
+                for (col in edgeBuffer until boardSize - edgeBuffer) {
+                    if (gameState.isTileEmpty(row, col)) {
+                        // Calculate Manhattan distance from center - lower is better
+                        val distFromCenter = Math.abs(row - center) + Math.abs(col - center)
+                        // Convert to a score where higher is better (closer to center)
+                        val positionScore = boardSize - distFromCenter
+                        
+                        candidates.add(Pair(Pair(row, col), positionScore))
+                    }
                 }
             }
             
-            // Try positions in order of distance from center
-            for ((r, c) in candidates) {
-                if (gameState.isValidPosition(r, c) && gameState.isTileEmpty(r, c)) {
-                    return Pair(r, c)
-                }
+            // Sort candidates by score (higher is better)
+            candidates.sortByDescending { it.second }
+            
+            // Take the top 5 positions (closest to center) and choose randomly among them
+            // This adds some variety while still favoring good positions
+            val topCandidates = candidates.take(5.coerceAtMost(candidates.size))
+            if (topCandidates.isNotEmpty()) {
+                return topCandidates[random.nextInt(topCandidates.size)].first
             }
         }
 
@@ -557,28 +608,67 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         if (candidates.isNotEmpty()) {
             var bestScore = Int.MIN_VALUE
             var bestMove: Pair<Int, Int>? = null
+            val bestMoves = mutableListOf<Pair<Int, Int>>()
 
             for ((row, col) in candidates) {
                 if (gameState.isTileEmpty(row, col)) {
+                    // Check if this position is too close to the edge
+                    val edgeDistance = minOf(row, col, boardSize - 1 - row, boardSize - 1 - col)
+                    if (edgeDistance < 2) {
+                        // Skip positions that are too close to the edge
+                        continue
+                    }
+                    
                     // Evaluate this position
                     val score = evaluatePosition(gameState, row, col, computerPlayer) -
                             evaluatePosition(gameState, row, col, humanPlayer)
 
                     if (score > bestScore) {
                         bestScore = score
-                        bestMove = Pair(row, col)
+                        bestMoves.clear()
+                        bestMoves.add(Pair(row, col))
+                    } else if (score == bestScore) {
+                        bestMoves.add(Pair(row, col))
                     }
                 }
             }
 
-            return bestMove
+            // If we have multiple moves with the same score, choose one randomly
+            if (bestMoves.isNotEmpty()) {
+                return bestMoves[random.nextInt(bestMoves.size)]
+            }
+            
+            // If all our candidates were too close to the edge, try again without the edge restriction
+            if (bestMoves.isEmpty()) {
+                for ((row, col) in candidates) {
+                    if (gameState.isTileEmpty(row, col)) {
+                        // Evaluate this position
+                        val score = evaluatePosition(gameState, row, col, computerPlayer) -
+                                evaluatePosition(gameState, row, col, humanPlayer)
+    
+                        if (score > bestScore) {
+                            bestScore = score
+                            bestMove = Pair(row, col)
+                        }
+                    }
+                }
+                
+                return bestMove
+            }
         }
 
-        // If no good candidates, just find any empty spot
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    return Pair(row, col)
+        // If no good candidates, just find any empty spot (prioritize center area)
+        for (distance in 0 until boardSize) {
+            for (dr in -distance..distance) {
+                for (dc in -distance..distance) {
+                    // Only check positions that are exactly 'distance' away from center
+                    if (Math.abs(dr) == distance || Math.abs(dc) == distance) {
+                        val r = center + dr
+                        val c = center + dc
+                        if (gameState.isValidPosition(r, c) && gameState.isTileEmpty(r, c)) {
+                            return Pair(r, c)
+                        }
+                    }
                 }
             }
         }
