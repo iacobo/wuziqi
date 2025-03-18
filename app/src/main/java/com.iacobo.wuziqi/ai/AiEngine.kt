@@ -681,20 +681,27 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                 gameState.board[row][col] = EMPTY
             }
         }
+        
+        // 3. Critical: Block open two threats on the bottom row
+        val maxRow = if (gameState.boardSize == 7) 5 else gameState.boardSize - 1
+        val result = findConnect4OpenTwoBlock(gameState, maxRow, humanPlayer)
+        if (result != null) {
+            return result
+        }
 
-        // 3. Look for Connect4-specific forced win setups
+        // 4. Look for Connect4-specific forced win setups
         val forcingMoveResult = findConnect4ForcingMove(gameState, computerPlayer)
         if (forcingMoveResult != null) {
             return forcingMoveResult
         }
 
-        // 4. Block opponent's forcing moves
+        // 5. Block opponent's forcing moves
         val blockForcingMoveResult = findConnect4ForcingMove(gameState, humanPlayer)
         if (blockForcingMoveResult != null) {
             return blockForcingMoveResult
         }
 
-        // 5. Evaluate positions with Connect4-specific heuristics
+        // 6. Evaluate positions with Connect4-specific heuristics
         var bestScore = Int.MIN_VALUE
         var bestMove: Pair<Int, Int>? = null
         
@@ -722,6 +729,62 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         }
         
         return bestMove
+    }
+    
+    /**
+     * Specifically handles blocking open two threats on the bottom row in Connect4.
+     * For example: "--rr--" needs to be blocked at position 3 (0-indexed, between the two 'r's).
+     */
+    private fun findConnect4OpenTwoBlock(gameState: GameState, bottomRow: Int, playerValue: Int): Pair<Int, Int>? {
+        val boardSize = gameState.boardSize
+        
+        // Check horizontal open two threats on bottom row
+        for (col in 0 until boardSize - 3) {
+            // Look for two adjacent opponent pieces with spaces on either side
+            if (gameState.board[bottomRow][col] == EMPTY &&
+                gameState.board[bottomRow][col+1] == playerValue &&
+                gameState.board[bottomRow][col+2] == playerValue &&
+                col+3 < boardSize && gameState.board[bottomRow][col+3] == EMPTY) {
+                
+                // Block by playing immediately before or after the pair
+                // Prefer blocking before if both are available
+                if (gameState.isTileEmpty(bottomRow, col)) {
+                    return Pair(bottomRow, col)
+                } else if (col+3 < boardSize && gameState.isTileEmpty(bottomRow, col+3)) {
+                    return Pair(bottomRow, col+3)
+                }
+            }
+        }
+        
+        // Check for pattern with a gap: "r-r"
+        for (col in 0 until boardSize - 2) {
+            if (gameState.board[bottomRow][col] == playerValue &&
+                gameState.board[bottomRow][col+1] == EMPTY &&
+                gameState.board[bottomRow][col+2] == playerValue) {
+                
+                // Block the gap
+                return Pair(bottomRow, col+1)
+            }
+        }
+        
+        // Also check for patterns like "-rr-" where we need to block one of the ends
+        for (col in 1 until boardSize - 2) {
+            if (gameState.board[bottomRow][col-1] == EMPTY &&
+                gameState.board[bottomRow][col] == playerValue &&
+                gameState.board[bottomRow][col+1] == playerValue &&
+                gameState.board[bottomRow][col+2] == EMPTY) {
+                
+                // Block one of the ends, prioritize the center side
+                val centerCol = boardSize / 2
+                if (Math.abs(col-1 - centerCol) < Math.abs(col+2 - centerCol)) {
+                    return Pair(bottomRow, col-1)
+                } else {
+                    return Pair(bottomRow, col+2)
+                }
+            }
+        }
+        
+        return null
     }
     
     /**
