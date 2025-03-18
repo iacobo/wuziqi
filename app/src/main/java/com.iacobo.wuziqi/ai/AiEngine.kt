@@ -426,13 +426,11 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             return bestMove
         }
 
-        // If no good candidates, just find any empty spot
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    return Pair(row, col)
-                }
-            }
+        // If no candidate moves (empty board), place in center
+        if (candidates.isEmpty()) {
+            val center = boardSize / 2
+            placeTile(center, center, bypassLoading = true)
+            return
         }
 
         return null // No valid move found (shouldn't happen unless board is full)
@@ -445,7 +443,7 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         var count = 0
         for (row in 0 until gameState.boardSize) {
             for (col in 0 until gameState.boardSize) {
-                if (gameState.board[row][col] != EMPTY) {
+                if (gameState.isTileEmpty(row,col)) {
                     count++
                 }
             }
@@ -470,13 +468,13 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         // Find all empty positions adjacent to existing stones
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
-                if (gameState.board[row][col] != EMPTY) {
+                if (!gameState.isTileEmpty(row, col)) {
                     // Check all adjacent positions
                     for ((dr, dc) in directions) {
                         val r = row + dr
                         val c = col + dc
 
-                        if (gameState.isValidPosition(r, c) && gameState.board[r][c] == EMPTY) {
+                        if (gameState.isValidPosition(r, c) && gameState.IsTileEmpty(r,c)) {
                             candidates.add(Pair(r, c))
                         }
                     }
