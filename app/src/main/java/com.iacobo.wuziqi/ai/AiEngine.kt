@@ -144,39 +144,42 @@ class WuziqiAIEngine(private val random: Random = Random()) {
     }
 
     /**
-     * Finds a move that properly blocks an open three threat.
-     * This is the critical function that ensures correct response to "--ooo--" patterns.
+     * Finds a move that blocks all types of threatening patterns.
+     * This is a critical function that handles various threats including:
+     * - Open threes: "--ooo--" (standard)
+     * - Broken threes: "x-ooo--", "x-ooo-x" (one-side closed)
+     * - Other forcing threats that require a specific response
      */
     private fun findOpenThreeBlockingMove(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
         val opponentValue = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
 
-        // Scan the board for open three patterns
+        // Scan the board for threatening patterns
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 // Only consider positions that already have the player's stone
                 if (gameState.board[row][col] == playerValue) {
-                    // Check all four directions for open three patterns
+                    // Check all four directions for threatening patterns
                     for ((deltaRow, deltaCol) in DIRECTIONS) {
                         val pattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue)
-
-                        // Look for standard open three pattern: "--ooo--"
+                        
+                        // === Open Three Patterns ===
+                        // Standard open three: "--ooo--"
                         val openThreeIndex = pattern.lineString.indexOf("--ooo--")
                         if (openThreeIndex != -1) {
-                            // We found an open three! The correct response is to block ADJACENT to the three stones
+                            // The correct response is to block ADJACENT to the three stones
                             // In "--ooo--", these are positions 1 and 5 (0-indexed)
-
-                            // Find the actual board positions for these critical blocking spots
                             val leftBlockPos = pattern.getPositionAt(openThreeIndex + 1)
                             val rightBlockPos = pattern.getPositionAt(openThreeIndex + 5)
 
-                            // Verify the positions are valid and empty
+                            // Try the left block position
                             if (leftBlockPos != null &&
                                 gameState.isValidPosition(leftBlockPos.first, leftBlockPos.second) &&
                                 gameState.isTileEmpty(leftBlockPos.first, leftBlockPos.second)) {
                                 return leftBlockPos
                             }
 
+                            // Try the right block position
                             if (rightBlockPos != null &&
                                 gameState.isValidPosition(rightBlockPos.first, rightBlockPos.second) &&
                                 gameState.isTileEmpty(rightBlockPos.first, rightBlockPos.second)) {
@@ -184,15 +187,85 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                             }
                         }
 
-                        // Check for non-standard open three patterns like "-o-oo-" and "-oo-o-"
-                        val nonStandardPatterns = listOf("-o-oo-", "-oo-o-")
+                        // === Broken Three Patterns ===
+                        // Pattern: "x-ooo--" (left side blocked, must block right)
+                        val brokenThreeLeftIndex = pattern.lineString.indexOf("x-ooo--")
+                        if (brokenThreeLeftIndex != -1) {
+                            // Must block at position 6 to prevent "x-oooo-"
+                            val blockPos = pattern.getPositionAt(brokenThreeLeftIndex + 6)
+                            if (blockPos != null &&
+                                gameState.isValidPosition(blockPos.first, blockPos.second) &&
+                                gameState.isTileEmpty(blockPos.first, blockPos.second)) {
+                                return blockPos
+                            }
+                        }
+                        
+                        // Pattern: "--ooo-x" (right side blocked, must block left)
+                        val brokenThreeRightIndex = pattern.lineString.indexOf("--ooo-x")
+                        if (brokenThreeRightIndex != -1) {
+                            // Must block at position 1 to prevent "-oooo-x"
+                            val blockPos = pattern.getPositionAt(brokenThreeRightIndex + 1)
+                            if (blockPos != null &&
+                                gameState.isValidPosition(blockPos.first, blockPos.second) &&
+                                gameState.isTileEmpty(blockPos.first, blockPos.second)) {
+                                return blockPos
+                            }
+                        }
+                        
+                        // Pattern: "x-ooo-x" (both sides blocked, must block middle)
+                        val brokenThreeBothIndex = pattern.lineString.indexOf("x-ooo-x")
+                        if (brokenThreeBothIndex != -1) {
+                            // Two possible blocks: either position 1 or 5
+                            val block1Pos = pattern.getPositionAt(brokenThreeBothIndex + 1)
+                            if (block1Pos != null &&
+                                gameState.isValidPosition(block1Pos.first, block1Pos.second) &&
+                                gameState.isTileEmpty(block1Pos.first, block1Pos.second)) {
+                                return block1Pos
+                            }
+                            
+                            val block2Pos = pattern.getPositionAt(brokenThreeBothIndex + 5)
+                            if (block2Pos != null &&
+                                gameState.isValidPosition(block2Pos.first, block2Pos.second) &&
+                                gameState.isTileEmpty(block2Pos.first, block2Pos.second)) {
+                                return block2Pos
+                            }
+                        }
+                        
+                        // Pattern: "xxooo--" (special case)
+                        val specialCase1 = pattern.lineString.indexOf("xxooo--")
+                        if (specialCase1 != -1) {
+                            // Must block at position 5
+                            val blockPos = pattern.getPositionAt(specialCase1 + 5)
+                            if (blockPos != null &&
+                                gameState.isValidPosition(blockPos.first, blockPos.second) &&
+                                gameState.isTileEmpty(blockPos.first, blockPos.second)) {
+                                return blockPos
+                            }
+                        }
+                        
+                        // Pattern: "--ooox" (special case)
+                        val specialCase2 = pattern.lineString.indexOf("--ooox")
+                        if (specialCase2 != -1) {
+                            // Must block at position 1
+                            val blockPos = pattern.getPositionAt(specialCase2 + 1)
+                            if (blockPos != null &&
+                                gameState.isValidPosition(blockPos.first, blockPos.second) &&
+                                gameState.isTileEmpty(blockPos.first, blockPos.second)) {
+                                return blockPos
+                            }
+                        }
+
+                        // === Non-standard open three patterns ===
+                        val nonStandardPatterns = listOf("-o-oo-", "-oo-o-", "o--oo-", "-oo--o")
                         for (patternStr in nonStandardPatterns) {
                             val idx = pattern.lineString.indexOf(patternStr)
                             if (idx != -1) {
-                                // Find the gap in the middle that needs to be blocked
+                                // Find the gap that needs to be blocked
                                 val gapOffset = when (patternStr) {
-                                    "-o-oo-" -> 2
-                                    "-oo-o-" -> 3
+                                    "-o-oo-" -> 2  // Block in the middle
+                                    "-oo-o-" -> 3  // Block in the middle
+                                    "o--oo-" -> 2  // Block second gap
+                                    "-oo--o" -> 3  // Block first gap
                                     else -> continue
                                 }
 
