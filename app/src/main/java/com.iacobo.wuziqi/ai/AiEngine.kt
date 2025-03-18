@@ -18,17 +18,7 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         // Player constants
         const val EMPTY = GameState.EMPTY
         const val PLAYER_ONE = GameState.PLAYER_ONE  // Human
-        const val PLAYER_TWO = GameState.PLAYER_TWO  // Computer
-
-        // Threat categories and their scores
-        const val FIVE = 10000000          // (5,1): Immediate win
-        const val OPEN_FOUR = 1000000      // (4,2): Guaranteed win next move
-        const val SIMPLE_FOUR = 100000     // (4,1): Forces a response
-        const val OPEN_THREE = 10000       // (3,3): Forces a response
-        const val BROKEN_THREE = 1000      // (3,2): Forces a response
-        const val SIMPLE_THREE = 100       // (3,1): Non-forcing
-        const val TWO = 10                 // (2,n): Non-forcing
-        const val ONE = 1                  // (1,n): Non-forcing
+        const val PLAYER_TWO = GameState.PLAYER_TWO  // Computer (AI)
 
         // Direction vectors for line detection
         val DIRECTIONS = arrayOf(
@@ -38,48 +28,14 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             Pair(1, -1)   // Diagonal /
         )
         
-        // Pattern definitions for efficient lookup
-        // 'x' represents player's stones, 'o' represents opponent's stones, '-' represents empty
-        val WIN_PATTERNS = arrayOf("xxxxx")
-        
-        val OPEN_FOUR_PATTERNS = arrayOf(
-            "-xxxx-",    // Standard open four
-            "xx-xx"      // Split open four
-        )
-        
-        val SIMPLE_FOUR_PATTERNS = arrayOf(
-            "xxxx-",     // Simple four
-            "-xxxx",     // Simple four
-            "xxx-x",     // Non-standard with gap
-            "x-xxx",     // Non-standard with gap
-            "xx-xx-",    // Split with edge
-            "-xx-xx"     // Split with edge
-        )
-        
-        val OPEN_THREE_PATTERNS = arrayOf(
-            "--xxx--",    // Standard open three
-            "-x-xx-",     // Non-standard with gap
-            "-xx-x-"      // Non-standard with gap
-        )
-        
-        val BROKEN_THREE_PATTERNS = arrayOf(
-            "-xxx-o",     // Broken three with right block
-            "o-xxx-",     // Broken three with left block
-            "x-xx-",      // Left-side variation
-            "-xx-x",      // Right-side variation
-            "-x-xx",      // Non-standard 
-            "xx-x-"       // Non-standard
-        )
+        // Edge distance constants
+        const val MIN_EDGE_DISTANCE = 3
     }
 
     /**
      * Finds the best move for the current game state.
-     *
-     * @param gameState The current game state
-     * @return The best move as a Pair(row, col) or null if no valid move found
      */
     fun findBestMove(gameState: GameState): Pair<Int, Int>? {
-        // Special cases for TicTacToe and Connect4
         return when {
             gameState.boardSize == 3 && gameState.winCondition == 3 -> {
                 findTicTacToeMove(gameState)
@@ -94,590 +50,647 @@ class WuziqiAIEngine(private val random: Random = Random()) {
     }
 
     /**
-     * Finds the best move for a standard Wuziqi position using threat-based analysis.
+     * Core Wuziqi move finding logic
      */
     private fun findWuziqiMove(gameState: GameState): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
-        val computerPlayer = PLAYER_TWO
-        val humanPlayer = PLAYER_ONE
         val center = boardSize / 2
-
-        // Handle opening moves based on game state
         val stoneCount = countStones(gameState)
         
+        // Opening book moves
         if (stoneCount == 0) {
-            // If this is the first move of the game (empty board), play at center
+            // First move: play center
             return Pair(center, center)
         } else if (stoneCount == 1) {
-            // If this is the second move (player went first)
-            
-            // Check if the player played at the center
-            if (gameState.board[center][center] == humanPlayer) {
-                // Two standard book responses:
-                // 1. Play 3 positions away from center (traditional)
-                // 2. Play 1 position diagonally from center (modern variation)
-                
-                val traditionalOptions = listOf(
-                    Pair(center - 3, center),  // 3 up from center
-                    Pair(center + 3, center),  // 3 down from center
-                    Pair(center, center - 3),  // 3 left from center
-                    Pair(center, center + 3)   // 3 right from center
+            // Second move (responding to human's first move)
+            if (gameState.board[center][center] == PLAYER_ONE) {
+                // Human played center, respond with a book move
+                val bookResponses = listOf(
+                    Pair(center - 3, center),     // Traditional: 3 spaces up
+                    Pair(center + 3, center),     // Traditional: 3 spaces down
+                    Pair(center, center - 3),     // Traditional: 3 spaces left
+                    Pair(center, center + 3),     // Traditional: 3 spaces right
+                    Pair(center - 1, center - 1), // Modern: diagonal adjacent
+                    Pair(center - 1, center + 1), // Modern: diagonal adjacent
+                    Pair(center + 1, center - 1), // Modern: diagonal adjacent
+                    Pair(center + 1, center + 1)  // Modern: diagonal adjacent
                 )
                 
-                val diagonalOptions = listOf(
-                    Pair(center - 1, center - 1),  // Top-left diagonal
-                    Pair(center - 1, center + 1),  // Top-right diagonal
-                    Pair(center + 1, center - 1),  // Bottom-left diagonal
-                    Pair(center + 1, center + 1)   // Bottom-right diagonal
-                )
-                
-                // Combine both options, with slight preference for traditional responses
-                val allOptions = traditionalOptions + diagonalOptions
-                
-                // Randomize the choice among valid options
-                val validOptions = allOptions.filter { (r, c) -> 
-                    gameState.isValidPosition(r, c) && gameState.isTileEmpty(r, c)
+                // Filter valid responses and pick one randomly
+                val validResponses = bookResponses.filter { (r, c) ->
+                    r in 0 until boardSize && c in 0 until boardSize && gameState.board[r][c] == EMPTY
                 }
                 
-                if (validOptions.isNotEmpty()) {
-                    return validOptions[random.nextInt(validOptions.size)]
+                if (validResponses.isNotEmpty()) {
+                    return validResponses[random.nextInt(validResponses.size)]
                 }
             } else {
-                // If player didn't play center, we play at center
-                if (gameState.isTileEmpty(center, center)) {
+                // Human didn't play center, we take center
+                if (gameState.board[center][center] == EMPTY) {
                     return Pair(center, center)
                 }
             }
-        } else if (stoneCount < 5) {
-            // For early game (but not first 2 moves), prefer central area
-            // Get coordinates within a reasonable distance from center
-            val minDist = 2  // Minimum distance from center
-            val maxDist = 5  // Maximum distance from center
-            
-            val candidates = mutableListOf<Pair<Int, Int>>()
-            
-            // First, check if any threats need to be handled before playing positionally
-            val threatResponse = handleThreatsOrCreateOwn(gameState, computerPlayer, humanPlayer)
-            if (threatResponse != null) {
-                return threatResponse
-            }
-            
-            // If no threats, collect candidate moves near existing stones
-            // but not too close to the board edge
-            val edgeDistance = 3  // Stay at least this far from the edge
-            
-            for (row in edgeDistance until boardSize - edgeDistance) {
-                for (col in edgeDistance until boardSize - edgeDistance) {
-                    if (gameState.isTileEmpty(row, col)) {
-                        // Calculate Manhattan distance from center
-                        val distFromCenter = Math.abs(row - center) + Math.abs(col - center)
-                        
-                        // Consider positions that are at a good distance from center
-                        if (distFromCenter in minDist..maxDist) {
-                            candidates.add(Pair(row, col))
-                        }
-                    }
-                }
-            }
-            
-            // If we have candidates, choose one randomly
-            if (candidates.isNotEmpty()) {
-                return candidates[random.nextInt(candidates.size)]
-            }
         }
         
-        // Handle threats or proceed with standard evaluation
-        return handleThreatsOrCreateOwn(gameState, computerPlayer, humanPlayer)
+        // Look for winning moves and threats
+        
+        // 1. Check if we can win with the next move
+        val winningMove = findWinningMove(gameState, PLAYER_TWO)
+        if (winningMove != null) {
+            return winningMove
+        }
+        
+        // 2. Block opponent's winning move
+        val blockWinningMove = findWinningMove(gameState, PLAYER_ONE)
+        if (blockWinningMove != null) {
+            return blockWinningMove
+        }
+        
+        // 3. Check for creating or blocking forced-win situations
+        val threatMove = findBestThreatMove(gameState)
+        if (threatMove != null) {
+            return threatMove
+        }
+        
+        // 4. If no threats, use positional evaluation
+        return findBestPositionalMove(gameState)
     }
     
     /**
-     * Handles all threat checking logic in the correct order.
-     * This helps avoid duplicating code in multiple places.
+     * Finds a move that would create a winning position (5 in a row)
      */
-    private fun handleThreatsOrCreateOwn(
-        gameState: GameState,
-        computerPlayer: Int,
-        humanPlayer: Int
-    ): Pair<Int, Int>? {
-        // 1. Check for immediate win (five)
+    private fun findWinningMove(gameState: GameState, player: Int): Pair<Int, Int>? {
         for (row in 0 until gameState.boardSize) {
             for (col in 0 until gameState.boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    gameState.board[row][col] = computerPlayer
-                    if (gameState.checkWin(row, col, computerPlayer)) {
+                if (gameState.board[row][col] == EMPTY) {
+                    // Try placing a stone here
+                    gameState.board[row][col] = player
+                    
+                    // Check if this creates a win
+                    if (gameState.checkWin(row, col, player)) {
                         gameState.board[row][col] = EMPTY
                         return Pair(row, col)
                     }
+                    
+                    // Reset the position
                     gameState.board[row][col] = EMPTY
                 }
             }
         }
-
-        // 2. Check for opponent's immediate win and block it
-        for (row in 0 until gameState.boardSize) {
-            for (col in 0 until gameState.boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    gameState.board[row][col] = humanPlayer
-                    if (gameState.checkWin(row, col, humanPlayer)) {
-                        gameState.board[row][col] = EMPTY
-                        return Pair(row, col)
-                    }
-                    gameState.board[row][col] = EMPTY
-                }
+        return null
+    }
+    
+    /**
+     * Finds the best move based on threat analysis.
+     * This handles creating our own threats and blocking opponent's threats.
+     */
+    private fun findBestThreatMove(gameState: GameState): Pair<Int, Int>? {
+        val boardSize = gameState.boardSize
+        
+        // Threat types in descending order of priority
+        val threatTypes = listOf(
+            ThreatType.OPEN_FOUR,      // Four with both ends open (guarantees a win)
+            ThreatType.FOUR,           // Four with one end open (forces a defensive move)
+            ThreatType.OPEN_THREE,     // Three with both ends open (forces a defensive move)
+            ThreatType.THREE           // Three with one end open
+        )
+        
+        // First, check if we can create a high-level threat
+        for (threatType in threatTypes) {
+            val createThreatMove = findCreateThreatMove(gameState, PLAYER_TWO, threatType)
+            if (createThreatMove != null) {
+                return createThreatMove
             }
-        }
-
-        // 3. Check for open four creation (guaranteed win next move)
-        val openFourMove = findThreateningMove(gameState, computerPlayer, OPEN_FOUR_PATTERNS)
-        if (openFourMove != null) {
-            return openFourMove
-        }
-
-        // 4. Block opponent's open four
-        val blockOpenFourMove = findThreateningMove(gameState, humanPlayer, OPEN_FOUR_PATTERNS)
-        if (blockOpenFourMove != null) {
-            return blockOpenFourMove
-        }
-
-        // 5. Check for simple four creation
-        val simpleFourMove = findThreateningMove(gameState, computerPlayer, SIMPLE_FOUR_PATTERNS)
-        if (simpleFourMove != null) {
-            return simpleFourMove
-        }
-
-        // 6. Block opponent's simple four
-        val blockSimpleFourMove = findThreateningMove(gameState, humanPlayer, SIMPLE_FOUR_PATTERNS)
-        if (blockSimpleFourMove != null) {
-            return blockSimpleFourMove
-        }
-
-        // 7. Handle opponent's open three threats
-        val blockOpenThreeMove = findOpenThreeBlock(gameState, humanPlayer)
-        if (blockOpenThreeMove != null) {
-            return blockOpenThreeMove
         }
         
-        // 8. Handle opponent's broken three threats
-        val blockBrokenThreeMove = findBrokenThreeBlock(gameState, humanPlayer)
-        if (blockBrokenThreeMove != null) {
-            return blockBrokenThreeMove
+        // Then, check if we need to block opponent's threats, from highest to lowest priority
+        for (threatType in threatTypes) {
+            val blockThreatMove = findBlockThreatMove(gameState, PLAYER_ONE, threatType)
+            if (blockThreatMove != null) {
+                return blockThreatMove
+            }
         }
-
-        // 9. Create our own open three if possible
-        val createOpenThreeMove = findThreateningMove(gameState, computerPlayer, OPEN_THREE_PATTERNS)
+        
+        // If no immediate threats, try to create our own lower threats
+        // First try to create an open three which is very strong
+        val createOpenThreeMove = findCreateThreatMove(gameState, PLAYER_TWO, ThreatType.OPEN_THREE)
         if (createOpenThreeMove != null) {
             return createOpenThreeMove
         }
-
-        // 10. Create our own broken three if possible
-        val createBrokenThreeMove = findThreateningMove(gameState, computerPlayer, BROKEN_THREE_PATTERNS)
-        if (createBrokenThreeMove != null) {
-            return createBrokenThreeMove
-        }
-
-        // 11. Fallback to positional evaluation if no threats found
-        return findBestPositionalMove(gameState)
-    }
-
-    /**
-     * Finds moves that create specific threatening patterns.
-     * Used for creating our own threats or blocking opponent's threats.
-     */
-    private fun findThreateningMove(
-        gameState: GameState,
-        playerValue: Int,
-        patterns: Array<String>
-    ): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
-        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
-
-        // First, scan the board for patterns that are almost complete
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.board[row][col] == playerValue) {
-                    for ((deltaRow, deltaCol) in DIRECTIONS) {
-                        // Normalize pattern representation
-                        val linePattern = extractLinePattern(
-                            gameState, row, col, deltaRow, deltaCol, playerValue
-                        )
-                        
-                        for (pattern in patterns) {
-                            val index = linePattern.lineString.indexOf(pattern)
-                            if (index != -1) {
-                                // Find all empty positions in the pattern and check if placing a stone would complete it
-                                for (i in pattern.indices) {
-                                    if (pattern[i] == '-') {
-                                        val pos = linePattern.getPositionAt(index + i)
-                                        if (pos != null && 
-                                            gameState.isValidPosition(pos.first, pos.second) && 
-                                            gameState.isTileEmpty(pos.first, pos.second)) {
-                                            return pos
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // If no immediate threats found, look for creating threats
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Try placing a stone here
-                    gameState.board[row][col] = playerValue
-
-                    // Check if this move creates any of the specified patterns
-                    for ((deltaRow, deltaCol) in DIRECTIONS) {
-                        val linePattern = extractLinePattern(
-                            gameState, row, col, deltaRow, deltaCol, playerValue
-                        ).lineString
-
-                        if (patterns.any { pattern -> linePattern.contains(pattern) }) {
-                            gameState.board[row][col] = EMPTY
-                            return Pair(row, col)
-                        }
-                    }
-
-                    gameState.board[row][col] = EMPTY
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * Specifically handles open three threats.
-     * Focused on properly blocking the key position to prevent a follow-up open four.
-     */
-    private fun findOpenThreeBlock(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
         
-        // Key insight: In extractLinePattern, when we pass playerValue, the function maps:
-        // - playerValue stones to 'o'
-        // - opponent stones to 'x'
-        // - empty spaces to '-'
-        // So we need to look for "ooo" patterns, not "xxx" patterns!
+        // Then try to create a regular three
+        val createThreeMove = findCreateThreatMove(gameState, PLAYER_TWO, ThreatType.THREE)
+        if (createThreeMove != null) {
+            return createThreeMove
+        }
         
-        // Look specifically for open three patterns (critical threat)
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.board[row][col] == playerValue) {
-                    for ((deltaRow, deltaCol) in DIRECTIONS) {
-                        val linePattern = extractLinePattern(
-                            gameState, row, col, deltaRow, deltaCol, playerValue
-                        )
-                        
-                        // Look for the standard open three pattern - key fix: using "ooo" not "xxx"
-                        val pattern = "--ooo--"
-                        val idx = linePattern.lineString.indexOf(pattern)
-                        if (idx != -1) {
-                            // The most critical positions to block are adjacent to the three stones
-                            // First try position right after the three stones
-                            val blockPos1 = linePattern.getPositionAt(idx + 5)
-                            if (blockPos1 != null && 
-                                gameState.isValidPosition(blockPos1.first, blockPos1.second) && 
-                                gameState.isTileEmpty(blockPos1.first, blockPos1.second)) {
-                                return blockPos1
-                            }
-                            
-                            // Then try position right before the three stones
-                            val blockPos2 = linePattern.getPositionAt(idx + 1)
-                            if (blockPos2 != null && 
-                                gameState.isValidPosition(blockPos2.first, blockPos2.second) && 
-                                gameState.isTileEmpty(blockPos2.first, blockPos2.second)) {
-                                return blockPos2
-                            }
-                            
-                            // As a last resort, block the outer spaces
-                            val blockPos3 = linePattern.getPositionAt(idx)
-                            if (blockPos3 != null && 
-                                gameState.isValidPosition(blockPos3.first, blockPos3.second) && 
-                                gameState.isTileEmpty(blockPos3.first, blockPos3.second)) {
-                                return blockPos3
-                            }
-                            
-                            val blockPos4 = linePattern.getPositionAt(idx + 6)
-                            if (blockPos4 != null && 
-                                gameState.isValidPosition(blockPos4.first, blockPos4.second) && 
-                                gameState.isTileEmpty(blockPos4.first, blockPos4.second)) {
-                                return blockPos4
-                            }
-                        }
-                        
-                        // Also check for non-standard open three patterns with gaps
-                        val gapPatterns = arrayOf("-o-oo-", "-oo-o-")
-                        for (gapPattern in gapPatterns) {
-                            val gapIdx = linePattern.lineString.indexOf(gapPattern)
-                            if (gapIdx != -1) {
-                                // In these patterns, the most critical position is the gap
-                                for (i in gapPattern.indices) {
-                                    if (gapPattern[i] == '-' && i > 0 && i < gapPattern.length - 1) {
-                                        val blockPos = linePattern.getPositionAt(gapIdx + i)
-                                        if (blockPos != null && 
-                                            gameState.isValidPosition(blockPos.first, blockPos.second) && 
-                                            gameState.isTileEmpty(blockPos.first, blockPos.second)) {
-                                            return blockPos
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        // If we can't create any decent threats, try to create at least a two
+        val createTwoMove = findCreateThreatMove(gameState, PLAYER_TWO, ThreatType.TWO)
+        if (createTwoMove != null) {
+            return createTwoMove
         }
         
         return null
     }
     
     /**
-     * Specifically handles broken three threats.
-     * These are three stones in a row with one end blocked, but the other end open.
+     * Finds a move that creates a specific threat for the given player
      */
-    private fun findBrokenThreeBlock(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
+    private fun findCreateThreatMove(gameState: GameState, player: Int, threatType: ThreatType): Pair<Int, Int>? {
+        val opponent = if (player == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
+        val possibleMoves = mutableListOf<Pair<Int, Int>>()
         
-        // Look for patterns like "-ooo-x" or "x-ooo-" - note the pattern is from the player's perspective
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.board[row][col] == playerValue) {
-                    for ((deltaRow, deltaCol) in DIRECTIONS) {
-                        val linePattern = extractLinePattern(
-                            gameState, row, col, deltaRow, deltaCol, playerValue
-                        )
-                        
-                        // Check both standard broken three patterns - key fix: using "ooo" not "xxx"
-                        val patterns = arrayOf("-ooo-x", "x-ooo-")
-                        for (pattern in patterns) {
-                            val idx = linePattern.lineString.indexOf(pattern)
-                            if (idx != -1) {
-                                // The critical position to block is the open side
-                                val blockPos = if (pattern == "-ooo-x") {
-                                    linePattern.getPositionAt(idx)
-                                } else { // "x-ooo-"
-                                    linePattern.getPositionAt(idx + 5)
-                                }
-                                
-                                if (blockPos != null && 
-                                    gameState.isValidPosition(blockPos.first, blockPos.second) && 
-                                    gameState.isTileEmpty(blockPos.first, blockPos.second)) {
-                                    return blockPos
-                                }
-                            }
+        // Try each empty position
+        for (row in 0 until gameState.boardSize) {
+            for (col in 0 until gameState.boardSize) {
+                if (gameState.board[row][col] == EMPTY) {
+                    // Place stone temporarily
+                    gameState.board[row][col] = player
+                    
+                    // Check if this creates the desired threat
+                    var threatCreated = false
+                    for ((dRow, dCol) in DIRECTIONS) {
+                        val lineInfo = analyzeLine(gameState, row, col, dRow, dCol, player)
+                        if (lineHasThreat(lineInfo, threatType, player)) {
+                            threatCreated = true
+                            break
                         }
-                        
-                        // Check broken three patterns with gaps - key fix: using "o" not "x"
-                        val gapPatterns = arrayOf("o-oo-", "-oo-o", "-o-oo", "oo-o-")
-                        for (gapPattern in gapPatterns) {
-                            val gapIdx = linePattern.lineString.indexOf(gapPattern)
-                            if (gapIdx != -1) {
-                                // For patterns with gaps, block the gap first
-                                for (i in gapPattern.indices) {
-                                    if (gapPattern[i] == '-' && 
-                                        ((i > 0 && i < gapPattern.length - 1) || // Internal gap
-                                         (i == 0 && gapPattern[1] == 'o') ||     // Left edge if next is 'o'
-                                         (i == gapPattern.length - 1 && gapPattern[i-1] == 'o'))) { // Right edge if prev is 'o'
-                                        
-                                        val blockPos = linePattern.getPositionAt(gapIdx + i)
-                                        if (blockPos != null && 
-                                            gameState.isValidPosition(blockPos.first, blockPos.second) && 
-                                            gameState.isTileEmpty(blockPos.first, blockPos.second)) {
-                                            return blockPos
-                                        }
-                                    }
-                                }
+                    }
+                    
+                    // Remove stone
+                    gameState.board[row][col] = EMPTY
+                    
+                    if (threatCreated) {
+                        // If this is an early move, check if it's not too close to the edge
+                        val stoneCount = countStones(gameState)
+                        if (stoneCount < 10) {
+                            val edgeDistance = minOf(row, col, gameState.boardSize - 1 - row, gameState.boardSize - 1 - col)
+                            if (edgeDistance >= MIN_EDGE_DISTANCE) {
+                                // Good position, away from edge
+                                return Pair(row, col)
+                            } else {
+                                // Too close to edge, but save it as a possibility
+                                possibleMoves.add(Pair(row, col))
                             }
+                        } else {
+                            // Later in the game, don't worry as much about edge distance
+                            return Pair(row, col)
                         }
                     }
                 }
             }
+        }
+        
+        // If we couldn't find a good move away from the edge but have some possibilities
+        if (possibleMoves.isNotEmpty()) {
+            return possibleMoves[random.nextInt(possibleMoves.size)]
         }
         
         return null
     }
-
+    
     /**
-     * Data class to represent a line pattern extracted from the board.
+     * Finds a move that blocks a specific threat by the opponent
      */
-    private data class LinePattern(
-        val lineString: String,
-        val positions: List<Pair<Int, Int>?>
-    ) {
-        /**
-         * Get the board position corresponding to a specific index in the pattern.
-         */
-        fun getPositionAt(index: Int): Pair<Int, Int>? {
-            return if (index in positions.indices) positions[index] else null
+    private fun findBlockThreatMove(gameState: GameState, opponent: Int, threatType: ThreatType): Pair<Int, Int>? {
+        val player = if (opponent == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
+        
+        // First, detect if this threat exists on the board
+        val threats = detectThreats(gameState, opponent, threatType)
+        if (threats.isEmpty()) {
+            return null // No threats of this type
+        }
+        
+        // For each threat, determine the best blocking move
+        val blockingMoves = mutableListOf<Pair<Int, Int>>()
+        
+        for (threat in threats) {
+            // For open threats, we need to close one end
+            if (threatType == ThreatType.OPEN_FOUR || threatType == ThreatType.OPEN_THREE) {
+                // Block either end of the threat
+                if (threat.openEnd1 != null && gameState.board[threat.openEnd1.first][threat.openEnd1.second] == EMPTY) {
+                    blockingMoves.add(threat.openEnd1)
+                }
+                
+                if (threat.openEnd2 != null && gameState.board[threat.openEnd2.first][threat.openEnd2.second] == EMPTY) {
+                    blockingMoves.add(threat.openEnd2)
+                }
+            } else if (threatType == ThreatType.FOUR) {
+                // For a simple four, we must block the open end
+                if (threat.openEnd1 != null && gameState.board[threat.openEnd1.first][threat.openEnd1.second] == EMPTY) {
+                    return threat.openEnd1 // Critical block, return immediately
+                }
+            } else if (threatType == ThreatType.THREE) {
+                // For a simple three, blocking the open end is usually best
+                if (threat.openEnd1 != null && gameState.board[threat.openEnd1.first][threat.openEnd1.second] == EMPTY) {
+                    blockingMoves.add(threat.openEnd1)
+                }
+            }
+        }
+        
+        // If we have blocking moves, choose the best one
+        if (blockingMoves.isNotEmpty()) {
+            // First check if any blocking move is also good for us
+            for (move in blockingMoves) {
+                gameState.board[move.first][move.second] = player
+                
+                var createsCounter = false
+                for ((dRow, dCol) in DIRECTIONS) {
+                    val lineInfo = analyzeLine(gameState, move.first, move.second, dRow, dCol, player)
+                    // Check if this creates any good threat for us
+                    if (lineHasThreat(lineInfo, ThreatType.OPEN_THREE, player) || 
+                        lineHasThreat(lineInfo, ThreatType.FOUR, player)) {
+                        createsCounter = true
+                        break
+                    }
+                }
+                
+                gameState.board[move.first][move.second] = EMPTY
+                
+                if (createsCounter) {
+                    return move // This move both blocks and creates a threat
+                }
+            }
+            
+            // If no move creates a counter-threat, just pick one
+            return blockingMoves[random.nextInt(blockingMoves.size)]
+        }
+        
+        return null
+    }
+    
+    /**
+     * Detects all threats of a specific type for a player
+     */
+    private fun detectThreats(gameState: GameState, player: Int, threatType: ThreatType): List<Threat> {
+        val threats = mutableListOf<Threat>()
+        
+        // Check each piece on the board
+        for (row in 0 until gameState.boardSize) {
+            for (col in 0 until gameState.boardSize) {
+                if (gameState.board[row][col] == player) {
+                    // Check in all directions
+                    for ((dRow, dCol) in DIRECTIONS) {
+                        val lineInfo = analyzeLine(gameState, row, col, dRow, dCol, player)
+                        
+                        // Check if this line has the specific threat type
+                        if (lineHasThreat(lineInfo, threatType, player)) {
+                            // Create threat object with relevant information
+                            val threat = createThreatFromLine(lineInfo, threatType, row, col, dRow, dCol, gameState)
+                            if (threat != null) {
+                                threats.add(threat)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return threats
+    }
+    
+    /**
+     * Creates a Threat object from a line analysis
+     */
+    private fun createThreatFromLine(
+        lineInfo: LineInfo,
+        threatType: ThreatType,
+        startRow: Int,
+        startCol: Int,
+        dRow: Int,
+        dCol: Int,
+        gameState: GameState
+    ): Threat? {
+        val boardSize = gameState.boardSize
+        val player = lineInfo.player
+        
+        // Find the beginning of the player's stones in this line
+        var consecutiveStart = -1
+        var maxConsecutive = 0
+        var currentConsecutive = 0
+        
+        for (i in lineInfo.line.indices) {
+            if (lineInfo.line[i] == player) {
+                if (currentConsecutive == 0) {
+                    consecutiveStart = i
+                }
+                currentConsecutive++
+                maxConsecutive = max(maxConsecutive, currentConsecutive)
+            } else {
+                currentConsecutive = 0
+            }
+        }
+        
+        if (maxConsecutive < 2) {
+            return null // Not enough consecutive stones
+        }
+        
+        // Determine the ends of the threat
+        var openEnd1: Pair<Int, Int>? = null
+        var openEnd2: Pair<Int, Int>? = null
+        
+        // Check locations before and after the consecutive stones
+        if (threatType == ThreatType.OPEN_FOUR || threatType == ThreatType.OPEN_THREE) {
+            // Both ends must be open
+            val before = consecutiveStart - 1
+            if (before >= 0 && lineInfo.line[before] == EMPTY) {
+                val r = startRow - (consecutiveStart - before) * dRow
+                val c = startCol - (consecutiveStart - before) * dCol
+                if (r in 0 until boardSize && c in 0 until boardSize) {
+                    openEnd1 = Pair(r, c)
+                }
+            }
+            
+            val consecutiveEnd = consecutiveStart + maxConsecutive - 1
+            val after = consecutiveEnd + 1
+            if (after < lineInfo.line.size && lineInfo.line[after] == EMPTY) {
+                val r = startRow + (after - consecutiveStart) * dRow
+                val c = startCol + (after - consecutiveStart) * dCol
+                if (r in 0 until boardSize && c in 0 until boardSize) {
+                    openEnd2 = Pair(r, c)
+                }
+            }
+        } else if (threatType == ThreatType.FOUR || threatType == ThreatType.THREE) {
+            // Only one end needs to be open
+            val before = consecutiveStart - 1
+            val consecutiveEnd = consecutiveStart + maxConsecutive - 1
+            val after = consecutiveEnd + 1
+            
+            if (before >= 0 && lineInfo.line[before] == EMPTY) {
+                val r = startRow - (consecutiveStart - before) * dRow
+                val c = startCol - (consecutiveStart - before) * dCol
+                if (r in 0 until boardSize && c in 0 until boardSize) {
+                    openEnd1 = Pair(r, c)
+                }
+            }
+            
+            if (openEnd1 == null && after < lineInfo.line.size && lineInfo.line[after] == EMPTY) {
+                val r = startRow + (after - consecutiveStart) * dRow
+                val c = startCol + (after - consecutiveStart) * dCol
+                if (r in 0 until boardSize && c in 0 until boardSize) {
+                    openEnd1 = Pair(r, c)
+                }
+            }
+        }
+        
+        // Create the threat object
+        return Threat(
+            threatType = threatType,
+            player = player,
+            openEnd1 = openEnd1,
+            openEnd2 = openEnd2
+        )
+    }
+    
+    /**
+     * Checks if a line contains a specific threat type
+     */
+    private fun lineHasThreat(lineInfo: LineInfo, threatType: ThreatType, player: Int): Boolean {
+        val line = lineInfo.line
+        val consecutive = countConsecutive(line, player)
+        val openEnds = countOpenEnds(line, player)
+        
+        return when (threatType) {
+            ThreatType.OPEN_FOUR -> consecutive == 4 && openEnds == 2
+            ThreatType.FOUR -> consecutive == 4 && openEnds == 1
+            ThreatType.OPEN_THREE -> consecutive == 3 && openEnds == 2
+            ThreatType.THREE -> consecutive == 3 && openEnds == 1
+            ThreatType.TWO -> consecutive == 2 && openEnds >= 1
         }
     }
-
+    
     /**
-     * Extracts a line pattern from the board in a given direction.
-     * Includes mapping between pattern positions and board positions.
+     * Counts the maximum consecutive pieces for a player in a line
      */
-    private fun extractLinePattern(
+    private fun countConsecutive(line: List<Int>, player: Int): Int {
+        var maxConsecutive = 0
+        var currentConsecutive = 0
+        
+        for (cell in line) {
+            if (cell == player) {
+                currentConsecutive++
+                maxConsecutive = max(maxConsecutive, currentConsecutive)
+            } else {
+                currentConsecutive = 0
+            }
+        }
+        
+        return maxConsecutive
+    }
+    
+    /**
+     * Counts the number of open ends for a player's consecutive stones
+     */
+    private fun countOpenEnds(line: List<Int>, player: Int): Int {
+        var openEnds = 0
+        var inConsecutive = false
+        
+        // Check for an open end before the consecutive stones
+        for (i in line.indices) {
+            if (line[i] == player) {
+                if (!inConsecutive && i > 0 && line[i-1] == EMPTY) {
+                    openEnds++
+                }
+                inConsecutive = true
+            } else if (inConsecutive) {
+                // End of consecutive stones
+                if (line[i] == EMPTY) {
+                    openEnds++
+                }
+                break
+            }
+        }
+        
+        return openEnds
+    }
+    
+    /**
+     * Analyzes a line from a starting position in a specific direction
+     */
+    private fun analyzeLine(
         gameState: GameState,
         row: Int,
         col: Int,
-        deltaRow: Int,
-        deltaCol: Int,
-        playerValue: Int
-    ): LinePattern {
+        dRow: Int,
+        dCol: Int,
+        player: Int
+    ): LineInfo {
         val boardSize = gameState.boardSize
-        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
-        val lineBuilder = StringBuilder()
+        val line = mutableListOf<Int>()
         val positions = mutableListOf<Pair<Int, Int>?>()
-
-        // Look 6 spaces in each direction to capture all possible threat patterns
-        for (i in -6..6) {
-            val r = row + i * deltaRow
-            val c = col + i * deltaCol
-
+        
+        // Extract 11 positions centered on the current position (5 on each side)
+        for (i in -5..5) {
+            val r = row + i * dRow
+            val c = col + i * dCol
+            
             if (r in 0 until boardSize && c in 0 until boardSize) {
-                when (gameState.board[r][c]) {
-                    playerValue -> {
-                        lineBuilder.append("o") // Current player's stones
-                        positions.add(Pair(r, c))
-                    }
-                    opponent -> {
-                        lineBuilder.append("x") // Opponent's stones 
-                        positions.add(Pair(r, c))
-                    }
-                    else -> {
-                        lineBuilder.append("-") // Empty spaces
-                        positions.add(Pair(r, c))
-                    }
-                }
+                line.add(gameState.board[r][c])
+                positions.add(Pair(r, c))
             } else {
-                // Off-board positions are treated as blocked
-                lineBuilder.append("x") // Treat edge as opponent's piece
-                positions.add(null) // null indicates off-board
+                // Treat off-board as occupied by opponent (blocked)
+                line.add(if (player == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE)
+                positions.add(null)
             }
         }
-
-        return LinePattern(lineBuilder.toString(), positions)
+        
+        return LineInfo(player, line, positions)
     }
-
+    
     /**
-     * When no threats are found, use positional evaluation to find the best move.
+     * Finds the best move based on positional evaluation
      */
     private fun findBestPositionalMove(gameState: GameState): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
-        val computerPlayer = PLAYER_TWO
-        val humanPlayer = PLAYER_ONE
         val center = boardSize / 2
-
-        // If the board is nearly empty, play near the center but avoid edges
-        if (countStones(gameState) < 10) {
-            // Avoid playing too close to the edge
-            val edgeBuffer = 3
+        val stoneCount = countStones(gameState)
+        
+        // Early game strategy: focus on central area
+        if (stoneCount < 10) {
+            val candidates = mutableListOf<Pair<Pair<Int, Int>, Int>>() // (position, score)
             
-            // Generate positions that are not too close to the edge and prioritize those near the center
-            val candidates = mutableListOf<Pair<Pair<Int, Int>, Int>>() // Pair of (position, score)
-            
-            for (row in edgeBuffer until boardSize - edgeBuffer) {
-                for (col in edgeBuffer until boardSize - edgeBuffer) {
-                    if (gameState.isTileEmpty(row, col)) {
-                        // Calculate Manhattan distance from center - lower is better
-                        val distFromCenter = Math.abs(row - center) + Math.abs(col - center)
-                        // Convert to a score where higher is better (closer to center)
-                        val positionScore = boardSize - distFromCenter
+            // Consider all empty positions that aren't too close to the edge
+            for (row in MIN_EDGE_DISTANCE until boardSize - MIN_EDGE_DISTANCE) {
+                for (col in MIN_EDGE_DISTANCE until boardSize - MIN_EDGE_DISTANCE) {
+                    if (gameState.board[row][col] == EMPTY) {
+                        // Score based on distance from center (closer is better)
+                        val centerDistance = abs(row - center) + abs(col - center)
+                        val positionScore = boardSize - centerDistance
                         
                         candidates.add(Pair(Pair(row, col), positionScore))
                     }
                 }
             }
             
-            // Sort candidates by score (higher is better)
-            candidates.sortByDescending { it.second }
-            
-            // Take the top 5 positions (closest to center) and choose randomly among them
-            // This adds some variety while still favoring good positions
-            val topCandidates = candidates.take(5.coerceAtMost(candidates.size))
-            if (topCandidates.isNotEmpty()) {
-                return topCandidates[random.nextInt(topCandidates.size)].first
+            // If we have candidates, choose one of the best ones
+            if (candidates.isNotEmpty()) {
+                candidates.sortByDescending { it.second } // Sort by score (descending)
+                val bestCandidates = candidates.take(3) // Take top 3 positions
+                return bestCandidates[random.nextInt(bestCandidates.size)].first
             }
         }
-
-        // Look for positions adjacent to existing stones
-        val candidates = findCandidateMoves(gameState)
+        
+        // Mid-late game strategy: evaluate positions near existing stones
+        val candidates = findCandidatesNearStones(gameState)
         if (candidates.isNotEmpty()) {
-            var bestScore = Int.MIN_VALUE
-            var bestMove: Pair<Int, Int>? = null
-            val bestMoves = mutableListOf<Pair<Int, Int>>()
-
+            val scoredCandidates = mutableListOf<Pair<Pair<Int, Int>, Int>>()
+            
             for ((row, col) in candidates) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Check if this position is too close to the edge
-                    val edgeDistance = minOf(row, col, boardSize - 1 - row, boardSize - 1 - col)
-                    if (edgeDistance < 2) {
-                        // Skip positions that are too close to the edge
-                        continue
-                    }
-                    
-                    // Evaluate this position
-                    val score = evaluatePosition(gameState, row, col, computerPlayer) -
-                            evaluatePosition(gameState, row, col, humanPlayer)
-
-                    if (score > bestScore) {
-                        bestScore = score
-                        bestMoves.clear()
-                        bestMoves.add(Pair(row, col))
-                    } else if (score == bestScore) {
-                        bestMoves.add(Pair(row, col))
-                    }
+                if (gameState.board[row][col] == EMPTY) {
+                    // Evaluate position
+                    val score = evaluatePosition(gameState, row, col)
+                    scoredCandidates.add(Pair(Pair(row, col), score))
                 }
-            }
-
-            // If we have multiple moves with the same score, choose one randomly
-            if (bestMoves.isNotEmpty()) {
-                return bestMoves[random.nextInt(bestMoves.size)]
             }
             
-            // If all our candidates were too close to the edge, try again without the edge restriction
-            if (bestMoves.isEmpty()) {
-                for ((row, col) in candidates) {
-                    if (gameState.isTileEmpty(row, col)) {
-                        // Evaluate this position
-                        val score = evaluatePosition(gameState, row, col, computerPlayer) -
-                                evaluatePosition(gameState, row, col, humanPlayer)
-    
-                        if (score > bestScore) {
-                            bestScore = score
-                            bestMove = Pair(row, col)
-                        }
-                    }
-                }
-                
-                return bestMove
+            // Sort by score and take best move
+            if (scoredCandidates.isNotEmpty()) {
+                scoredCandidates.sortByDescending { it.second }
+                return scoredCandidates[0].first
             }
         }
-
-        // If no good candidates, just find any empty spot (prioritize center area)
+        
+        // Fallback: just find any empty spot, starting from center and working outward
         for (distance in 0 until boardSize) {
             for (dr in -distance..distance) {
                 for (dc in -distance..distance) {
-                    // Only check positions that are exactly 'distance' away from center
-                    if (Math.abs(dr) == distance || Math.abs(dc) == distance) {
+                    // Only check positions at exactly 'distance' from center
+                    if (abs(dr) == distance || abs(dc) == distance) {
                         val r = center + dr
                         val c = center + dc
-                        if (gameState.isValidPosition(r, c) && gameState.isTileEmpty(r, c)) {
+                        if (r in 0 until boardSize && c in 0 until boardSize && 
+                            gameState.board[r][c] == EMPTY) {
                             return Pair(r, c)
                         }
                     }
                 }
             }
         }
-
-        return null // No valid move found (shouldn't happen unless board is full)
+        
+        return null
     }
-
+    
     /**
-     * Counts the number of stones on the board.
+     * Finds candidate moves near existing stones
+     */
+    private fun findCandidatesNearStones(gameState: GameState): List<Pair<Int, Int>> {
+        val boardSize = gameState.boardSize
+        val candidates = mutableSetOf<Pair<Int, Int>>()
+        
+        // Check positions adjacent to existing stones
+        val directions = listOf(
+            -1 to -1, -1 to 0, -1 to 1,
+            0 to -1, 0 to 1,
+            1 to -1, 1 to 0, 1 to 1
+        )
+        
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.board[row][col] != EMPTY) {
+                    // Check all adjacent positions
+                    for ((dr, dc) in directions) {
+                        val r = row + dr
+                        val c = col + dc
+                        
+                        if (r in 0 until boardSize && c in 0 until boardSize && 
+                            gameState.board[r][c] == EMPTY) {
+                            candidates.add(Pair(r, c))
+                        }
+                    }
+                }
+            }
+        }
+        
+        return candidates.toList()
+    }
+    
+    /**
+     * Evaluates a position for strategic value
+     */
+    private fun evaluatePosition(gameState: GameState, row: Int, col: Int): Int {
+        val boardSize = gameState.boardSize
+        val center = boardSize / 2
+        var score = 0
+        
+        // Don't play too close to the edge in early game
+        val stoneCount = countStones(gameState)
+        if (stoneCount < 10) {
+            val edgeDistance = minOf(row, col, boardSize - 1 - row, boardSize - 1 - col)
+            if (edgeDistance < MIN_EDGE_DISTANCE) {
+                return -1000 // Strong penalty for edge positions
+            }
+        }
+        
+        // Prefer positions closer to the center
+        val centerDistance = abs(row - center) + abs(col - center)
+        score -= centerDistance * 2
+        
+        // Place stone temporarily
+        gameState.board[row][col] = PLAYER_TWO
+        
+        // Check potential for creating threats
+        for ((dRow, dCol) in DIRECTIONS) {
+            val lineInfo = analyzeLine(gameState, row, col, dRow, dCol, PLAYER_TWO)
+            
+            // Score based on potential threats
+            if (lineHasThreat(lineInfo, ThreatType.OPEN_THREE, PLAYER_TWO)) score += 500
+            else if (lineHasThreat(lineInfo, ThreatType.THREE, PLAYER_TWO)) score += 100
+            else if (lineHasThreat(lineInfo, ThreatType.TWO, PLAYER_TWO)) score += 10
+            
+            // Score based on blocking opponent threats
+            val opponentLineInfo = analyzeLine(gameState, row, col, dRow, dCol, PLAYER_ONE)
+            if (lineHasThreat(opponentLineInfo, ThreatType.OPEN_THREE, PLAYER_ONE)) score += 400
+            else if (lineHasThreat(opponentLineInfo, ThreatType.THREE, PLAYER_ONE)) score += 80
+        }
+        
+        // Remove temporary stone
+        gameState.board[row][col] = EMPTY
+        
+        return score
+    }
+    
+    /**
+     * Counts the total number of stones on the board
      */
     private fun countStones(gameState: GameState): Int {
         var count = 0
@@ -689,122 +702,6 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             }
         }
         return count
-    }
-
-    /**
-     * Finds candidate moves (positions adjacent to existing stones).
-     */
-    private fun findCandidateMoves(gameState: GameState): List<Pair<Int, Int>> {
-        val boardSize = gameState.boardSize
-        val candidates = mutableSetOf<Pair<Int, Int>>()
-
-        // Directions for checking adjacent cells (8 directions)
-        val directions = listOf(
-            -1 to -1, -1 to 0, -1 to 1,
-            0 to -1, 0 to 1,
-            1 to -1, 1 to 0, 1 to 1
-        )
-
-        // Find all empty positions adjacent to existing stones
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.board[row][col] != EMPTY) {
-                    // Check all adjacent positions
-                    for ((dr, dc) in directions) {
-                        val r = row + dr
-                        val c = col + dc
-
-                        if (gameState.isValidPosition(r, c) && gameState.board[r][c] == EMPTY) {
-                            candidates.add(Pair(r, c))
-                        }
-                    }
-                }
-            }
-        }
-
-        return candidates.toList()
-    }
-
-    /**
-     * Evaluates a position for a given player.
-     * Enhanced version of the evaluation from the OOOOO bot description.
-     */
-    private fun evaluatePosition(gameState: GameState, row: Int, col: Int, playerValue: Int): Int {
-        // Skip if the position is not empty
-        if (!gameState.isTileEmpty(row, col)) {
-            return 0
-        }
-
-        // Place a stone temporarily
-        gameState.board[row][col] = playerValue
-
-        // Get threat values in all 4 directions
-        val threatValues = mutableListOf<Int>()
-        for ((deltaRow, deltaCol) in DIRECTIONS) {
-            val pattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue).lineString
-            threatValues.add(evaluatePatternScore(pattern))
-        }
-
-        // Remove the temporary stone
-        gameState.board[row][col] = EMPTY
-
-        // Sort threat values in descending order
-        threatValues.sortDescending()
-
-        // Take the two best threats
-        val a = 16.coerceAtMost(threatValues.getOrElse(0) { 0 } / 10)
-        val b = 16.coerceAtMost(threatValues.getOrElse(1) { 0 } / 10)
-
-        // Use the formula from the OOOOO bot: 1.5 * 1.8^a + 1.8^b
-        return (1.5 * 1.8.pow(a.toDouble()) + 1.8.pow(b.toDouble())).toInt()
-    }
-
-    /**
-     * Evaluates a pattern string and returns a score.
-     * Handles all pattern variations for efficient evaluation.
-     */
-    private fun evaluatePatternScore(pattern: String): Int {
-        var score = 0
-
-        // Winning threats
-        if (pattern.contains("ooooo")) score += FIVE
-
-        // Open Four threats
-        if (pattern.contains("-oooo-")) score += OPEN_FOUR
-        if (pattern.contains("oo-oo")) score += OPEN_FOUR
-
-        // Simple Four threats
-        if (pattern.contains("oooo-")) score += SIMPLE_FOUR
-        if (pattern.contains("-oooo")) score += SIMPLE_FOUR
-        if (pattern.contains("ooo-o")) score += SIMPLE_FOUR
-        if (pattern.contains("o-ooo")) score += SIMPLE_FOUR
-        if (pattern.contains("oo-oo-")) score += SIMPLE_FOUR
-        if (pattern.contains("-oo-oo")) score += SIMPLE_FOUR
-
-        // Open Three threats
-        if (pattern.contains("--ooo--")) score += OPEN_THREE
-        if (pattern.contains("-o-oo-")) score += OPEN_THREE
-        if (pattern.contains("-oo-o-")) score += OPEN_THREE
-
-        // Broken Three threats
-        if (pattern.contains("-ooo-x")) score += BROKEN_THREE
-        if (pattern.contains("x-ooo-")) score += BROKEN_THREE
-        if (pattern.contains("-oo-o")) score += BROKEN_THREE
-        if (pattern.contains("o-oo-")) score += BROKEN_THREE
-
-        // Simple Three threats
-        if (pattern.contains("ooo--x")) score += SIMPLE_THREE
-        if (pattern.contains("x--ooo")) score += SIMPLE_THREE
-
-        // Two threats
-        if (pattern.contains("--oo--")) score += TWO * 4 // (2,4)
-        if (pattern.contains("-oo---")) score += TWO * 3 // (2,3)
-        if (pattern.contains("---oo-")) score += TWO * 3 // (2,3)
-
-        // One threats
-        if (pattern.contains("--o--")) score += ONE * 5 // (1,5)
-
-        return score
     }
 
     /**
