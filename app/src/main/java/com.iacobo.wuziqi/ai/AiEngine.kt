@@ -907,3 +907,4 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         
         return count >= 4
     }
+}
