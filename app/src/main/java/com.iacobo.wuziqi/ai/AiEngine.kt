@@ -37,6 +37,46 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             Pair(1, 1),   // Diagonal \
             Pair(1, -1)   // Diagonal /
         )
+        
+        // Pattern definitions for efficient lookup
+        // 'x' represents player's stones, 'o' represents opponent's stones, '-' represents empty
+        val WIN_PATTERNS = arrayOf("xxxxx")
+        
+        val OPEN_FOUR_PATTERNS = arrayOf(
+            "-xxxx-",    // Standard open four
+            "xx-xx"      // Split open four
+        )
+        
+        val SIMPLE_FOUR_PATTERNS = arrayOf(
+            "xxxx-",     // Simple four
+            "-xxxx",     // Simple four
+            "xxx-x",     // Non-standard with gap
+            "x-xxx",     // Non-standard with gap
+            "xx-xx-",    // Split with edge
+            "-xx-xx"     // Split with edge
+        )
+        
+        val OPEN_THREE_PATTERNS = arrayOf(
+            "--xxx--",    // Standard open three
+            "-x-xx-",     // Non-standard with gap
+            "-xx-x-"      // Non-standard with gap
+        )
+        
+        val BROKEN_THREE_PATTERNS = arrayOf(
+            "-xxx-o",     // Broken three with right block
+            "o-xxx-",     // Broken three with left block
+            "x-xxx-",     // Left-side variation
+            "-xxx-x",     // Right-side variation
+            "x-ooo--",    // Left side blocked, must block right
+            "--ooo-x",    // Right side blocked, must block left
+            "x-ooo-x",    // Both sides blocked, gap in middle
+            "xxooo--",    // Special case
+            "--ooox",     // Special case
+            "-xx-x",      // Non-standard 
+            "x-xx-",      // Non-standard
+            "-x-xx",      // Non-standard
+            "xx-x-"       // Non-standard
+        )
     }
 
     /**
@@ -96,45 +136,44 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             }
         }
 
-        // 3. Check for open four creation
-        val openFourMove = findOpenFourMove(gameState, computerPlayer)
+        // 3. Check for open four creation (guaranteed win next move)
+        val openFourMove = findThreateningMove(gameState, computerPlayer, OPEN_FOUR_PATTERNS)
         if (openFourMove != null) {
             return openFourMove
         }
 
         // 4. Block opponent's open four
-        val blockOpenFourMove = findOpenFourMove(gameState, humanPlayer)
+        val blockOpenFourMove = findThreateningMove(gameState, humanPlayer, OPEN_FOUR_PATTERNS)
         if (blockOpenFourMove != null) {
             return blockOpenFourMove
         }
 
         // 5. Check for simple four creation
-        val simpleFourMove = findSimpleFourMove(gameState, computerPlayer)
+        val simpleFourMove = findThreateningMove(gameState, computerPlayer, SIMPLE_FOUR_PATTERNS)
         if (simpleFourMove != null) {
             return simpleFourMove
         }
 
         // 6. Block opponent's simple four
-        val blockSimpleFourMove = findSimpleFourMove(gameState, humanPlayer)
+        val blockSimpleFourMove = findThreateningMove(gameState, humanPlayer, SIMPLE_FOUR_PATTERNS)
         if (blockSimpleFourMove != null) {
             return blockSimpleFourMove
         }
 
-        // 7. Handle open three threats - CRITICAL for correct play
-        // First check if we need to defend against opponent's open three
-        val blockOpenThreeMove = findOpenThreeBlockingMove(gameState, humanPlayer)
-        if (blockOpenThreeMove != null) {
-            return blockOpenThreeMove
+        // 7. Handle opponent's forcing threats (open three, broken three)
+        val blockForcingMove = findForcingThreatBlock(gameState, humanPlayer)
+        if (blockForcingMove != null) {
+            return blockForcingMove
         }
 
         // 8. Create our own open three if possible
-        val createOpenThreeMove = findCreateOpenThreeMove(gameState, computerPlayer)
+        val createOpenThreeMove = findThreateningMove(gameState, computerPlayer, OPEN_THREE_PATTERNS)
         if (createOpenThreeMove != null) {
             return createOpenThreeMove
         }
 
         // 9. Create our own broken three if possible
-        val createBrokenThreeMove = findCreateBrokenThreeMove(gameState, computerPlayer)
+        val createBrokenThreeMove = findThreateningMove(gameState, computerPlayer, BROKEN_THREE_PATTERNS)
         if (createBrokenThreeMove != null) {
             return createBrokenThreeMove
         }
@@ -144,136 +183,121 @@ class WuziqiAIEngine(private val random: Random = Random()) {
     }
 
     /**
-     * Finds a move that blocks all types of threatening patterns.
-     * This is a critical function that handles various threats including:
-     * - Open threes: "--ooo--" (standard)
-     * - Broken threes: "x-ooo--", "x-ooo-x" (one-side closed)
-     * - Other forcing threats that require a specific response
+     * Finds moves that create specific threatening patterns.
+     * Used for creating our own threats or blocking opponent's threats.
      */
-    private fun findOpenThreeBlockingMove(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
+    private fun findThreateningMove(
+        gameState: GameState,
+        playerValue: Int,
+        patterns: Array<String>
+    ): Pair<Int, Int>? {
+        val boardSize = gameState.boardSize
+
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.isTileEmpty(row, col)) {
+                    // Try placing a stone here
+                    gameState.board[row][col] = playerValue
+
+                    // Check if this move creates any of the specified patterns
+                    for ((deltaRow, deltaCol) in DIRECTIONS) {
+                        val linePattern = extractLinePattern(
+                            gameState, row, col, deltaRow, deltaCol, playerValue
+                        ).lineString
+
+                        if (patterns.any { pattern -> linePattern.contains(pattern) }) {
+                            gameState.board[row][col] = EMPTY
+                            return Pair(row, col)
+                        }
+                    }
+
+                    gameState.board[row][col] = EMPTY
+                }
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Finds a move that blocks forcing threats (open threes or broken threes).
+     * Prioritizes specific blocking positions based on the threat type.
+     */
+    private fun findForcingThreatBlock(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
         val opponentValue = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
 
-        // Scan the board for threatening patterns
+        // Block structure to define how to block specific patterns
+        data class ThreatPattern(val pattern: String, val blockOffsets: List<Int>)
+        
+        // Define threat patterns and their corresponding blocking positions
+        val threatPatterns = listOf(
+            // Open Three patterns (critical to block correctly!)
+            ThreatPattern("--ooo--", listOf(1, 5)),  // Standard open three: block adjacent to the three stones
+            
+            // Broken Three patterns - now with consistent handling
+            ThreatPattern("x-ooo--", listOf(1, 6)),  // Left blocked: block at gap or right end
+            ThreatPattern("--ooo-x", listOf(0, 5)),  // Right blocked: block at left end or gap
+            ThreatPattern("x-ooo-x", listOf(1, 5)),  // Both sides blocked: block either gap
+            
+            // Special cases
+            ThreatPattern("xxooo--", listOf(5)),     // Special case: must block right
+            ThreatPattern("--ooox", listOf(1)),      // Special case: must block left
+            
+            // Non-standard patterns with gaps
+            ThreatPattern("-o-oo-", listOf(2)),      // Gap in middle
+            ThreatPattern("-oo-o-", listOf(3)),      // Gap in middle
+            ThreatPattern("o--oo-", listOf(2)),      // Second gap
+            ThreatPattern("-oo--o", listOf(3))       // First gap
+        )
+
+        // Debug information for pattern matching
+        var debugInfo = StringBuilder()
+
+        // Scan the board for threat patterns
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
-                // Only consider positions that already have the player's stone
                 if (gameState.board[row][col] == playerValue) {
-                    // Check all four directions for threatening patterns
                     for ((deltaRow, deltaCol) in DIRECTIONS) {
-                        val pattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue)
+                        val linePattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue)
                         
-                        // === Open Three Patterns ===
-                        // Standard open three: "--ooo--"
-                        val openThreeIndex = pattern.lineString.indexOf("--ooo--")
-                        if (openThreeIndex != -1) {
-                            // The correct response is to block ADJACENT to the three stones
-                            // In "--ooo--", these are positions 1 and 5 (0-indexed)
-                            val leftBlockPos = pattern.getPositionAt(openThreeIndex + 1)
-                            val rightBlockPos = pattern.getPositionAt(openThreeIndex + 5)
-
-                            // Try the left block position
-                            if (leftBlockPos != null &&
-                                gameState.isValidPosition(leftBlockPos.first, leftBlockPos.second) &&
-                                gameState.isTileEmpty(leftBlockPos.first, leftBlockPos.second)) {
-                                return leftBlockPos
-                            }
-
-                            // Try the right block position
-                            if (rightBlockPos != null &&
-                                gameState.isValidPosition(rightBlockPos.first, rightBlockPos.second) &&
-                                gameState.isTileEmpty(rightBlockPos.first, rightBlockPos.second)) {
-                                return rightBlockPos
-                            }
-                        }
-
-                        // === Broken Three Patterns ===
-                        // Pattern: "x-ooo--" (left side blocked, must block right)
-                        val brokenThreeLeftIndex = pattern.lineString.indexOf("x-ooo--")
-                        if (brokenThreeLeftIndex != -1) {
-                            // Must block at position 6 to prevent "x-oooo-"
-                            val blockPos = pattern.getPositionAt(brokenThreeLeftIndex + 6)
-                            if (blockPos != null &&
-                                gameState.isValidPosition(blockPos.first, blockPos.second) &&
-                                gameState.isTileEmpty(blockPos.first, blockPos.second)) {
-                                return blockPos
-                            }
-                        }
+                        debugInfo.append("Position ($row, $col): Pattern = ${linePattern.lineString}\n")
                         
-                        // Pattern: "--ooo-x" (right side blocked, must block left)
-                        val brokenThreeRightIndex = pattern.lineString.indexOf("--ooo-x")
-                        if (brokenThreeRightIndex != -1) {
-                            // Must block at position 1 to prevent "-oooo-x"
-                            val blockPos = pattern.getPositionAt(brokenThreeRightIndex + 1)
-                            if (blockPos != null &&
-                                gameState.isValidPosition(blockPos.first, blockPos.second) &&
-                                gameState.isTileEmpty(blockPos.first, blockPos.second)) {
-                                return blockPos
-                            }
-                        }
-                        
-                        // Pattern: "x-ooo-x" (both sides blocked, must block middle)
-                        val brokenThreeBothIndex = pattern.lineString.indexOf("x-ooo-x")
-                        if (brokenThreeBothIndex != -1) {
-                            // Two possible blocks: either position 1 or 5
-                            val block1Pos = pattern.getPositionAt(brokenThreeBothIndex + 1)
-                            if (block1Pos != null &&
-                                gameState.isValidPosition(block1Pos.first, block1Pos.second) &&
-                                gameState.isTileEmpty(block1Pos.first, block1Pos.second)) {
-                                return block1Pos
-                            }
-                            
-                            val block2Pos = pattern.getPositionAt(brokenThreeBothIndex + 5)
-                            if (block2Pos != null &&
-                                gameState.isValidPosition(block2Pos.first, block2Pos.second) &&
-                                gameState.isTileEmpty(block2Pos.first, block2Pos.second)) {
-                                return block2Pos
-                            }
-                        }
-                        
-                        // Pattern: "xxooo--" (special case)
-                        val specialCase1 = pattern.lineString.indexOf("xxooo--")
-                        if (specialCase1 != -1) {
-                            // Must block at position 5
-                            val blockPos = pattern.getPositionAt(specialCase1 + 5)
-                            if (blockPos != null &&
-                                gameState.isValidPosition(blockPos.first, blockPos.second) &&
-                                gameState.isTileEmpty(blockPos.first, blockPos.second)) {
-                                return blockPos
-                            }
-                        }
-                        
-                        // Pattern: "--ooox" (special case)
-                        val specialCase2 = pattern.lineString.indexOf("--ooox")
-                        if (specialCase2 != -1) {
-                            // Must block at position 1
-                            val blockPos = pattern.getPositionAt(specialCase2 + 1)
-                            if (blockPos != null &&
-                                gameState.isValidPosition(blockPos.first, blockPos.second) &&
-                                gameState.isTileEmpty(blockPos.first, blockPos.second)) {
-                                return blockPos
-                            }
-                        }
-
-                        // === Non-standard open three patterns ===
-                        val nonStandardPatterns = listOf("-o-oo-", "-oo-o-", "o--oo-", "-oo--o")
-                        for (patternStr in nonStandardPatterns) {
-                            val idx = pattern.lineString.indexOf(patternStr)
+                        // Check each threat pattern
+                        for (threat in threatPatterns) {
+                            val patternStr = threat.pattern
+                            val idx = linePattern.lineString.indexOf(patternStr)
                             if (idx != -1) {
-                                // Find the gap that needs to be blocked
-                                val gapOffset = when (patternStr) {
-                                    "-o-oo-" -> 2  // Block in the middle
-                                    "-oo-o-" -> 3  // Block in the middle
-                                    "o--oo-" -> 2  // Block second gap
-                                    "-oo--o" -> 3  // Block first gap
-                                    else -> continue
-                                }
-
-                                val gapPos = pattern.getPositionAt(idx + gapOffset)
-                                if (gapPos != null &&
-                                    gameState.isValidPosition(gapPos.first, gapPos.second) &&
-                                    gameState.isTileEmpty(gapPos.first, gapPos.second)) {
-                                    return gapPos
+                                debugInfo.append("Found pattern '${patternStr}' at index $idx\n")
+                                
+                                // Try each possible blocking position
+                                for (offset in threat.blockOffsets) {
+                                    val blockPos = linePattern.getPositionAt(idx + offset)
+                                    debugInfo.append("  Trying block at offset $offset -> position $blockPos\n")
+                                    
+                                    if (blockPos != null &&
+                                        gameState.isValidPosition(blockPos.first, blockPos.second) &&
+                                        gameState.isTileEmpty(blockPos.first, blockPos.second)) {
+                                        
+                                        // Debugging: print pattern before and after blocking
+                                        val beforeStr = linePattern.lineString
+                                        val afterStr = StringBuilder(beforeStr).also { 
+                                            if (idx + offset < beforeStr.length) {
+                                                it.setCharAt(idx + offset, 'x') 
+                                            }
+                                        }.toString()
+                                        debugInfo.append("  Block successful! Pattern would change from $beforeStr to $afterStr\n")
+                                        
+                                        // Check if this actually matches what we expect
+                                        if (patternStr == "--ooo--" && offset == 5) {
+                                            // This should produce "--ooox-", not "--ooo-x"
+                                            val expectedResult = "--ooox-"
+                                            val actualResult = afterStr.substring(idx, idx + patternStr.length)
+                                            debugInfo.append("  For open three: Expected $expectedResult, Actual $actualResult\n")
+                                        }
+                                        
+                                        return blockPos
+                                    }
                                 }
                             }
                         }
@@ -282,189 +306,10 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             }
         }
 
+        // Print debug info if we couldn't find a blocking move
+        //println("DEBUG: $debugInfo")
+        
         return null
-    }
-
-    /**
-     * Finds a move that creates an open four pattern.
-     */
-    private fun findOpenFourMove(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
-
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Try placing our stone here
-                    gameState.board[row][col] = playerValue
-
-                    // Check if this creates an open four
-                    if (hasOpenFour(gameState, row, col, playerValue)) {
-                        gameState.board[row][col] = EMPTY
-                        return Pair(row, col)
-                    }
-
-                    gameState.board[row][col] = EMPTY
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * Finds a move that creates a simple four pattern.
-     */
-    private fun findSimpleFourMove(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
-
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Try placing our stone here
-                    gameState.board[row][col] = playerValue
-
-                    // Check if this creates a simple four
-                    if (hasSimpleFour(gameState, row, col, playerValue)) {
-                        gameState.board[row][col] = EMPTY
-                        return Pair(row, col)
-                    }
-
-                    gameState.board[row][col] = EMPTY
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * Finds a move that creates an open three pattern.
-     */
-    private fun findCreateOpenThreeMove(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
-
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Try placing our stone here
-                    gameState.board[row][col] = playerValue
-
-                    // Check if this creates an open three
-                    if (hasOpenThree(gameState, row, col, playerValue)) {
-                        gameState.board[row][col] = EMPTY
-                        return Pair(row, col)
-                    }
-
-                    gameState.board[row][col] = EMPTY
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * Finds a move that creates a broken three pattern.
-     */
-    private fun findCreateBrokenThreeMove(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
-
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    // Try placing our stone here
-                    gameState.board[row][col] = playerValue
-
-                    // Check if this creates a broken three
-                    if (hasBrokenThree(gameState, row, col, playerValue)) {
-                        gameState.board[row][col] = EMPTY
-                        return Pair(row, col)
-                    }
-
-                    gameState.board[row][col] = EMPTY
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * Checks if a move creates an open four threat.
-     */
-    private fun hasOpenFour(gameState: GameState, row: Int, col: Int, playerValue: Int): Boolean {
-        for ((deltaRow, deltaCol) in DIRECTIONS) {
-            val pattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue).lineString
-
-            // Check various patterns for open four
-            if (pattern.contains("-xxxx-") ||   // Standard open four
-                pattern.contains("xx-xx") ||    // Split open four
-                pattern.contains("xxx-x") ||    // Non-standard with gap
-                pattern.contains("x-xxx")) {    // Non-standard with gap
-                return true
-            }
-        }
-        return false
-    }
-
-    /**
-     * Checks if a move creates a simple four threat.
-     */
-    private fun hasSimpleFour(gameState: GameState, row: Int, col: Int, playerValue: Int): Boolean {
-        for ((deltaRow, deltaCol) in DIRECTIONS) {
-            val pattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue).lineString
-
-            // Check various patterns for simple four
-            if (pattern.contains("xxxx-") ||    // Standard simple four
-                pattern.contains("-xxxx") ||    // Standard simple four
-                pattern.contains("xx-xx-") ||   // Split with block
-                pattern.contains("-xx-xx") ||   // Split with block
-                pattern.contains("xxx-x-") ||   // Non-standard with gap
-                pattern.contains("-xxx-x") ||   // Non-standard with gap
-                pattern.contains("x-xxx-") ||   // Non-standard with gap
-                pattern.contains("-x-xxx")) {   // Non-standard with gap
-                return true
-            }
-        }
-        return false
-    }
-
-    /**
-     * Checks if a move creates an open three threat.
-     */
-    private fun hasOpenThree(gameState: GameState, row: Int, col: Int, playerValue: Int): Boolean {
-        for ((deltaRow, deltaCol) in DIRECTIONS) {
-            val pattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue).lineString
-
-            // Check various patterns for open three
-            if (pattern.contains("--xxx--") ||   // Standard open three
-                pattern.contains("-x-xx-") ||    // Non-standard with gap
-                pattern.contains("-xx-x-") ||    // Non-standard with gap
-                pattern.contains("-x--x-x--")) { // Special pattern
-                return true
-            }
-        }
-        return false
-    }
-
-    /**
-     * Checks if a move creates a broken three threat.
-     */
-    private fun hasBrokenThree(gameState: GameState, row: Int, col: Int, playerValue: Int): Boolean {
-        for ((deltaRow, deltaCol) in DIRECTIONS) {
-            val pattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue).lineString
-
-            // Check various patterns for broken three
-            if (pattern.contains("-xxx-o") ||   // Broken three
-                pattern.contains("o-xxx-") ||   // Broken three
-                pattern.contains("-xx-x") ||    // Non-standard
-                pattern.contains("x-xx-") ||    // Non-standard
-                pattern.contains("-x-xx") ||    // Non-standard
-                pattern.contains("xx-x-")) {    // Non-standard
-                return true
-            }
-        }
-        return false
     }
 
     /**
@@ -507,21 +352,21 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             if (r in 0 until boardSize && c in 0 until boardSize) {
                 when (gameState.board[r][c]) {
                     playerValue -> {
-                        lineBuilder.append("x")
+                        lineBuilder.append("o") // Current player's stones
                         positions.add(Pair(r, c))
                     }
                     opponent -> {
-                        lineBuilder.append("o")
+                        lineBuilder.append("x") // Opponent's stones 
                         positions.add(Pair(r, c))
                     }
                     else -> {
-                        lineBuilder.append("-")
+                        lineBuilder.append("-") // Empty spaces
                         positions.add(Pair(r, c))
                     }
                 }
             } else {
                 // Off-board positions are treated as blocked
-                lineBuilder.append("o")
+                lineBuilder.append("x") // Treat edge as opponent's piece
                 positions.add(null) // null indicates off-board
             }
         }
@@ -678,47 +523,48 @@ class WuziqiAIEngine(private val random: Random = Random()) {
 
     /**
      * Evaluates a pattern string and returns a score.
+     * Handles all pattern variations for efficient evaluation.
      */
     private fun evaluatePatternScore(pattern: String): Int {
         var score = 0
 
         // Winning threats
-        if (pattern.contains("xxxxx")) score += FIVE
+        if (pattern.contains("ooooo")) score += FIVE
 
         // Open Four threats
-        if (pattern.contains("-xxxx-")) score += OPEN_FOUR
-        if (pattern.contains("xx-xx")) score += OPEN_FOUR
-        if (pattern.contains("xxx-x")) score += OPEN_FOUR
-        if (pattern.contains("x-xxx")) score += OPEN_FOUR
+        if (pattern.contains("-oooo-")) score += OPEN_FOUR
+        if (pattern.contains("oo-oo")) score += OPEN_FOUR
+        if (pattern.contains("ooo-o")) score += OPEN_FOUR
+        if (pattern.contains("o-ooo")) score += OPEN_FOUR
 
         // Simple Four threats
-        if (pattern.contains("xxxx-")) score += SIMPLE_FOUR
-        if (pattern.contains("-xxxx")) score += SIMPLE_FOUR
-        if (pattern.contains("xx-xx-")) score += SIMPLE_FOUR
-        if (pattern.contains("-xx-xx")) score += SIMPLE_FOUR
+        if (pattern.contains("oooo-")) score += SIMPLE_FOUR
+        if (pattern.contains("-oooo")) score += SIMPLE_FOUR
+        if (pattern.contains("oo-oo-")) score += SIMPLE_FOUR
+        if (pattern.contains("-oo-oo")) score += SIMPLE_FOUR
 
         // Open Three threats
-        if (pattern.contains("--xxx--")) score += OPEN_THREE
-        if (pattern.contains("-x-xx-")) score += OPEN_THREE
-        if (pattern.contains("-xx-x-")) score += OPEN_THREE
+        if (pattern.contains("--ooo--")) score += OPEN_THREE
+        if (pattern.contains("-o-oo-")) score += OPEN_THREE
+        if (pattern.contains("-oo-o-")) score += OPEN_THREE
 
         // Broken Three threats
-        if (pattern.contains("-xxx-o")) score += BROKEN_THREE
-        if (pattern.contains("o-xxx-")) score += BROKEN_THREE
-        if (pattern.contains("-xx-x")) score += BROKEN_THREE
-        if (pattern.contains("x-xx-")) score += BROKEN_THREE
+        if (pattern.contains("-ooo-x")) score += BROKEN_THREE
+        if (pattern.contains("x-ooo-")) score += BROKEN_THREE
+        if (pattern.contains("-oo-o")) score += BROKEN_THREE
+        if (pattern.contains("o-oo-")) score += BROKEN_THREE
 
         // Simple Three threats
-        if (pattern.contains("xxx--o")) score += SIMPLE_THREE
-        if (pattern.contains("o--xxx")) score += SIMPLE_THREE
+        if (pattern.contains("ooo--x")) score += SIMPLE_THREE
+        if (pattern.contains("x--ooo")) score += SIMPLE_THREE
 
         // Two threats
-        if (pattern.contains("--xx--")) score += TWO * 4 // (2,4)
-        if (pattern.contains("-xx---")) score += TWO * 3 // (2,3)
-        if (pattern.contains("---xx-")) score += TWO * 3 // (2,3)
+        if (pattern.contains("--oo--")) score += TWO * 4 // (2,4)
+        if (pattern.contains("-oo---")) score += TWO * 3 // (2,3)
+        if (pattern.contains("---oo-")) score += TWO * 3 // (2,3)
 
         // One threats
-        if (pattern.contains("--x--")) score += ONE * 5 // (1,5)
+        if (pattern.contains("--o--")) score += ONE * 5 // (1,5)
 
         return score
     }
@@ -803,7 +649,7 @@ class WuziqiAIEngine(private val random: Random = Random()) {
     }
 
     /**
-     * Finds the best move for Connect4.
+     * Finds the best move for Connect4 using a specialized approach for vertical boards.
      */
     private fun findConnect4Move(gameState: GameState): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
@@ -836,22 +682,228 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             }
         }
 
-        // 3. Prioritize center column
-        val centerCol = boardSize / 2
-        val centerRow = findBottomEmptyRow(gameState, centerCol)
-        if (centerRow != -1) {
-            return Pair(centerRow, centerCol)
+        // 3. Look for Connect4-specific forced win setups
+        val forcingMoveResult = findConnect4ForcingMove(gameState, computerPlayer)
+        if (forcingMoveResult != null) {
+            return forcingMoveResult
         }
 
-        // 4. Play in columns near the center
-        val colOrder = (0 until boardSize).sortedBy { abs(it - centerCol) }
-        for (col in colOrder) {
+        // 4. Block opponent's forcing moves
+        val blockForcingMoveResult = findConnect4ForcingMove(gameState, humanPlayer)
+        if (blockForcingMoveResult != null) {
+            return blockForcingMoveResult
+        }
+
+        // 5. Evaluate positions with Connect4-specific heuristics
+        var bestScore = Int.MIN_VALUE
+        var bestMove: Pair<Int, Int>? = null
+        
+        // Column preference: center > sides
+        val centerCol = boardSize / 2
+        val colValues = (0 until boardSize).sortedBy { abs(it - centerCol) }
+        
+        for (col in colValues) {
             val row = findBottomEmptyRow(gameState, col)
             if (row != -1) {
-                return Pair(row, col)
+                // Place a temporary stone
+                gameState.board[row][col] = computerPlayer
+                
+                // Evaluate this position using Connect4-specific evaluation
+                val score = evaluateConnect4Position(gameState, row, col, computerPlayer)
+                
+                // Remove temporary stone
+                gameState.board[row][col] = EMPTY
+                
+                if (score > bestScore) {
+                    bestScore = score
+                    bestMove = Pair(row, col)
+                }
             }
         }
-
-        return null // No valid move (shouldn't happen unless board is full)
+        
+        return bestMove
     }
-}
+    
+    /**
+     * Finds forcing moves specific to Connect4 strategy.
+     * Looks for potential "trap" setups where playing one move forces a win.
+     */
+    private fun findConnect4ForcingMove(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
+        val boardSize = gameState.boardSize
+        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
+        
+        // Check for potential double-threat setups (two winning moves in a single turn)
+        for (col in 0 until boardSize) {
+            val row = findBottomEmptyRow(gameState, col)
+            if (row != -1) {
+                // Place a temporary stone
+                gameState.board[row][col] = playerValue
+                
+                // Count how many winning moves would be available after this move
+                var winningCols = 0
+                var firstWinningCol = -1
+                
+                // Check if this creates a potential winning move in the next turn
+                for (nextCol in 0 until boardSize) {
+                    val nextRow = findBottomEmptyRow(gameState, nextCol)
+                    if (nextRow != -1) {
+                        gameState.board[nextRow][nextCol] = playerValue
+                        if (gameState.checkWin(nextRow, nextCol, playerValue)) {
+                            winningCols++
+                            if (firstWinningCol == -1) {
+                                firstWinningCol = nextCol
+                            }
+                        }
+                        gameState.board[nextRow][nextCol] = EMPTY
+                    }
+                }
+                
+                // Remove the temporary stone
+                gameState.board[row][col] = EMPTY
+                
+                // If this move creates two or more winning possibilities, it's a forcing move
+                if (winningCols >= 2) {
+                    return Pair(row, col)
+                }
+            }
+        }
+        
+        return null
+    }
+    
+    /**
+     * Evaluates a Connect4 position with specific heuristics for the game.
+     */
+    private fun evaluateConnect4Position(gameState: GameState, row: Int, col: Int, playerValue: Int): Int {
+        val boardSize = gameState.boardSize
+        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
+        var score = 0
+        
+        // Prioritize center columns
+        val centerScore = boardSize - 2 * abs(col - boardSize / 2)
+        score += centerScore * 3
+        
+        // Count potential winning lines through this position
+        val directions = arrayOf(
+            Pair(0, 1),   // Horizontal
+            Pair(1, 0),   // Vertical
+            Pair(1, 1),   // Diagonal \
+            Pair(1, -1)   // Diagonal /
+        )
+        
+        for ((deltaRow, deltaCol) in directions) {
+            // Look for sequences of pieces and empty spaces that could lead to wins
+            var playerCount = 0
+            var emptyCount = 0
+            var opponentCount = 0
+            
+            // Check 3 in each direction (4 total pieces including the current position)
+            for (i in -3..3) {
+                val r = row + i * deltaRow
+                val c = col + i * deltaCol
+                
+                if (r in 0 until boardSize && c in 0 until boardSize) {
+                    when (gameState.board[r][c]) {
+                        playerValue -> playerCount++
+                        EMPTY -> emptyCount++
+                        opponent -> opponentCount++
+                    }
+                }
+            }
+            
+            // Score based on piece configurations
+            if (opponentCount == 0) {
+                // No opponents in this line, so it's a potential win
+                when (playerCount) {
+                    3 -> score += 1000  // 3 in a row - very strong position
+                    2 -> score += 100   // 2 in a row - good position
+                    1 -> score += 10    // Just this piece - weak but potential
+                }
+            } else if (playerCount == 0 && opponentCount > 0) {
+                // Defensive evaluation - block opponent's potential lines
+                when (opponentCount) {
+                    3 -> score -= 800   // Critical to block, but not as valuable as winning
+                    2 -> score -= 50    // Should consider blocking
+                }
+            }
+        }
+        
+        // Look for "trap" setups - situations where dropping a piece creates a fork
+        val tempBoard = Array(boardSize) { r -> IntArray(boardSize) { c -> gameState.board[r][c] } }
+        
+        // Check if we can create a trap by playing here
+        tempBoard[row][col] = playerValue
+        
+        // Check for potential next-move wins in multiple columns
+        var winningColumns = 0
+        for (nextCol in 0 until boardSize) {
+            val nextRow = findBottomEmptyRow(gameState, nextCol)
+            if (nextRow != -1) {
+                tempBoard[nextRow][nextCol] = playerValue
+                
+                // Check if this would be a win
+                var isWin = false
+                for ((dr, dc) in directions) {
+                    if (checkConnect4Line(tempBoard, nextRow, nextCol, dr, dc, playerValue)) {
+                        isWin = true
+                        break
+                    }
+                }
+                
+                if (isWin) {
+                    winningColumns++
+                }
+                
+                // Restore board
+                tempBoard[nextRow][nextCol] = EMPTY
+            }
+        }
+        
+        // Significant bonus for moves that create multiple winning possibilities
+        if (winningColumns >= 2) {
+            score += 5000
+        }
+        
+        return score
+    }
+    
+    /**
+     * Checks if there's a connect-4 win in a specific direction.
+     */
+    private fun checkConnect4Line(
+        board: Array<IntArray>,
+        row: Int, 
+        col: Int, 
+        deltaRow: Int, 
+        deltaCol: Int, 
+        playerValue: Int
+    ): Boolean {
+        val boardSize = board.size
+        var count = 1  // Start with the current piece
+        
+        // Check in the positive direction
+        for (i in 1..3) {
+            val r = row + i * deltaRow
+            val c = col + i * deltaCol
+            
+            if (r in 0 until boardSize && c in 0 until boardSize && board[r][c] == playerValue) {
+                count++
+            } else {
+                break
+            }
+        }
+        
+        // Check in the negative direction
+        for (i in 1..3) {
+            val r = row - i * deltaRow
+            val c = col - i * deltaCol
+            
+            if (r in 0 until boardSize && c in 0 until boardSize && board[r][c] == playerValue) {
+                count++
+            } else {
+                break
+            }
+        }
+        
+        return count >= 4
+    }
