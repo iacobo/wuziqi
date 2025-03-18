@@ -65,16 +65,9 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         val BROKEN_THREE_PATTERNS = arrayOf(
             "-xxx-o",     // Broken three with right block
             "o-xxx-",     // Broken three with left block
-            "x-xxx-",     // Left-side variation
-            "-xxx-x",     // Right-side variation
-            "x-ooo--",    // Left side blocked, must block right
-            "--ooo-x",    // Right side blocked, must block left
-            "x-ooo-x",    // Both sides blocked, gap in middle
-            "xxooo--",    // Special case
-            "--ooox",     // Special case
-            "-xx-x",      // Non-standard 
-            "x-xx-",      // Non-standard
-            "-x-xx",      // Non-standard
+            "x-xx-",      // Left-side variation
+            "-xx-x",      // Right-side variation
+            "-x-xx",      // Non-standard 
             "xx-x-"       // Non-standard
         )
     }
@@ -107,6 +100,55 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         val boardSize = gameState.boardSize
         val computerPlayer = PLAYER_TWO
         val humanPlayer = PLAYER_ONE
+        val center = boardSize / 2
+
+        // Handle opening moves based on game state
+        val stoneCount = countStones(gameState)
+        
+        if (stoneCount == 0) {
+            // If this is the first move of the game (empty board), play at center
+            return Pair(center, center)
+        } else if (stoneCount == 1) {
+            // If this is the second move (player went first)
+            
+            // Check if the player played at the center
+            if (gameState.board[center][center] == humanPlayer) {
+                // Two standard book responses:
+                // 1. Play 3 positions away from center (traditional)
+                // 2. Play 1 position diagonally from center (modern variation)
+                
+                val traditionalOptions = listOf(
+                    Pair(center - 3, center),  // 3 up from center
+                    Pair(center + 3, center),  // 3 down from center
+                    Pair(center, center - 3),  // 3 left from center
+                    Pair(center, center + 3)   // 3 right from center
+                )
+                
+                val diagonalOptions = listOf(
+                    Pair(center - 1, center - 1),  // Top-left diagonal
+                    Pair(center - 1, center + 1),  // Top-right diagonal
+                    Pair(center + 1, center - 1),  // Bottom-left diagonal
+                    Pair(center + 1, center + 1)   // Bottom-right diagonal
+                )
+                
+                // Combine both options, with slight preference for traditional responses
+                val allOptions = traditionalOptions + diagonalOptions
+                
+                // Randomize the choice among valid options
+                val validOptions = allOptions.filter { (r, c) -> 
+                    gameState.isValidPosition(r, c) && gameState.isTileEmpty(r, c)
+                }
+                
+                if (validOptions.isNotEmpty()) {
+                    return validOptions[random.nextInt(validOptions.size)]
+                }
+            } else {
+                // If player didn't play center, we play at center
+                if (gameState.isTileEmpty(center, center)) {
+                    return Pair(center, center)
+                }
+            }
+        }
 
         // 1. Check for immediate win (five)
         for (row in 0 until boardSize) {
@@ -160,25 +202,31 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             return blockSimpleFourMove
         }
 
-        // 7. Handle opponent's forcing threats (open three, broken three)
-        val blockForcingMove = findForcingThreatBlock(gameState, humanPlayer)
-        if (blockForcingMove != null) {
-            return blockForcingMove
+        // 7. Handle opponent's open three threats
+        val blockOpenThreeMove = findOpenThreeBlock(gameState, humanPlayer)
+        if (blockOpenThreeMove != null) {
+            return blockOpenThreeMove
+        }
+        
+        // 8. Handle opponent's broken three threats
+        val blockBrokenThreeMove = findBrokenThreeBlock(gameState, humanPlayer)
+        if (blockBrokenThreeMove != null) {
+            return blockBrokenThreeMove
         }
 
-        // 8. Create our own open three if possible
+        // 9. Create our own open three if possible
         val createOpenThreeMove = findThreateningMove(gameState, computerPlayer, OPEN_THREE_PATTERNS)
         if (createOpenThreeMove != null) {
             return createOpenThreeMove
         }
 
-        // 9. Create our own broken three if possible
+        // 10. Create our own broken three if possible
         val createBrokenThreeMove = findThreateningMove(gameState, computerPlayer, BROKEN_THREE_PATTERNS)
         if (createBrokenThreeMove != null) {
             return createBrokenThreeMove
         }
 
-        // 10. Fallback to positional evaluation if no threats found
+        // 11. Fallback to positional evaluation if no threats found
         return findBestPositionalMove(gameState)
     }
 
@@ -192,7 +240,40 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         patterns: Array<String>
     ): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
+        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
 
+        // First, scan the board for patterns that are almost complete
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.board[row][col] == playerValue) {
+                    for ((deltaRow, deltaCol) in DIRECTIONS) {
+                        // Normalize pattern representation
+                        val linePattern = extractLinePattern(
+                            gameState, row, col, deltaRow, deltaCol, playerValue
+                        )
+                        
+                        for (pattern in patterns) {
+                            val index = linePattern.lineString.indexOf(pattern)
+                            if (index != -1) {
+                                // Find all empty positions in the pattern and check if placing a stone would complete it
+                                for (i in pattern.indices) {
+                                    if (pattern[i] == '-') {
+                                        val pos = linePattern.getPositionAt(index + i)
+                                        if (pos != null && 
+                                            gameState.isValidPosition(pos.first, pos.second) && 
+                                            gameState.isTileEmpty(pos.first, pos.second)) {
+                                            return pos
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // If no immediate threats found, look for creating threats
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (gameState.isTileEmpty(row, col)) {
@@ -220,83 +301,73 @@ class WuziqiAIEngine(private val random: Random = Random()) {
     }
 
     /**
-     * Finds a move that blocks forcing threats (open threes or broken threes).
-     * Prioritizes specific blocking positions based on the threat type.
+     * Specifically handles open three threats.
+     * Focused on properly blocking the key position to prevent a follow-up open four.
      */
-    private fun findForcingThreatBlock(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
+    private fun findOpenThreeBlock(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
-        val opponentValue = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
-
-        // Block structure to define how to block specific patterns
-        data class ThreatPattern(val pattern: String, val blockOffsets: List<Int>)
+        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
         
-        // Define threat patterns and their corresponding blocking positions
-        val threatPatterns = listOf(
-            // Open Three patterns (critical to block correctly!)
-            ThreatPattern("--ooo--", listOf(1, 5)),  // Standard open three: block adjacent to the three stones
-            
-            // Broken Three patterns - now with consistent handling
-            ThreatPattern("x-ooo--", listOf(1, 6)),  // Left blocked: block at gap or right end
-            ThreatPattern("--ooo-x", listOf(0, 5)),  // Right blocked: block at left end or gap
-            ThreatPattern("x-ooo-x", listOf(1, 5)),  // Both sides blocked: block either gap
-            
-            // Special cases
-            ThreatPattern("xxooo--", listOf(5)),     // Special case: must block right
-            ThreatPattern("--ooox", listOf(1)),      // Special case: must block left
-            
-            // Non-standard patterns with gaps
-            ThreatPattern("-o-oo-", listOf(2)),      // Gap in middle
-            ThreatPattern("-oo-o-", listOf(3)),      // Gap in middle
-            ThreatPattern("o--oo-", listOf(2)),      // Second gap
-            ThreatPattern("-oo--o", listOf(3))       // First gap
-        )
-
-        // Debug information for pattern matching
-        var debugInfo = StringBuilder()
-
-        // Scan the board for threat patterns
+        // Specifically look for "--xxx--" pattern and block one of the critical positions
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (gameState.board[row][col] == playerValue) {
                     for ((deltaRow, deltaCol) in DIRECTIONS) {
-                        val linePattern = extractLinePattern(gameState, row, col, deltaRow, deltaCol, playerValue)
+                        val linePattern = extractLinePattern(
+                            gameState, row, col, deltaRow, deltaCol, playerValue
+                        )
                         
-                        debugInfo.append("Position ($row, $col): Pattern = ${linePattern.lineString}\n")
+                        // Look for the standard open three pattern
+                        val pattern = "--xxx--"
+                        val idx = linePattern.lineString.indexOf(pattern)
+                        if (idx != -1) {
+                            // The most critical positions to block are adjacent to the three stones
+                            // First try position right after the three stones
+                            val blockPos1 = linePattern.getPositionAt(idx + 5)
+                            if (blockPos1 != null && 
+                                gameState.isValidPosition(blockPos1.first, blockPos1.second) && 
+                                gameState.isTileEmpty(blockPos1.first, blockPos1.second)) {
+                                return blockPos1
+                            }
+                            
+                            // Then try position right before the three stones
+                            val blockPos2 = linePattern.getPositionAt(idx + 1)
+                            if (blockPos2 != null && 
+                                gameState.isValidPosition(blockPos2.first, blockPos2.second) && 
+                                gameState.isTileEmpty(blockPos2.first, blockPos2.second)) {
+                                return blockPos2
+                            }
+                            
+                            // As a last resort, block the outer spaces
+                            val blockPos3 = linePattern.getPositionAt(idx)
+                            if (blockPos3 != null && 
+                                gameState.isValidPosition(blockPos3.first, blockPos3.second) && 
+                                gameState.isTileEmpty(blockPos3.first, blockPos3.second)) {
+                                return blockPos3
+                            }
+                            
+                            val blockPos4 = linePattern.getPositionAt(idx + 6)
+                            if (blockPos4 != null && 
+                                gameState.isValidPosition(blockPos4.first, blockPos4.second) && 
+                                gameState.isTileEmpty(blockPos4.first, blockPos4.second)) {
+                                return blockPos4
+                            }
+                        }
                         
-                        // Check each threat pattern
-                        for (threat in threatPatterns) {
-                            val patternStr = threat.pattern
-                            val idx = linePattern.lineString.indexOf(patternStr)
-                            if (idx != -1) {
-                                debugInfo.append("Found pattern '${patternStr}' at index $idx\n")
-                                
-                                // Try each possible blocking position
-                                for (offset in threat.blockOffsets) {
-                                    val blockPos = linePattern.getPositionAt(idx + offset)
-                                    debugInfo.append("  Trying block at offset $offset -> position $blockPos\n")
-                                    
-                                    if (blockPos != null &&
-                                        gameState.isValidPosition(blockPos.first, blockPos.second) &&
-                                        gameState.isTileEmpty(blockPos.first, blockPos.second)) {
-                                        
-                                        // Debugging: print pattern before and after blocking
-                                        val beforeStr = linePattern.lineString
-                                        val afterStr = StringBuilder(beforeStr).also { 
-                                            if (idx + offset < beforeStr.length) {
-                                                it.setCharAt(idx + offset, 'x') 
-                                            }
-                                        }.toString()
-                                        debugInfo.append("  Block successful! Pattern would change from $beforeStr to $afterStr\n")
-                                        
-                                        // Check if this actually matches what we expect
-                                        if (patternStr == "--ooo--" && offset == 5) {
-                                            // This should produce "--ooox-", not "--ooo-x"
-                                            val expectedResult = "--ooox-"
-                                            val actualResult = afterStr.substring(idx, idx + patternStr.length)
-                                            debugInfo.append("  For open three: Expected $expectedResult, Actual $actualResult\n")
+                        // Also check for non-standard open three patterns with gaps
+                        val gapPatterns = arrayOf("-x-xx-", "-xx-x-")
+                        for (gapPattern in gapPatterns) {
+                            val gapIdx = linePattern.lineString.indexOf(gapPattern)
+                            if (gapIdx != -1) {
+                                // In these patterns, the most critical position is the gap
+                                for (i in gapPattern.indices) {
+                                    if (gapPattern[i] == '-' && i > 0 && i < gapPattern.length - 1) {
+                                        val blockPos = linePattern.getPositionAt(gapIdx + i)
+                                        if (blockPos != null && 
+                                            gameState.isValidPosition(blockPos.first, blockPos.second) && 
+                                            gameState.isTileEmpty(blockPos.first, blockPos.second)) {
+                                            return blockPos
                                         }
-                                        
-                                        return blockPos
                                     }
                                 }
                             }
@@ -305,9 +376,73 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                 }
             }
         }
-
-        // Print debug info if we couldn't find a blocking move
-        //println("DEBUG: $debugInfo")
+        
+        return null
+    }
+    
+    /**
+     * Specifically handles broken three threats.
+     * These are three stones in a row with one end blocked, but the other end open.
+     */
+    private fun findBrokenThreeBlock(gameState: GameState, playerValue: Int): Pair<Int, Int>? {
+        val boardSize = gameState.boardSize
+        val opponent = if (playerValue == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
+        
+        // Look for patterns like "-xxx-o" or "o-xxx-"
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.board[row][col] == playerValue) {
+                    for ((deltaRow, deltaCol) in DIRECTIONS) {
+                        val linePattern = extractLinePattern(
+                            gameState, row, col, deltaRow, deltaCol, playerValue
+                        )
+                        
+                        // Check both standard broken three patterns
+                        val patterns = arrayOf("-xxx-o", "o-xxx-")
+                        for (pattern in patterns) {
+                            val idx = linePattern.lineString.indexOf(pattern)
+                            if (idx != -1) {
+                                // The critical position to block is the open side
+                                val blockPos = if (pattern == "-xxx-o") {
+                                    linePattern.getPositionAt(idx)
+                                } else { // "o-xxx-"
+                                    linePattern.getPositionAt(idx + 5)
+                                }
+                                
+                                if (blockPos != null && 
+                                    gameState.isValidPosition(blockPos.first, blockPos.second) && 
+                                    gameState.isTileEmpty(blockPos.first, blockPos.second)) {
+                                    return blockPos
+                                }
+                            }
+                        }
+                        
+                        // Check broken three patterns with gaps
+                        val gapPatterns = arrayOf("x-xx-", "-xx-x", "-x-xx", "xx-x-")
+                        for (gapPattern in gapPatterns) {
+                            val gapIdx = linePattern.lineString.indexOf(gapPattern)
+                            if (gapIdx != -1) {
+                                // For patterns with gaps, block the gap first
+                                for (i in gapPattern.indices) {
+                                    if (gapPattern[i] == '-' && 
+                                        ((i > 0 && i < gapPattern.length - 1) || // Internal gap
+                                         (i == 0 && gapPattern[1] == 'x') ||     // Left edge if next is 'x'
+                                         (i == gapPattern.length - 1 && gapPattern[i-1] == 'x'))) { // Right edge if prev is 'x'
+                                        
+                                        val blockPos = linePattern.getPositionAt(gapIdx + i)
+                                        if (blockPos != null && 
+                                            gameState.isValidPosition(blockPos.first, blockPos.second) && 
+                                            gameState.isTileEmpty(blockPos.first, blockPos.second)) {
+                                            return blockPos
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         return null
     }
@@ -382,24 +517,37 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         val computerPlayer = PLAYER_TWO
         val humanPlayer = PLAYER_ONE
 
-        // If the board is empty or nearly empty, play near the center
+        // If the board is nearly empty, play near the center
         if (countStones(gameState) < 5) {
-            // Play close to center
+            // Get the center and consider positions in a 5x5 area around it
             val center = boardSize / 2
-
-            // Try the center first
-            if (gameState.isTileEmpty(center, center)) {
-                return Pair(center, center)
+            val radius = 2
+            
+            // Generate positions starting from center and moving outward
+            val candidates = mutableListOf<Pair<Int, Int>>()
+            
+            // Start with the center
+            candidates.add(Pair(center, center))
+            
+            // Add positions in concentric rings around the center
+            for (r in 1..radius) {
+                // Top and bottom rows of the ring
+                for (c in center-r..center+r) {
+                    candidates.add(Pair(center-r, c))
+                    candidates.add(Pair(center+r, c))
+                }
+                
+                // Left and right columns of the ring (excluding corners already added)
+                for (rr in center-r+1..center+r-1) {
+                    candidates.add(Pair(rr, center-r))
+                    candidates.add(Pair(rr, center+r))
+                }
             }
-
-            // Try spots around the center
-            for (dr in -1..1) {
-                for (dc in -1..1) {
-                    val r = center + dr
-                    val c = center + dc
-                    if (gameState.isValidPosition(r, c) && gameState.isTileEmpty(r, c)) {
-                        return Pair(r, c)
-                    }
+            
+            // Try positions in order of distance from center
+            for ((r, c) in candidates) {
+                if (gameState.isValidPosition(r, c) && gameState.isTileEmpty(r, c)) {
+                    return Pair(r, c)
                 }
             }
         }
@@ -489,7 +637,7 @@ class WuziqiAIEngine(private val random: Random = Random()) {
 
     /**
      * Evaluates a position for a given player.
-     * Based on the evaluation formula from the OOOOO bot description.
+     * Enhanced version of the evaluation from the OOOOO bot description.
      */
     private fun evaluatePosition(gameState: GameState, row: Int, col: Int, playerValue: Int): Int {
         // Skip if the position is not empty
@@ -534,12 +682,12 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         // Open Four threats
         if (pattern.contains("-oooo-")) score += OPEN_FOUR
         if (pattern.contains("oo-oo")) score += OPEN_FOUR
-        if (pattern.contains("ooo-o")) score += OPEN_FOUR
-        if (pattern.contains("o-ooo")) score += OPEN_FOUR
 
         // Simple Four threats
         if (pattern.contains("oooo-")) score += SIMPLE_FOUR
         if (pattern.contains("-oooo")) score += SIMPLE_FOUR
+        if (pattern.contains("ooo-o")) score += SIMPLE_FOUR
+        if (pattern.contains("o-ooo")) score += SIMPLE_FOUR
         if (pattern.contains("oo-oo-")) score += SIMPLE_FOUR
         if (pattern.contains("-oo-oo")) score += SIMPLE_FOUR
 
