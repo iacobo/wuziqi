@@ -19,34 +19,53 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         const val EMPTY = GameState.EMPTY
         const val PLAYER_ONE = GameState.PLAYER_ONE  // Human
         const val PLAYER_TWO = GameState.PLAYER_TWO  // Computer
-
-        // Threat categories and their scores
-        const val FIVE = 10000000          // (5,1): Immediate win
-        const val OPEN_FOUR = 1000000      // (4,2): Guaranteed win next move
-        const val SIMPLE_FOUR = 100000     // (4,1): Forces a response
-        const val OPEN_THREE = 10000       // (3,3): Forces a response
-        const val BROKEN_THREE = 1000      // (3,2): Forces a response
-        const val SIMPLE_THREE = 100       // (3,1): Non-forcing
-        const val TWO = 10                 // (2,n): Non-forcing
-        const val ONE = 1                  // (1,n): Non-forcing
-
-        // Direction vectors for line detection
+        
+        // Direction vectors for pattern detection
         val DIRECTIONS = arrayOf(
             Pair(1, 0),   // Horizontal
             Pair(0, 1),   // Vertical
             Pair(1, 1),   // Diagonal \
             Pair(1, -1)   // Diagonal /
         )
+        
+        // Pattern definitions with their respective priorities
+        // x = AI stone, o = opponent stone, . = empty
+        // Winning patterns
+        val FIVE_IN_ROW = PatternDefinition("xxxxx", 10000000, MoveType.WIN)
+        
+        // Forcing patterns (guaranteed win in the next move)
+        val OPEN_FOUR = PatternDefinition(".xxxx.", 1000000, MoveType.FORCING)
+        val SPLIT_OPEN_FOUR = PatternDefinition("xx.xx", 1000000, MoveType.FORCING)
+        
+        // Forcing patterns (require a response from opponent)
+        val SIMPLE_FOUR = listOf(
+            PatternDefinition("xxxx.", 100000, MoveType.URGENT),
+            PatternDefinition(".xxxx", 100000, MoveType.URGENT),
+            PatternDefinition("xxx.x", 100000, MoveType.URGENT),
+            PatternDefinition("x.xxx", 100000, MoveType.URGENT)
+        )
+        
+        // Strong tactical patterns
+        val OPEN_THREE = listOf(
+            PatternDefinition("..xxx..", 20000, MoveType.TACTICAL),
+            PatternDefinition(".xxx..", 20000, MoveType.TACTICAL),
+            PatternDefinition("..xxx.", 20000, MoveType.TACTICAL),
+            PatternDefinition(".xx.x.", 20000, MoveType.TACTICAL),
+            PatternDefinition(".x.xx.", 20000, MoveType.TACTICAL)
+        )
+        
+        // Developmental patterns
+        val OPEN_TWO = listOf(
+            PatternDefinition("..xx..", 1000, MoveType.DEVELOPMENT),
+            PatternDefinition(".x.x.", 1000, MoveType.DEVELOPMENT)
+        )
     }
-
+    
     /**
-     * Finds the best move for the current game state.
-     *
-     * @param gameState The current game state
-     * @return The best move as a Pair(row, col) or null if no valid move found
+     * Finds the best move for the current game state based on pattern recognition.
      */
     fun findBestMove(gameState: GameState): Pair<Int, Int>? {
-        // Special cases for TicTacToe and Connect4
+        // Handle special game variants
         return when {
             gameState.boardSize == 3 && gameState.winCondition == 3 -> {
                 findTicTacToeMove(gameState)
@@ -55,290 +74,256 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                 findConnect4Move(gameState)
             }
             else -> {
-                findWuziqiMove(gameState)
+                findPatternBasedMove(gameState)
             }
         }
     }
-
+    
     /**
-     * Finds the best move for a standard Wuziqi position using improved threat-based analysis.
+     * Core pattern-based move finding algorithm.
+     * Prioritizes moves based on pattern matching and strategic potential.
      */
-    private fun findWuziqiMove(gameState: GameState): Pair<Int, Int>? {
+    private fun findPatternBasedMove(gameState: GameState): Pair<Int, Int>? {
         val boardSize = gameState.boardSize
-        val computerPlayer = PLAYER_TWO
+        val aiPlayer = PLAYER_TWO
         val humanPlayer = PLAYER_ONE
         
-        // Store candidate moves with their scores for multi-objective evaluation
-        val moveScores = mutableMapOf<Pair<Int, Int>, MoveScore>()
-        
-        // Track if we've found any moves of each category
-        var foundWinningMove = false
-        var foundBlockingMove = false
-        var foundForcingMove = false
-        
-        // 1. Scan for immediate winning moves and opponent's immediate winning moves
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.isTileEmpty(row, col)) {
-                    val movePos = Pair(row, col)
-                    val moveScore = MoveScore()
-                    moveScores[movePos] = moveScore
-                    
-                    // Check if this is a winning move for us
-                    gameState.board[row][col] = computerPlayer
-                    if (gameState.checkWin(row, col, computerPlayer)) {
-                        moveScore.isWinningMove = true
-                        foundWinningMove = true
-                    }
-                    gameState.board[row][col] = EMPTY
-                    
-                    // Check if this blocks opponent's winning move
-                    gameState.board[row][col] = humanPlayer
-                    if (gameState.checkWin(row, col, humanPlayer)) {
-                        moveScore.isBlockingMove = true
-                        foundBlockingMove = true
-                    }
-                    gameState.board[row][col] = EMPTY
-                }
-            }
+        // 1. If board is empty or nearly empty, play near center
+        if (countStones(gameState) < 3) {
+            return playNearCenter(gameState)
         }
         
-        // 2. If we found winning moves, pick the best one and return immediately
-        if (foundWinningMove) {
-            return moveScores.entries
-                .filter { it.value.isWinningMove }
-                .maxByOrNull { evaluatePositionalValue(gameState, it.key.first, it.key.second) }
-                ?.key
+        // Create candidate move list
+        val candidatePositions = findCandidateMoves(gameState)
+        if (candidatePositions.isEmpty()) {
+            return playNearCenter(gameState)
         }
         
-        // 3. If we found blocking moves, pick the best one and return immediately
-        if (foundBlockingMove) {
-            return moveScores.entries
-                .filter { it.value.isBlockingMove }
-                .maxByOrNull { evaluatePositionalValue(gameState, it.key.first, it.key.second) }
-                ?.key
+        // Evaluate each move by pattern matching
+        val moveEvaluations = mutableListOf<MoveEvaluation>()
+        
+        for (position in candidatePositions) {
+            val (row, col) = position
+            if (!gameState.isTileEmpty(row, col)) continue
+            
+            // Evaluate AI's patterns after placing here
+            val aiPatterns = findPatterns(gameState, row, col, aiPlayer)
+            
+            // Evaluate opponent's patterns if they played here instead
+            val opponentPatterns = findPatterns(gameState, row, col, humanPlayer)
+            
+            // Determine best patterns for both AI and opponent
+            val bestAiPattern = aiPatterns.maxByOrNull { it.priority }
+            val bestOpponentPattern = opponentPatterns.maxByOrNull { it.priority }
+            
+            // Calculate a comprehensive score for this move
+            val score = calculateMoveScore(bestAiPattern, bestOpponentPattern, row, col, gameState)
+            
+            moveEvaluations.add(MoveEvaluation(position, score, bestAiPattern, bestOpponentPattern))
         }
         
-        // 4. Search for forcing moves (creating open fours or multiple threats)
-        for ((movePos, score) in moveScores) {
-            val (row, col) = movePos
-            
-            // Check if this creates an open four or multiple threats for us
-            gameState.board[row][col] = computerPlayer
-            val ourThreats = findThreats(gameState, row, col, computerPlayer)
-            if (ourThreats.containsOpenFour() || ourThreats.countMultipleThreats() >= 2) {
-                score.createsForcingThreat = true
-                score.threatScore += ourThreats.getTotalScore()
-                foundForcingMove = true
-            }
-            
-            // Check if this blocks an open four or multiple threats for opponent
-            gameState.board[row][col] = humanPlayer
-            val opponentThreats = findThreats(gameState, row, col, humanPlayer)
-            if (opponentThreats.containsOpenFour() || opponentThreats.countMultipleThreats() >= 2) {
-                score.blocksOpponentThreat = true
-                score.threatBlockScore += opponentThreats.getTotalScore()
-            }
-            
-            // Reset the board
-            gameState.board[row][col] = EMPTY
-        }
+        // Sort moves by score and get the best one
+        moveEvaluations.sortByDescending { it.score }
         
-        // 5. If we found forcing moves, pick the best one
-        if (foundForcingMove) {
-            return moveScores.entries
-                .filter { it.value.createsForcingThreat }
-                .maxByOrNull { (pos, score) -> 
-                    score.threatScore + 
-                    (if (score.blocksOpponentThreat) score.threatBlockScore else 0) +
-                    evaluatePositionalValue(gameState, pos.first, pos.second) 
-                }
-                ?.key
-        }
-        
-        // 6. Calculate comprehensive scores for all remaining moves
-        for ((movePos, score) in moveScores) {
-            val (row, col) = movePos
-            
-            // Skip already processed high-priority moves
-            if (score.isWinningMove || score.isBlockingMove || score.createsForcingThreat) {
-                continue
-            }
-            
-            // Evaluate the threat-creation potential
-            gameState.board[row][col] = computerPlayer
-            val ourThreats = findThreats(gameState, row, col, computerPlayer)
-            score.threatScore = ourThreats.getTotalScore()
-            
-            // Evaluate the threat-blocking potential
-            gameState.board[row][col] = humanPlayer
-            val opponentThreats = findThreats(gameState, row, col, humanPlayer)
-            score.threatBlockScore = opponentThreats.getTotalScore()
-            
-            // Reset the board
-            gameState.board[row][col] = EMPTY
-            
-            // Calculate positional score (closeness to existing pieces, center bias, etc.)
-            score.positionalScore = evaluatePositionalValue(gameState, row, col)
-            
-            // Calculate the composite score
-            score.calculateTotalScore()
-        }
-        
-        // 7. Return the move with the highest total score
-        return moveScores.maxByOrNull { it.value.totalScore }?.key ?: 
-            // Fallback to a random adjacent move if no good moves found
-            findAdjacentMove(gameState)
+        // Return best move, with tie breaking for moves that accomplish multiple goals
+        return chooseBestMove(moveEvaluations, gameState)
     }
-
+    
     /**
-     * Evaluates threats created or blocked by a move.
-     * Returns a collection of threats found in all directions.
+     * Finds all patterns that would be created by placing a stone at the specified position.
      */
-    private fun findThreats(gameState: GameState, row: Int, col: Int, player: Int): ThreatsCollection {
-        val threats = ThreatsCollection()
+    private fun findPatterns(
+        gameState: GameState, 
+        row: Int, 
+        col: Int, 
+        player: Int
+    ): List<PatternMatch> {
+        val patterns = mutableListOf<PatternMatch>()
         val opponent = if (player == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
         
         // Temporarily place the stone
         val originalValue = gameState.board[row][col]
         gameState.board[row][col] = player
         
-        // Check all 4 directions
+        // Check patterns in all 4 directions
         for ((deltaRow, deltaCol) in DIRECTIONS) {
-            // Extract the line in this direction
-            val line = extractLine(gameState, row, col, deltaRow, deltaCol, player)
+            // Extract line of 11 cells centered on the newly placed stone
+            val line = extractLine(gameState, row, col, deltaRow, deltaCol)
             
-            // Analyze the line for threats
-            val threatType = analyzeThreatType(line, player, opponent)
-            if (threatType != ThreatType.NONE) {
-                threats.addThreat(threatType)
-            }
+            // Convert line to pattern string (x for player, o for opponent, . for empty)
+            val patternString = lineToPatternString(line, player, opponent)
+            
+            // Match against known patterns
+            patterns.addAll(matchPatterns(patternString))
         }
         
         // Restore the board
         gameState.board[row][col] = originalValue
         
-        return threats
+        return patterns
     }
-
+    
     /**
-     * Analyzes a line to determine what kind of threat it contains.
-     */
-    private fun analyzeThreatType(line: String, player: Int, opponent: Int): ThreatType {
-        // Convert the line to a pattern string where:
-        // 'x' = player's stone, 'o' = opponent's stone, '_' = empty
-        val pattern = line.map { 
-            when (it.toInt()) {
-                player -> 'x'
-                opponent -> 'o'
-                else -> '_'
-            }
-        }.joinToString("")
-        
-        // Check for win (five in a row)
-        if (pattern.contains("xxxxx")) {
-            return ThreatType.FIVE
-        }
-        
-        // Check for open four (guaranteed win next move)
-        if (pattern.contains("_xxxx_") || pattern.contains("xx_xx")) {
-            return ThreatType.OPEN_FOUR
-        }
-        
-        // Check for simple four (one end blocked)
-        if (pattern.contains("xxxx_") || pattern.contains("_xxxx") || 
-            pattern.contains("xxx_x") || pattern.contains("x_xxx")) {
-            return ThreatType.SIMPLE_FOUR
-        }
-        
-        // Check for open three
-        if (pattern.contains("_xxx__") || pattern.contains("__xxx_") || 
-            pattern.contains("_xx_x_") || pattern.contains("_x_xx_")) {
-            return ThreatType.OPEN_THREE
-        }
-        
-        // Check for broken three (one end blocked)
-        if (pattern.contains("_xxx_o") || pattern.contains("o_xxx_") ||
-            pattern.contains("_xx_xo") || pattern.contains("ox_xx_")) {
-            return ThreatType.BROKEN_THREE
-        }
-        
-        // Check for simple three
-        if (pattern.contains("xxx__") || pattern.contains("__xxx") ||
-            pattern.contains("xx_x_") || pattern.contains("_x_xx")) {
-            return ThreatType.SIMPLE_THREE
-        }
-        
-        // Check for open two
-        if (pattern.contains("__xx__")) {
-            return ThreatType.OPEN_TWO
-        }
-        
-        // No significant threat found
-        return ThreatType.NONE
-    }
-
-    /**
-     * Extracts a line of stones in a given direction.
+     * Extracts a line of cells in a specific direction.
      */
     private fun extractLine(
-        gameState: GameState, 
-        row: Int, 
-        col: Int, 
-        deltaRow: Int, 
-        deltaCol: Int,
-        player: Int
-    ): String {
+        gameState: GameState,
+        row: Int,
+        col: Int,
+        deltaRow: Int,
+        deltaCol: Int
+    ): List<Int> {
+        val line = mutableListOf<Int>()
         val boardSize = gameState.boardSize
-        val result = StringBuilder()
         
-        // Look 5 spaces in each direction (enough for Wuziqi patterns)
+        // Look 5 cells in each direction (11 cells total including the center)
         for (i in -5..5) {
             val r = row + i * deltaRow
             val c = col + i * deltaCol
             
             if (r in 0 until boardSize && c in 0 until boardSize) {
-                result.append(gameState.board[r][c])
+                line.add(gameState.board[r][c])
             } else {
-                // Off-board positions are marked differently
-                result.append(-1)
+                // Use a special value for off-board cells
+                line.add(-1)
             }
         }
         
-        return result.toString()
+        return line
     }
-
+    
     /**
-     * Evaluates the positional value of a move based on:
-     * 1. Proximity to center
-     * 2. Proximity to existing pieces
-     * 3. Pattern formation potential
+     * Converts a line of cells to a pattern string.
      */
-    private fun evaluatePositionalValue(gameState: GameState, row: Int, col: Int): Int {
-        val boardSize = gameState.boardSize
+    private fun lineToPatternString(line: List<Int>, player: Int, opponent: Int): String {
+        return line.map { cell ->
+            when (cell) {
+                player -> 'x'     // Player's stone
+                opponent -> 'o'   // Opponent's stone
+                EMPTY -> '.'      // Empty cell
+                else -> '#'       // Off-board or invalid
+            }
+        }.joinToString("")
+    }
+    
+    /**
+     * Matches a pattern string against known patterns.
+     */
+    private fun matchPatterns(patternString: String): List<PatternMatch> {
+        val matches = mutableListOf<PatternMatch>()
+        
+        // Check for five in a row (winning pattern)
+        if (patternString.contains(FIVE_IN_ROW.pattern)) {
+            matches.add(PatternMatch(FIVE_IN_ROW, FIVE_IN_ROW.priority))
+            return matches // Early return since this is the highest priority
+        }
+        
+        // Check for open four patterns
+        if (patternString.contains(OPEN_FOUR.pattern)) {
+            matches.add(PatternMatch(OPEN_FOUR, OPEN_FOUR.priority))
+            return matches // Early return since this is very high priority
+        }
+        
+        if (patternString.contains(SPLIT_OPEN_FOUR.pattern)) {
+            matches.add(PatternMatch(SPLIT_OPEN_FOUR, SPLIT_OPEN_FOUR.priority))
+            return matches // Early return since this is very high priority
+        }
+        
+        // Check for simple four patterns
+        for (pattern in SIMPLE_FOUR) {
+            if (patternString.contains(pattern.pattern)) {
+                matches.add(PatternMatch(pattern, pattern.priority))
+                return matches // Early return since this is high priority
+            }
+        }
+        
+        // Check for open three patterns
+        for (pattern in OPEN_THREE) {
+            if (patternString.contains(pattern.pattern)) {
+                matches.add(PatternMatch(pattern, pattern.priority))
+                // Don't return early, as we might find multiple patterns
+            }
+        }
+        
+        // Check for open two patterns
+        for (pattern in OPEN_TWO) {
+            if (patternString.contains(pattern.pattern)) {
+                matches.add(PatternMatch(pattern, pattern.priority))
+            }
+        }
+        
+        return matches
+    }
+    
+    /**
+     * Calculates a comprehensive score for a potential move.
+     */
+    private fun calculateMoveScore(
+        bestAiPattern: PatternMatch?,
+        bestOpponentPattern: PatternMatch?,
+        row: Int,
+        col: Int,
+        gameState: GameState
+    ): Int {
         var score = 0
         
-        // Center proximity (higher value closer to center)
-        val centerDist = Math.abs(row - boardSize / 2) + Math.abs(col - boardSize / 2)
-        score += (boardSize - centerDist) * 2
+        // Score based on AI pattern creation
+        if (bestAiPattern != null) {
+            score += bestAiPattern.priority
+        }
         
-        // Proximity to existing pieces
-        val adjacentStones = countAdjacentStones(gameState, row, col, 2)
-        score += adjacentStones * 10
+        // Score based on blocking opponent
+        if (bestOpponentPattern != null) {
+            // Blocking opponent's winning or forcing patterns is critical
+            if (bestOpponentPattern.pattern.moveType == MoveType.WIN || 
+                bestOpponentPattern.pattern.moveType == MoveType.FORCING) {
+                score += bestOpponentPattern.priority
+            } else {
+                // Blocking non-critical patterns is good but not as important
+                score += bestOpponentPattern.priority / 2
+            }
+        }
+        
+        // Add positional score
+        score += calculatePositionalScore(row, col, gameState)
         
         return score
     }
-
+    
     /**
-     * Counts stones within a certain radius of a position.
+     * Calculates a positional score for a move based on board position.
      */
-    private fun countAdjacentStones(gameState: GameState, row: Int, col: Int, radius: Int): Int {
+    private fun calculatePositionalScore(row: Int, col: Int, gameState: GameState): Int {
         val boardSize = gameState.boardSize
-        var count = 0
+        var score = 0
         
-        for (r in (row - radius).coerceAtLeast(0)..(row + radius).coerceAtMost(boardSize - 1)) {
-            for (c in (col - radius).coerceAtLeast(0)..(col + radius).coerceAtMost(boardSize - 1)) {
-                if (gameState.board[r][c] != EMPTY) {
+        // Prefer center positions
+        val centerDistance = abs(row - boardSize / 2) + abs(col - boardSize / 2)
+        score += (boardSize - centerDistance) * 5
+        
+        // Prefer positions adjacent to existing stones
+        val adjacentStones = countAdjacentStones(gameState, row, col)
+        score += adjacentStones * 50
+        
+        return score
+    }
+    
+    /**
+     * Counts stones adjacent to a position.
+     */
+    private fun countAdjacentStones(gameState: GameState, row: Int, col: Int): Int {
+        var count = 0
+        val boardSize = gameState.boardSize
+        
+        for (dr in -1..1) {
+            for (dc in -1..1) {
+                if (dr == 0 && dc == 0) continue
+                
+                val r = row + dr
+                val c = col + dc
+                
+                if (r in 0 until boardSize && c in 0 until boardSize && 
+                    gameState.board[r][c] != EMPTY) {
                     count++
                 }
             }
@@ -346,36 +331,66 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         
         return count
     }
-
+    
     /**
-     * Finds a move adjacent to existing pieces when no good tactical moves are found.
+     * Chooses the best move from evaluated candidates, 
+     * with special handling for moves that accomplish multiple goals.
      */
-    private fun findAdjacentMove(gameState: GameState): Pair<Int, Int>? {
-        val boardSize = gameState.boardSize
-        val candidates = mutableListOf<Pair<Int, Int>>()
+    private fun chooseBestMove(moveEvaluations: List<MoveEvaluation>, gameState: GameState): Pair<Int, Int>? {
+        if (moveEvaluations.isEmpty()) return null
         
-        // If board is empty, play at or near center
-        if (isBoardEmpty(gameState)) {
-            val center = boardSize / 2
-            return Pair(center, center)
+        // Check if there's a dominant best move
+        val bestScore = moveEvaluations[0].score
+        val topCandidates = moveEvaluations.filter { it.score >= bestScore * 0.95 }
+        
+        // If we have multiple top candidates, prefer those that accomplish multiple goals
+        if (topCandidates.size > 1) {
+            // Prioritize moves that both create a good pattern AND block opponent's good pattern
+            val dualPurposeMoves = topCandidates.filter { 
+                it.aiPattern != null && it.aiPattern.pattern.moveType in setOf(MoveType.TACTICAL, MoveType.DEVELOPMENT) &&
+                it.opponentPattern != null && it.opponentPattern.pattern.moveType in setOf(MoveType.FORCING, MoveType.TACTICAL)
+            }
+            
+            if (dualPurposeMoves.isNotEmpty()) {
+                return dualPurposeMoves[0].position
+            }
+            
+            // If no dual-purpose moves, pick the best one or randomly from top candidates
+            return if (random.nextDouble() < 0.8) {
+                // 80% chance to pick the absolute best move
+                topCandidates[0].position
+            } else {
+                // 20% chance to pick a random top candidate for variety
+                topCandidates[random.nextInt(topCandidates.size)].position
+            }
         }
         
-        // Collect all empty positions adjacent to existing stones
+        // Return the best move
+        return moveEvaluations[0].position
+    }
+    
+    /**
+     * Finds all valid candidate moves (positions adjacent to existing stones).
+     */
+    private fun findCandidateMoves(gameState: GameState): List<Pair<Int, Int>> {
+        val boardSize = gameState.boardSize
+        val candidates = mutableSetOf<Pair<Int, Int>>()
+        
+        // Find all empty positions within 2 cells of any existing stone
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (gameState.board[row][col] != EMPTY) {
-                    // Check 8 adjacent directions
-                    for (dr in -1..1) {
-                        for (dc in -1..1) {
+                    // Add empty cells within 2 steps
+                    for (dr in -2..2) {
+                        for (dc in -2..2) {
                             if (dr == 0 && dc == 0) continue
                             
-                            val newRow = row + dr
-                            val newCol = col + dc
+                            val r = row + dr
+                            val c = col + dc
                             
-                            if (newRow in 0 until boardSize && 
-                                newCol in 0 until boardSize && 
-                                gameState.board[newRow][newCol] == EMPTY) {
-                                candidates.add(Pair(newRow, newCol))
+                            if (r in 0 until boardSize && c in 0 until boardSize && 
+                                gameState.board[r][c] == EMPTY) {
+                                candidates.add(Pair(r, c))
                             }
                         }
                     }
@@ -383,124 +398,65 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             }
         }
         
-        // Return the best candidate based on positional evaluation
-        return candidates.maxByOrNull { (row, col) -> 
-            evaluatePositionalValue(gameState, row, col)
-        } ?: findDefaultMove(gameState)
+        return candidates.toList()
     }
-
+    
     /**
-     * Checks if the board is completely empty.
+     * Plays near the center of the board (for opening moves).
      */
-    private fun isBoardEmpty(gameState: GameState): Boolean {
-        val boardSize = gameState.boardSize
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (gameState.board[row][col] != EMPTY) {
-                    return false
-                }
-            }
-        }
-        return true
-    }
-
-    /**
-     * Returns a default move (center or nearest to center) when no other move is found.
-     */
-    private fun findDefaultMove(gameState: GameState): Pair<Int, Int>? {
+    private fun playNearCenter(gameState: GameState): Pair<Int, Int> {
         val boardSize = gameState.boardSize
         val center = boardSize / 2
         
-        // Try center first
+        // Try the center first
         if (gameState.isTileEmpty(center, center)) {
             return Pair(center, center)
         }
         
-        // Try positions close to center
-        for (distance in 1 until boardSize) {
-            for (dr in -distance..distance) {
-                for (dc in -distance..distance) {
-                    // Only check positions exactly at 'distance'
-                    if (Math.abs(dr) == distance || Math.abs(dc) == distance) {
-                        val r = center + dr
-                        val c = center + dc
-                        
-                        if (r in 0 until boardSize && 
-                            c in 0 until boardSize && 
-                            gameState.isTileEmpty(r, c)) {
-                            return Pair(r, c)
-                        }
-                    }
+        // Try positions near the center with a slight random offset
+        val offset = random.nextInt(3) - 1 // -1, 0, or 1
+        
+        for (dr in -2..2) {
+            for (dc in -2..2) {
+                val r = center + dr + offset
+                val c = center + dc + offset
+                
+                if (r in 0 until boardSize && c in 0 until boardSize && 
+                    gameState.isTileEmpty(r, c)) {
+                    return Pair(r, c)
                 }
             }
         }
         
-        // If we get here, there's no valid move (board is full)
-        return null
-    }
-
-    /**
-     * Data class to track different types of scores for a candidate move.
-     */
-    private class MoveScore {
-        var isWinningMove = false
-        var isBlockingMove = false
-        var createsForcingThreat = false
-        var blocksOpponentThreat = false
-        var threatScore = 0
-        var threatBlockScore = 0
-        var positionalScore = 0
-        var totalScore = 0
-        
-        fun calculateTotalScore() {
-            totalScore = when {
-                isWinningMove -> Int.MAX_VALUE
-                isBlockingMove -> Int.MAX_VALUE - 1
-                createsForcingThreat -> 1000000 + threatScore + threatBlockScore + positionalScore
-                blocksOpponentThreat -> 100000 + threatBlockScore + threatScore + positionalScore
-                else -> threatScore + threatBlockScore/2 + positionalScore
-            }
-        }
-    }
-
-    /**
-     * Enum to classify different types of threats.
-     */
-    private enum class ThreatType(val score: Int) {
-        FIVE(10000000),            // Win
-        OPEN_FOUR(1000000),        // Guaranteed win next move
-        SIMPLE_FOUR(100000),       // Forces a response
-        OPEN_THREE(10000),         // Potentially creates a four next move
-        BROKEN_THREE(1000),        // One end blocked three
-        SIMPLE_THREE(100),         // Non-forcing three
-        OPEN_TWO(10),              // Open two in a row
-        NONE(0)                    // No significant threat
-    }
-
-    /**
-     * Collection class to track threats found in a position.
-     */
-    private class ThreatsCollection {
-        private val threats = mutableMapOf<ThreatType, Int>()
-        
-        fun addThreat(type: ThreatType) {
-            threats[type] = (threats[type] ?: 0) + 1
-        }
-        
-        fun containsOpenFour(): Boolean {
-            return (threats[ThreatType.OPEN_FOUR] ?: 0) > 0
-        }
-        
-        fun countMultipleThreats(): Int {
-            return threats.entries.count { (type, count) -> 
-                type == ThreatType.OPEN_THREE && count > 0 || 
-                type == ThreatType.SIMPLE_FOUR && count > 0
+        // Fallback to any empty position
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.isTileEmpty(row, col)) {
+                    return Pair(row, col)
+                }
             }
         }
         
-        fun getTotalScore(): Int {
-            return threats.entries.sumOf { (type, count) -> type.score * count }
+        // Board is full (shouldn't happen)
+        return Pair(0, 0)
+    }
+    
+    /**
+     * Counts the total number of stones on the board.
+     */
+    private fun countStones(gameState: GameState): Int {
+        var count = 0
+        val boardSize = gameState.boardSize
+        
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.board[row][col] != EMPTY) {
+                    count++
+                }
+            }
         }
+        
+        return count
     }
 
     /**
