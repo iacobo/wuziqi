@@ -289,10 +289,10 @@ class WuziqiAIEngine(private val random: Random = Random()) {
 
                 // Building tactical structures (open threes) gets high priority
                 MoveType.TACTICAL,
-                MoveType.URGENT -> score += offensivePattern.priority * 0.8
+                MoveType.URGENT -> score += offensivePattern.priority * 8 / 10
 
                 // Development patterns get medium priority
-                MoveType.DEVELOPMENT -> score += offensivePattern.priority * 0.6
+                MoveType.DEVELOPMENT -> score += offensivePattern.priority * 6 / 10
 
                 // Other patterns
                 else -> score += offensivePattern.priority / 2
@@ -306,15 +306,15 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                 MoveType.WIN -> score += defensivePattern.priority
 
                 // Must block forcing moves (open fours)
-                MoveType.FORCING -> score += defensivePattern.priority * 0.9
+                MoveType.FORCING -> score += defensivePattern.priority * 9 / 10
 
                 // Only block urgent moves if they're truly dangerous
-                MoveType.URGENT -> score += defensivePattern.priority * 0.7
+                MoveType.URGENT -> score += defensivePattern.priority * 7 / 10
 
                 // Don't prioritize blocking tactical threats as much
                 // This is the key change - we prioritize our own development over blocking
                 // non-forcing threats
-                MoveType.TACTICAL -> score += defensivePattern.priority / 3
+                MoveType.TACTICAL -> score += defensivePattern.priority * 3 / 10
 
                 // Low priority for blocking early development
                 MoveType.DEVELOPMENT -> score += defensivePattern.priority / 10
