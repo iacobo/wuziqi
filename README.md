@@ -48,13 +48,10 @@ Completely FOSS - no ads, no trackers, nothing unnecessary. Just a clean, offlin
 Players take turns placing their stones on the grid. The first player to place 5 of their colour in a row (vertically, horizontally, or diagonally) wins.
 
 <div align="center">
-[<img 
+<img 
     alt="Gameplay light mode" 
     width="300"
-    src="https://github.com/iacobo/wuziqi/raw/main/.assets/wuziqiscreenshotlight.jpg" />] [<img 
-    alt="Gameplay dark mode" 
-    width="300"
-    src="https://github.com/iacobo/wuziqi/raw/main/.assets/wuziqiscreenshotdark.jpg" />]
+    src="https://github.com/iacobo/wuziqi/raw/main/.assets/wuziqiscreenshotlight.jpg" />
 
 </div>
 
