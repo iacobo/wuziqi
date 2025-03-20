@@ -77,6 +77,19 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                         PatternDefinition(".x.xx.", 20000, MoveType.TACTICAL)
                 )
 
+        // Closed/blocked three patterns - less valuable defensively but still important offensively
+        val HALF_OPEN_THREE =
+                listOf(
+                        PatternDefinition("oxxx..", 8000, MoveType.DEVELOPMENT),
+                        PatternDefinition("..xxxo", 8000, MoveType.DEVELOPMENT),
+                        PatternDefinition("ox.xx.", 8000, MoveType.DEVELOPMENT),
+                        PatternDefinition(".xx.xo", 8000, MoveType.DEVELOPMENT),
+                        PatternDefinition("#xxx..", 8000, MoveType.DEVELOPMENT),
+                        PatternDefinition("..xxx#", 8000, MoveType.DEVELOPMENT),
+                        PatternDefinition("#x.xx.", 8000, MoveType.DEVELOPMENT),
+                        PatternDefinition(".xx.x#", 8000, MoveType.DEVELOPMENT)
+                )
+
         // Developmental patterns
         val OPEN_TWO =
                 listOf(
@@ -385,7 +398,7 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             if (r in 0 until boardSize && c in 0 until boardSize) {
                 line.add(gameState.board[r][c])
             } else {
-                // Use a special value for off-board cells
+                // Use special value -1 for off-board cells
                 line.add(-1)
             }
         }
@@ -401,7 +414,8 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                         player -> 'x' // Player's stone
                         opponent -> 'o' // Opponent's stone
                         EMPTY -> '.' // Empty cell
-                        else -> '#' // Off-board or invalid
+                        -1 -> '#' // Board edge (off-board cell)
+                        else -> '#' // Any other invalid value
                     }
                 }
                 .joinToString("")
