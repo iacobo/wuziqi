@@ -8,16 +8,14 @@
 
 # wuziqi
 
-[![GPLv3 license](https://img.shields.io/badge/GPLv3-blue.svg?style=for-the-badge&logo=gnu)](/LICENSE)
-[![Open Source](https://img.shields.io/badge/Open%20🤍%20Source-teal.svg?style=for-the-badge&logo=)](https://www.gnu.org/philosophy/essays-and-articles.html)
-![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
+[![GPLv3 license](https://img.shields.io/badge/GPLv3-blue.svg?style=for-the-badge&logo=gnu)](/LICENSE)[![Open Source](https://img.shields.io/badge/Open%20🤍%20Source-teal.svg?style=for-the-badge&logo=)](https://www.gnu.org/philosophy/essays-and-articles.html)![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 
-[<img src="https://raw.githubusercontent.com/andOTP/andOTP/master/assets/badges/get-it-on-github.png" 
+[<img src=".assets/get-it-on-github.png" 
     alt="Get it on Github"
-    height="80">](https://github.com/iacobo/wuziqi/releases/latest)
-[<img src="https://github.com/ironfox-oss/IronFox/raw/dev/assets/obtainium.png"
+    height="50">](https://github.com/iacobo/wuziqi/releases/latest)&nbsp;&nbsp;&nbsp;
+[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png"
     alt="Get it on Obtainium"
-    height="80">](obtainium://app/%7B%22id%22%3A%22com.iacobo.wuziqi%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fiacobo%2Fwuziqi%22%2C%22author%22%3A%22iacobo%22%2C%22name%22%3A%22wuziqi%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22fallbackToOlderReleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22filterReleaseNotesByRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22verifyLatestTag%5C%22%3Afalse%2C%5C%22dontSortReleasesList%5C%22%3Afalse%2C%5C%22useLatestAssetDateAsReleaseDate%5C%22%3Afalse%2C%5C%22trackOnly%5C%22%3Afalse%2C%5C%22versionExtractionRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22matchGroupToUse%5C%22%3A%5C%22%5C%22%2C%5C%22versionDetection%5C%22%3Afalse%2C%5C%22releaseDateAsVersion%5C%22%3Afalse%2C%5C%22useVersionCodeAsOSVersion%5C%22%3Afalse%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5C%22%2C%5C%22invertAPKFilter%5C%22%3Afalse%2C%5C%22autoApkFilterByArch%5C%22%3Atrue%2C%5C%22appName%5C%22%3A%5C%22wuziqi%5C%22%2C%5C%22exemptFromBackgroundUpdates%5C%22%3Afalse%2C%5C%22skipUpdateNotifications%5C%22%3Afalse%2C%5C%22about%5C%22%3A%5C%22FOSS%20android%205-in-a-row%20game.%5C%22%2C%5C%22appAuthor%5C%22%3A%5C%22iacobo%5C%22%7D%22%7D)
+    height="50">](http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/iacobo/wuziqi/releases)
 
 <!--
 [<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png"
