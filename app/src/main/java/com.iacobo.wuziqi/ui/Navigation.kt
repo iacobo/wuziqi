@@ -39,7 +39,7 @@ object Routes {
 @Composable
 fun AppNavigation(
         navController: NavHostController = rememberNavController(),
-        isInitialLaunch: Boolean = false
+        isInitialLaunch: Boolean = true
 ) {
     // Create shared ViewModel instances that persist across navigation
     val settingsViewModel: SettingsViewModel = viewModel()
@@ -88,17 +88,31 @@ fun AppNavigation(
                     backStackEntry.arguments?.getInt("winLength") ?: GameState.DEFAULT_WIN_CONDITION
             val isComputer = backStackEntry.arguments?.getInt("isComputer") == 1
 
+            // Create a more specific key to prevent recreation of the LaunchedEffect
+            // We use a Route path component to ensure it only runs when the route changes
+            // not when returning from other screens
+            val routePath = backStackEntry.arguments?.getString("boardSize") ?: ""
+
             // Set up the game with specified parameters only on first navigation
-            // We use a LaunchedEffect with a key of boardSize+winLength+isComputer to ensure
-            // it only runs when these parameters change, not when navigating back from settings
-            LaunchedEffect(key1 = "$boardSize-$winLength-$isComputer") {
-                // Setup game with the specified parameters
-                gameViewModel.setupGame(
-                        boardSize = boardSize,
-                        winLength = winLength,
-                        opponent = if (isComputer) Opponent.COMPUTER else Opponent.HUMAN,
-                        skipStartSound = isInitialLaunch
-                )
+            LaunchedEffect(key1 = "gameSetup-$routePath") {
+                // Check if game is already set up with these parameters
+                val currentGame = gameViewModel.gameState
+                val needsSetup =
+                        currentGame.boardSize != boardSize ||
+                                currentGame.winCondition != winLength ||
+                                currentGame.againstComputer != isComputer ||
+                                // Also setup new game if there's a winner (game is complete)
+                                gameViewModel.winner != null
+
+                if (needsSetup) {
+                    // Setup new game with the specified parameters
+                    gameViewModel.setupGame(
+                            boardSize = boardSize,
+                            winLength = winLength,
+                            opponent = if (isComputer) Opponent.COMPUTER else Opponent.HUMAN,
+                            skipStartSound = isInitialLaunch
+                    )
+                }
             }
 
             GameScreen(

@@ -121,7 +121,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             boardSize: Int,
             winLength: Int,
             opponent: Opponent,
-            skipStartSound: Boolean = true
+            skipStartSound: Boolean = false
     ) {
         // Clear any existing game
         winner = null
@@ -145,7 +145,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             discoveredEasterEggs = easterEggManager.getDiscoveredEasterEggs()
         }
 
-        // Play sound effect if enabled (but skip on initial launch)
+        // Play sound effect if enabled AND we should not skip it
         if (soundEnabled && !skipStartSound) {
             soundPool.play(soundReset, 0.7f, 0.7f, 1, 0, 1.0f)
         }
@@ -379,16 +379,42 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Get last move
         val lastMove = moveHistory.last()
 
+        // Remove the move from history before making changes to the board
+        moveHistory = moveHistory.dropLast(1)
+
         // Remove it from board
         gameState.board[lastMove.row][lastMove.col] = GameState.EMPTY
 
-        // Update current player to the one who made the last move
-        gameState.currentPlayer = lastMove.player
+        // If playing against computer, we need to handle both moves
+        if (gameState.againstComputer) {
+            // Only perform a second undo if there's another move AND the player is still the same
+            // This prevents recursion from continuing after both moves are undone
+            if (moveHistory.isNotEmpty() && moveHistory.last().player != lastMove.player) {
+
+                // Get previous move (computer's move)
+                val previousMove = moveHistory.last()
+
+                // Remove it from history
+                moveHistory = moveHistory.dropLast(1)
+
+                // Remove it from board
+                gameState.board[previousMove.row][previousMove.col] = GameState.EMPTY
+
+                // Set current player back to the human player
+                gameState.currentPlayer = GameState.PLAYER_ONE
+            } else {
+                // Set current player back to the one who made the last move
+                gameState.currentPlayer = lastMove.player
+            }
+        } else {
+            // Set current player back to the one who made the last move
+            gameState.currentPlayer = lastMove.player
+        }
 
         // Update last placed position
         lastPlacedPosition =
-                if (moveHistory.size > 1) {
-                    val previousMove = moveHistory[moveHistory.size - 2]
+                if (moveHistory.isNotEmpty()) {
+                    val previousMove = moveHistory.last()
                     Position(previousMove.row, previousMove.col)
                 } else {
                     null
@@ -397,17 +423,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Play sound effect if enabled
         if (soundEnabled) {
             soundPool.play(soundUndo, 0.7f, 0.7f, 1, 0, 1.0f)
-        }
-
-        // Remove the move from history
-        moveHistory = moveHistory.dropLast(1)
-
-        // If playing against computer, undo the computer's move as well
-        if (gameState.againstComputer &&
-                        moveHistory.isNotEmpty() &&
-                        moveHistory.last().player != gameState.currentPlayer
-        ) {
-            undoMove()
         }
 
         // Save state after undo

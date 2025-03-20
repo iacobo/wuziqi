@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
                     AppNavigation(navController = navController, isInitialLaunch = isInitialLaunch)
 
                     // Reset the flag after first navigation
-                    LaunchedEffect(Unit) { isInitialLaunch = false }
+                    LaunchedEffect(Unit) { isInitialLaunch = true }
                 }
             }
         }
