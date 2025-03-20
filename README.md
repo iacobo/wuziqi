@@ -35,13 +35,28 @@
 
 ## About
 
-A simple material design Wuziqi game (aka [Gomoku, 5-in-a-row, Caro](https://en.wikipedia.org/wiki/Gomoku)).
+A simple Wuziqi game for android (aka [Gomoku / Connect 5](https://en.wikipedia.org/wiki/Gomoku)).
 
-Completely FOSS, no ads, no trackers, nothing unnecessary. Just a clean, offline, 2-player boardgame app.
+- play with a friend or challenge the computer
+- design your own custom games
+- discover an ~easter egg~ or two 🥚🐇
+
+Completely FOSS - no ads, no trackers, nothing unnecessary. Just a clean, offline, 2-player boardgame app.
 
 ## How to play
 
 Players take turns placing their stones on the grid. The first player to place 5 of their colour in a row (vertically, horizontally, or diagonally) wins.
+
+<div align="center">
+[<img 
+    alt="Gameplay light mode" 
+    width="300"
+    src="https://github.com/iacobo/wuziqi/raw/main/.assets/wuziqiscreenshotlight.jpg" />] [<img 
+    alt="Gameplay dark mode" 
+    width="300"
+    src="https://github.com/iacobo/wuziqi/raw/main/.assets/wuziqiscreenshotdark.jpg" />]
+
+</div>
 
 ## Donate 🕊️
 
@@ -49,11 +64,13 @@ This app is free, but if you can afford to, please consider donating to these ch
 
 <div align="center">
 
-[<img alt="Shelter" 
+[<img 
+    alt="Shelter" 
     height="60px"
-    src="https://images.ctfassets.net/6sxvmndnpn0s/1qQWlJLKM5rpZHETE32eLX/fc3c1d9f75930f9f5e4d4d0754806ec7/logo--d-england.png" />](https://www.shelter.org.uk/)  [<img alt="PCRF" 
+    src="https://images.ctfassets.net/6sxvmndnpn0s/1qQWlJLKM5rpZHETE32eLX/fc3c1d9f75930f9f5e4d4d0754806ec7/logo--d-england.png" />](https://www.shelter.org.uk/)  [<img
+    alt="PCRF" 
     height="60px"
     src="https://github.com/iacobo/iacobo.github.io/raw/main/assets/logos/pcrf.svg?raw=true" />](https://www.pcrf.net/)
 
-    You can make a difference!
+You can make a difference!
 </div>
