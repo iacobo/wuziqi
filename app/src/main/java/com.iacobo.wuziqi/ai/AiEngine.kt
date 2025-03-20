@@ -288,10 +288,11 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                 MoveType.FORCING -> score += offensivePattern.priority
 
                 // Building tactical structures (open threes) gets high priority
-                MoveType.TACTICAL -> score += offensivePattern.priority * 0.8.toInt()
+                MoveType.TACTICAL,
+                MoveType.URGENT -> score += offensivePattern.priority * 0.8
 
                 // Development patterns get medium priority
-                MoveType.DEVELOPMENT -> score += offensivePattern.priority * 0.6.toInt()
+                MoveType.DEVELOPMENT -> score += offensivePattern.priority * 0.6
 
                 // Other patterns
                 else -> score += offensivePattern.priority / 2
@@ -305,18 +306,18 @@ class WuziqiAIEngine(private val random: Random = Random()) {
                 MoveType.WIN -> score += defensivePattern.priority
 
                 // Must block forcing moves (open fours)
-                MoveType.FORCING -> score += defensivePattern.priority * 0.9.toInt()
+                MoveType.FORCING -> score += defensivePattern.priority * 0.9
 
                 // Only block urgent moves if they're truly dangerous
-                MoveType.URGENT -> score += defensivePattern.priority * 0.7.toInt()
+                MoveType.URGENT -> score += defensivePattern.priority * 0.7
 
                 // Don't prioritize blocking tactical threats as much
                 // This is the key change - we prioritize our own development over blocking
                 // non-forcing threats
-                MoveType.TACTICAL -> score += defensivePattern.priority * 0.3.toInt()
+                MoveType.TACTICAL -> score += defensivePattern.priority / 3
 
                 // Low priority for blocking early development
-                MoveType.DEVELOPMENT -> score += defensivePattern.priority * 0.1.toInt()
+                MoveType.DEVELOPMENT -> score += defensivePattern.priority / 10
 
                 // Other patterns
                 else -> score += defensivePattern.priority / 10
