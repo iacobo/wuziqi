@@ -180,13 +180,30 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             return playNearCenter(gameState)
         }
 
+        // Get the top candidates (moves with scores at least 90% of the best score)
+        val bestScore = moveEvaluations[0].score
+        val topCandidates = moveEvaluations.filter { it.score >= bestScore * 0.9 }
+
+        // Check for offensive opportunities first - moves that create our own threats
+        val offensiveOpportunities =
+                topCandidates.filter {
+                    it.aiPattern != null &&
+                            it.aiPattern.pattern.moveType in
+                                    setOf(MoveType.TACTICAL, MoveType.FORCING)
+                }
+
+        // If we have offensive opportunities, prioritize them
+        if (offensiveOpportunities.isNotEmpty()) {
+            return offensiveOpportunities[0].position
+        }
+
         // Check for dual-purpose moves that create a threat AND block a threat
         val dualPurposeMoves =
-                moveEvaluations.filter {
+                topCandidates.filter {
                     it.aiPattern != null &&
                             it.opponentPattern != null &&
                             it.aiPattern.pattern.moveType in
-                                    setOf(MoveType.TACTICAL, MoveType.FORCING) &&
+                                    setOf(MoveType.TACTICAL, MoveType.DEVELOPMENT) &&
                             it.opponentPattern.pattern.moveType in
                                     setOf(MoveType.TACTICAL, MoveType.FORCING)
                 }
@@ -194,6 +211,16 @@ class WuziqiAIEngine(private val random: Random = Random()) {
         // If we have dual-purpose moves, prioritize them
         if (dualPurposeMoves.isNotEmpty()) {
             return dualPurposeMoves[0].position
+        }
+
+        // If we have multiple top candidates, add some non-determinism
+        if (topCandidates.size > 1) {
+            // 80% chance to pick the best move, 20% to pick a random top move
+            return if (random.nextDouble() < 0.8) {
+                topCandidates[0].position
+            } else {
+                topCandidates[random.nextInt(topCandidates.size)].position
+            }
         }
 
         // Return the move with highest score
@@ -240,27 +267,46 @@ class WuziqiAIEngine(private val random: Random = Random()) {
     ): Int {
         var score = positionScore
 
-        // Add offensive score
+        // Add offensive score - prioritize creating our own threats
         if (offensivePattern != null) {
-            // Critical patterns (win, forcing)
-            if (offensivePattern.pattern.moveType in setOf(MoveType.WIN, MoveType.FORCING)) {
-                score += offensivePattern.priority
-            } else {
-                // Regular pattern creation
-                score += offensivePattern.priority / 2
+            when (offensivePattern.pattern.moveType) {
+                // Critical patterns (win, forcing) get full priority
+                MoveType.WIN,
+                MoveType.FORCING -> score += offensivePattern.priority
+
+                // Building tactical structures (open threes) gets high priority
+                MoveType.TACTICAL -> score += offensivePattern.priority * 0.8.toInt()
+
+                // Development patterns get medium priority
+                MoveType.DEVELOPMENT -> score += offensivePattern.priority * 0.6.toInt()
+
+                // Other patterns
+                else -> score += offensivePattern.priority / 2
             }
         }
 
-        // Add defensive score
+        // Add defensive score - be more selective about what we defend against
         if (defensivePattern != null) {
-            // Critical blocks (win, forcing)
-            if (defensivePattern.pattern.moveType in
-                            setOf(MoveType.WIN, MoveType.FORCING, MoveType.URGENT)
-            ) {
-                score += defensivePattern.priority
-            } else {
-                // Regular blocks
-                score += defensivePattern.priority / 3
+            when (defensivePattern.pattern.moveType) {
+                // Must block winning moves
+                MoveType.WIN -> score += defensivePattern.priority
+
+                // Must block forcing moves (open fours)
+                MoveType.FORCING -> score += defensivePattern.priority * 0.9.toInt()
+
+                // Only block urgent moves if they're truly dangerous
+                MoveType.URGENT -> score += defensivePattern.priority * 0.7.toInt()
+
+                // Don't prioritize blocking tactical threats as much
+                // This is the key change - we prioritize our own development over blocking
+                // non-forcing threats
+                MoveType.TACTICAL -> score += defensivePattern.priority * 0.3.toInt()
+
+                // Low priority for blocking early development
+                MoveType.DEVELOPMENT -> score += defensivePattern.priority * 0.1.toInt()
+
+                // Other patterns
+                else -> score += defensivePattern.priority / 10
             }
         }
 
@@ -298,6 +344,13 @@ class WuziqiAIEngine(private val random: Random = Random()) {
 
         // Check for open three patterns (critical for creating future threats)
         for (pattern in OPEN_THREE) {
+            if (patternString.contains(pattern.pattern)) {
+                matches.add(PatternMatch(pattern, pattern.priority))
+            }
+        }
+
+        // Check for half-open three patterns (less critical defensively)
+        for (pattern in HALF_OPEN_THREE) {
             if (patternString.contains(pattern.pattern)) {
                 matches.add(PatternMatch(pattern, pattern.priority))
             }
