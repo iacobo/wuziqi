@@ -65,10 +65,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // SoundPool for softer, more natural sounds
     private val soundPool: SoundPool
-    private val soundPlaceTile: Int
     private val soundWin: Int
     private val soundUndo: Int
     private val soundReset: Int
+    private val soundPlaceTile: Int
+    private val soundPlaceTicTacToe: Int
+    private val soundPlaceConnect4: Int
 
     init {
         // Initialize SoundPool
@@ -82,6 +84,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // Load sound effects
         soundPlaceTile = soundPool.load(application, R.raw.soft_tap, 1)
+        soundPlaceTicTacToe = soundPool.load(application, R.raw.soft_scratch, 1)
+        soundPlaceConnect4 = soundPool.load(application, R.raw.soft_drop, 1)
         soundWin = soundPool.load(application, R.raw.soft_success, 1)
         soundUndo = soundPool.load(application, R.raw.soft_pop, 1)
         soundReset = soundPool.load(application, R.raw.soft_click, 1)
@@ -343,9 +347,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Plays the sound effect for placing a tile. */
+    /** Plays the appropriate sound effect for placing a tile based on the game type. */
     private fun playTileSound() {
-        soundPool.play(soundPlaceTile, 0.7f, 0.7f, 1, 0, 1.0f)
+        val soundId =
+                when {
+                    // TicTacToe game - use soft_scratch
+                    gameState.boardSize == 3 && gameState.winCondition == 3 -> soundPlaceTicTacToe
+                    // Connect4 game - use soft_drop
+                    gameState.boardSize == 7 && gameState.winCondition == 4 -> soundPlaceConnect4
+                    // Default Wuziqi game - use soft_tap
+                    else -> soundPlaceTile
+                }
+
+        soundPool.play(soundId, 0.7f, 0.7f, 1, 0, 1.0f)
     }
 
     /** Plays a sound effect for winning the game. */
