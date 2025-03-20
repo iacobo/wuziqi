@@ -22,12 +22,10 @@ import com.iacobo.wuziqi.data.UserPreferences
 import com.iacobo.wuziqi.ui.theme.WuziqiTheme
 import com.iacobo.wuziqi.viewmodel.SettingsViewModel
 
-/**
- * Main entry point for the Wuziqi application.
- */
+/** Main entry point for the Wuziqi application. */
 class MainActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()
-    
+
     // Flag to track whether startup sound should be suppressed
     private var isInitialLaunch = true
 
@@ -35,10 +33,10 @@ class MainActivity : ComponentActivity() {
         // Apply splash screen
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        
+
         // Make system UI transparent with edge-to-edge
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        
+
         setContent {
             // Access userPreferences as a State<UserPreferences>
             val preferences = settingsViewModel.userPreferences.value
@@ -47,39 +45,33 @@ class MainActivity : ComponentActivity() {
             ApplyLanguageSettings(preferences)
 
             // Apply theme settings based on user preferences
-            val darkTheme = when (preferences.themeMode) {
-                ThemeMode.LIGHT -> false
-                ThemeMode.DARK -> true
-                ThemeMode.SYSTEM -> isSystemInDarkTheme()
-            }
+            val darkTheme =
+                    when (preferences.themeMode) {
+                        ThemeMode.LIGHT -> false
+                        ThemeMode.DARK -> true
+                        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                    }
 
             // Use dynamic theme (Material You) if available, but with our theme colors
             WuziqiTheme(darkTheme = darkTheme) {
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    
+
                     // Pass initial launch flag to suppress startup sound
-                    AppNavigation(
-                        navController = navController,
-                        isInitialLaunch = isInitialLaunch
-                    )
-                    
+                    AppNavigation(navController = navController, isInitialLaunch = isInitialLaunch)
+
                     // Reset the flag after first navigation
-                    LaunchedEffect(Unit) {
-                        isInitialLaunch = false
-                    }
+                    LaunchedEffect(Unit) { isInitialLaunch = false }
                 }
             }
         }
     }
 }
 
-/**
- * Applies language settings based on user preferences.
- */
+/** Applies language settings based on user preferences. */
 @Composable
 fun ApplyLanguageSettings(preferences: UserPreferences) {
     val context = LocalContext.current

@@ -15,52 +15,52 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 // Color schemes based on Material Design guidelines
-private val DarkColorScheme = darkColorScheme(
-    primary = GameDarkPrimary,
-    secondary = GameDarkSecondary,
-    tertiary = GameDarkAccent,
-    background = GameDarkBackground
-)
+private val DarkColorScheme =
+        darkColorScheme(
+                primary = GameDarkPrimary,
+                secondary = GameDarkSecondary,
+                tertiary = GameDarkAccent,
+                background = GameDarkBackground
+        )
 
-private val LightColorScheme = lightColorScheme(
-    primary = GameLightPrimary,
-    secondary = GameLightSecondary,
-    tertiary = GameLightAccent,
-    background = GameLightBackground
-)
+private val LightColorScheme =
+        lightColorScheme(
+                primary = GameLightPrimary,
+                secondary = GameLightSecondary,
+                tertiary = GameLightAccent,
+                background = GameLightBackground
+        )
 
 /**
- * Theme for the Wuziqi app.
- * Applies appropriate color schemes based on system settings and dynamic colors.
+ * Theme for the Wuziqi app. Applies appropriate color schemes based on system settings and dynamic
+ * colors.
  */
 @Composable
 fun WuziqiTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true, // Use dynamic colors on Android 12+
-    content: @Composable () -> Unit
+        darkTheme: Boolean = isSystemInDarkTheme(),
+        dynamicColor: Boolean = true, // Use dynamic colors on Android 12+
+        content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-    
+    val colorScheme =
+            when {
+                dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                    val context = LocalContext.current
+                    if (darkTheme) dynamicDarkColorScheme(context)
+                    else dynamicLightColorScheme(context)
+                }
+                darkTheme -> DarkColorScheme
+                else -> LightColorScheme
+            }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            
+
             // Set status bar colors and appearance
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }

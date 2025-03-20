@@ -41,17 +41,16 @@ import com.iacobo.wuziqi.viewmodel.DRAW
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 
 /**
- * Main game screen composable.
- * Displays the game board, status, and controls.
- * Supports standard game and easter eggs.
+ * Main game screen composable. Displays the game board, status, and controls. Supports standard
+ * game and easter eggs.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
-    viewModel: GameViewModel,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToHome: () -> Unit,
-    themeMode: ThemeMode = ThemeMode.SYSTEM
+        viewModel: GameViewModel,
+        onNavigateToSettings: () -> Unit,
+        onNavigateToHome: () -> Unit,
+        themeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
     val gameState = viewModel.gameState
     val winner = viewModel.winner
@@ -60,257 +59,251 @@ fun GameScreen(
     val isLoading = viewModel.isLoading
     val boardSize = gameState.boardSize
     val winLength = gameState.winCondition
-    
+
     // Determine game type for easter eggs
     val isXandO = boardSize == 3 && winLength == 3
     val isConnect4 = boardSize == 7 && winLength == 4
 
     // Determine app title based on easter egg mode
-    val appTitle = when {
-        isXandO -> "X's & O's"
-        isConnect4 -> "Connect 4"
-        else -> stringResource(R.string.app_name)
-    }
+    val appTitle =
+            when {
+                isXandO -> "X's & O's"
+                isConnect4 -> "Connect 4"
+                else -> stringResource(R.string.app_name)
+            }
 
     // Determine if we're in dark theme based on the theme mode
-    val isDarkTheme = when (themeMode) {
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-    }
+    val isDarkTheme =
+            when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+            }
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = appTitle,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
+            topBar = {
+                CenterAlignedTopAppBar(
+                        title = {
+                            Text(text = appTitle, style = MaterialTheme.typography.titleLarge)
+                        },
+                        colors =
+                                TopAppBarDefaults.topAppBarColors(
+                                        containerColor = MaterialTheme.colorScheme.background,
+                                        titleContentColor = MaterialTheme.colorScheme.onBackground
+                                )
                 )
-            )
-        },
-        bottomBar = {
-            BottomAppBar(
-                actions = {
-                    // Home button
-                    IconButton(onClick = onNavigateToHome) {
-                        Icon(
-                            imageVector = Icons.Default.Home,
-                            contentDescription = stringResource(R.string.home)
-                        )
-                    }
-                    
-                    // Undo button (disabled if no moves or game frozen)
-                    IconButton(
-                        onClick = { viewModel.undoMove() },
-                        enabled = moveHistory.isNotEmpty() && !isLoading
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Undo,
-                            contentDescription = stringResource(R.string.undo)
-                        )
-                    }
-                    
-                    // Reset button
-                    IconButton(onClick = { viewModel.resetGame() }) {
-                        Icon(
-                            imageVector = Icons.Default.Replay,
-                            contentDescription = stringResource(R.string.reset)
-                        )
-                    }
-                    
-                    Spacer(Modifier.weight(1f))
-                    
-                    // Settings button (right aligned)
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings)
-                        )
-                    }
-                }
-            )
-        }
+            },
+            bottomBar = {
+                BottomAppBar(
+                        actions = {
+                            // Home button
+                            IconButton(onClick = onNavigateToHome) {
+                                Icon(
+                                        imageVector = Icons.Default.Home,
+                                        contentDescription = stringResource(R.string.home)
+                                )
+                            }
+
+                            // Undo button (disabled if no moves or game frozen)
+                            IconButton(
+                                    onClick = { viewModel.undoMove() },
+                                    enabled = moveHistory.isNotEmpty() && !isLoading
+                            ) {
+                                Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Undo,
+                                        contentDescription = stringResource(R.string.undo)
+                                )
+                            }
+
+                            // Reset button
+                            IconButton(onClick = { viewModel.resetGame() }) {
+                                Icon(
+                                        imageVector = Icons.Default.Replay,
+                                        contentDescription = stringResource(R.string.reset)
+                                )
+                            }
+
+                            Spacer(Modifier.weight(1f))
+
+                            // Settings button (right aligned)
+                            IconButton(onClick = onNavigateToSettings) {
+                                Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = stringResource(R.string.settings)
+                                )
+                            }
+                        }
+                )
+            }
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Fixed height container for player indicator to prevent layout shifts
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.Center
+                    modifier = Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
             ) {
                 if (isLoading) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.secondary,
-                            strokeWidth = 2.dp
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.secondary,
+                                strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.computer_thinking),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.secondary
+                                text = stringResource(R.string.computer_thinking),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.secondary
                         )
                     }
                 } else if (winner == DRAW) {
                     // Show draw message
                     Text(
-                        text = stringResource(R.string.draw),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary
+                            text = stringResource(R.string.draw),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
                     )
                 } else if (winner != null) {
                     // Show winner with fireworks emoji
-                    val winnerText = when {
-                        isXandO -> stringResource(
-                            R.string.winner_format,
-                            if (winner == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_x)
-                            else
-                                stringResource(R.string.player_o)
-                        )
-                        isConnect4 -> stringResource(
-                            R.string.winner_format,
-                            if (winner == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_red)
-                            else
-                                stringResource(R.string.player_yellow)
-                        )
-                        else -> {
-                            // Handle computer opponent case
-                            if (gameState.againstComputer) {
-                                if (winner == GameState.PLAYER_ONE) 
-                                    stringResource(R.string.you_won)
-                                else 
-                                    stringResource(R.string.computer_won)
-                            } else {
-                                stringResource(
-                                    R.string.winner_format,
-                                    if (winner == GameState.PLAYER_ONE) 
-                                        stringResource(R.string.player_black)
-                                    else 
-                                        stringResource(R.string.player_white)
-                                )
+                    val winnerText =
+                            when {
+                                isXandO ->
+                                        stringResource(
+                                                R.string.winner_format,
+                                                if (winner == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_x)
+                                                else stringResource(R.string.player_o)
+                                        )
+                                isConnect4 ->
+                                        stringResource(
+                                                R.string.winner_format,
+                                                if (winner == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_red)
+                                                else stringResource(R.string.player_yellow)
+                                        )
+                                else -> {
+                                    // Handle computer opponent case
+                                    if (gameState.againstComputer) {
+                                        if (winner == GameState.PLAYER_ONE)
+                                                stringResource(R.string.you_won)
+                                        else stringResource(R.string.computer_won)
+                                    } else {
+                                        stringResource(
+                                                R.string.winner_format,
+                                                if (winner == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_black)
+                                                else stringResource(R.string.player_white)
+                                        )
+                                    }
+                                }
                             }
-                        }
-                    }
-                    
-                    val winnerColor = when {
-                        isConnect4 -> if (winner == GameState.PLAYER_ONE) Connect4PieceRed else Connect4PieceYellow
-                        else -> if (winner == GameState.PLAYER_ONE) 
-                            MaterialTheme.colorScheme.primary
-                        else 
-                            MaterialTheme.colorScheme.secondary
-                    }
-                    
+
+                    val winnerColor =
+                            when {
+                                isConnect4 ->
+                                        if (winner == GameState.PLAYER_ONE) Connect4PieceRed
+                                        else Connect4PieceYellow
+                                else ->
+                                        if (winner == GameState.PLAYER_ONE)
+                                                MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.secondary
+                            }
+
                     Text(
-                        text = winnerText,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = winnerColor
+                            text = winnerText,
+                            style =
+                                    MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold
+                                    ),
+                            color = winnerColor
                     )
                 } else {
                     // Show current player
-                    val playerText = when {
-                        isXandO -> stringResource(
-                            R.string.player_turn_format,
-                            if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_x)
-                            else
-                                stringResource(R.string.player_o)
-                        )
-                        isConnect4 -> stringResource(
-                            R.string.player_turn_format,
-                            if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_red)
-                            else
-                                stringResource(R.string.player_yellow)
-                        )
-                        else -> {
-                            // Handle computer opponent case
-                            if (gameState.againstComputer) {
-                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                    stringResource(R.string.your_turn)
-                                else
-                                    stringResource(R.string.computer_thinking)
-                            } else {
-                                stringResource(
-                                    R.string.player_turn_format,
-                                    if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                        stringResource(R.string.player_black)
-                                    else
-                                        stringResource(R.string.player_white)
-                                )
+                    val playerText =
+                            when {
+                                isXandO ->
+                                        stringResource(
+                                                R.string.player_turn_format,
+                                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_x)
+                                                else stringResource(R.string.player_o)
+                                        )
+                                isConnect4 ->
+                                        stringResource(
+                                                R.string.player_turn_format,
+                                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_red)
+                                                else stringResource(R.string.player_yellow)
+                                        )
+                                else -> {
+                                    // Handle computer opponent case
+                                    if (gameState.againstComputer) {
+                                        if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                stringResource(R.string.your_turn)
+                                        else stringResource(R.string.computer_thinking)
+                                    } else {
+                                        stringResource(
+                                                R.string.player_turn_format,
+                                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_black)
+                                                else stringResource(R.string.player_white)
+                                        )
+                                    }
+                                }
                             }
-                        }
-                    }
 
-                    val playerColor = when {
-                        isConnect4 -> if (gameState.currentPlayer == GameState.PLAYER_ONE) Connect4PieceRed else Connect4PieceYellow
-                        else -> if (gameState.currentPlayer == GameState.PLAYER_ONE) 
-                            MaterialTheme.colorScheme.primary
-                        else 
-                            MaterialTheme.colorScheme.secondary
-                    }
-                    
+                    val playerColor =
+                            when {
+                                isConnect4 ->
+                                        if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                Connect4PieceRed
+                                        else Connect4PieceYellow
+                                else ->
+                                        if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.secondary
+                            }
+
                     Text(
-                        text = playerText,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = playerColor
+                            text = playerText,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = playerColor
                     )
                 }
             }
 
             // Game Board - fills remaining space
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center
             ) {
                 when {
-                    isXandO -> TicTacToeBoard(
-                        gameState = gameState,
-                        lastPlacedPosition = lastPlacedPosition,
-                        isDarkTheme = isDarkTheme,
-                        isGameFrozen = winner != null || isLoading,
-                        onTileClick = { row, col ->
-                            viewModel.placeTile(row, col)
-                        }
-                    )
-                    isConnect4 -> Connect4Board(
-                        gameState = gameState,
-                        lastPlacedPosition = lastPlacedPosition,
-                        isGameFrozen = winner != null || isLoading,
-                        onColumnClick = { col ->
-                            viewModel.placeConnect4Tile(col)
-                        }
-                    )
-                    else -> GameBoard(
-                        gameState = gameState,
-                        lastPlacedPosition = lastPlacedPosition,
-                        isDarkTheme = isDarkTheme,
-                        isGameFrozen = winner != null || isLoading,
-                        onTileClick = { row, col ->
-                            viewModel.placeTile(row, col)
-                        }
-                    )
+                    isXandO ->
+                            TicTacToeBoard(
+                                    gameState = gameState,
+                                    lastPlacedPosition = lastPlacedPosition,
+                                    isDarkTheme = isDarkTheme,
+                                    isGameFrozen = winner != null || isLoading,
+                                    onTileClick = { row, col -> viewModel.placeTile(row, col) }
+                            )
+                    isConnect4 ->
+                            Connect4Board(
+                                    gameState = gameState,
+                                    lastPlacedPosition = lastPlacedPosition,
+                                    isGameFrozen = winner != null || isLoading,
+                                    onColumnClick = { col -> viewModel.placeConnect4Tile(col) }
+                            )
+                    else ->
+                            GameBoard(
+                                    gameState = gameState,
+                                    lastPlacedPosition = lastPlacedPosition,
+                                    isDarkTheme = isDarkTheme,
+                                    isGameFrozen = winner != null || isLoading,
+                                    onTileClick = { row, col -> viewModel.placeTile(row, col) }
+                            )
                 }
             }
         }
