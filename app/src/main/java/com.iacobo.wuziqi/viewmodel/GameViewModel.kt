@@ -121,7 +121,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             boardSize: Int,
             winLength: Int,
             opponent: Opponent,
-            skipStartSound: Boolean = false
+            skipStartSound: Boolean = true
     ) {
         // Clear any existing game
         winner = null
