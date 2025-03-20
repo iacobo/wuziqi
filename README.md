@@ -39,7 +39,7 @@ A simple Wuziqi game for android (aka [Gomoku / Connect 5](https://en.wikipedia.
 
 - play with a friend or challenge the computer
 - design your own custom games
-- discover an ~easter egg~ or two 🥚🐇
+- discover an \~easter egg\~ or two 🥚🐇
 
 Completely FOSS - no ads, no trackers, nothing unnecessary. Just a clean, offline, 2-player boardgame app.
 

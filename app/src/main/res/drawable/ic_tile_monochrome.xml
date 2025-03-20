@@ -36,18 +36,18 @@
         android:strokeWidth="4"
         android:strokeAlpha="0.7"
         android:fillColor="#FFFFFF"
-        android:fillAlpha="0.2"
+        android:fillAlpha="1"
         android:pathData="M83.33,166.67m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
 
     <!-- Black Stone in Bottom Right -->
     <path
         android:fillColor="#FFFFFF"
-        android:fillAlpha="0.8"
+        android:fillAlpha="1"
         android:pathData="M166.67,166.67m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
 
     <!-- Black Stone in Top Left -->
     <path
         android:fillColor="#FFFFFF"
-        android:fillAlpha="0.8"
+        android:fillAlpha="1"
         android:pathData="M83.33,83.33m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
 </vector>
