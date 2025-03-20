@@ -16,8 +16,8 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Grid3x3
 import androidx.compose.material.icons.filled.Margin
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ViewComfy
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -74,7 +74,7 @@ fun StartScreen(
                             Spacer(Modifier.weight(1f))
                             IconButton(onClick = onNavigateToSettings) {
                                 Icon(
-                                        imageVector = Icons.Default.Settings,
+                                        imageVector = Icons.Default.Menu,
                                         contentDescription = stringResource(R.string.settings)
                                 )
                             }
