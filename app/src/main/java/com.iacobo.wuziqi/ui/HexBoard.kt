@@ -191,10 +191,10 @@ fun HexBoard(
                             val endY = hexVertices[nextIdx].second
 
                             // Determine if this edge is on the outer boundary
-                            val isTopEdge = isTopRow && i in 0..1
-                            val isBottomEdge = isBottomRow && i in 3..4
-                            val isLeftEdge = isLeftCol && i in 2..3
-                            val isRightEdge = isRightCol && i in 5 || (i == 0 && isRightCol)
+                            val isTopEdge = isTopRow && (i == 0 || i == 1)
+                            val isBottomEdge = isBottomRow && (i == 3 || i == 4)
+                            val isLeftEdge = isLeftCol && (i == 2 || i == 3)
+                            val isRightEdge = isRightCol && (i == 5 || i == 0)
 
                             val edgeColor =
                                     when {
