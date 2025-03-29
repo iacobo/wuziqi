@@ -2,23 +2,25 @@ package com.iacobo.wuziqi.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.viewmodel.Position
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
@@ -45,12 +47,47 @@ fun HexBoard(
     
     Box(
         modifier = Modifier
-            .fillMaxSize()
+            .aspectRatio(1f)
             .padding(16.dp)
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        // Draw hexagonal grid on canvas
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        // Draw hexagonal grid and handle clicks with a single Canvas
+        Canvas(modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(isGameFrozen) {
+                if (!isGameFrozen) {
+                    detectTapGestures { tapOffset ->
+                        // Calculate hex dimensions same as in drawing
+                        val hexRadius = size.minDimension / (boardSize * 2)
+                        val hexHeight = hexRadius * 2
+                        val hexWidth = hexRadius * sqrt(3f)
+                        
+                        val xOffset = (size.width - hexWidth * (boardSize + 0.5f)) / 2
+                        val yOffset = (size.height - hexHeight * boardSize * 0.75f - hexHeight / 4) / 2
+                        
+                        // Find which hex was clicked
+                        for (row in 0 until boardSize) {
+                            for (col in 0 until boardSize) {
+                                val centerX = xOffset + col * hexWidth + (row % 2) * (hexWidth / 2)
+                                val centerY = yOffset + row * hexHeight * 0.75f + hexHeight / 2
+                                
+                                // Distance check with a bit of margin for hexagonal shape
+                                val distance = sqrt(
+                                    (tapOffset.x - centerX).pow(2) + 
+                                    (tapOffset.y - centerY).pow(2)
+                                )
+                                
+                                if (distance < hexRadius * 0.9f && 
+                                    gameState.board[row][col] == GameState.EMPTY) {
+                                    onTileClick(row, col)
+                                    return@detectTapGestures
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ) {
             val hexRadius = size.minDimension / (boardSize * 2)
             val hexHeight = hexRadius * 2
             val hexWidth = hexRadius * sqrt(3f)
@@ -80,7 +117,7 @@ fun HexBoard(
             }
             drawPath(edgePath2, color = edgeColor2.copy(alpha = 0.2f), style = Fill)
             
-            // Create hit areas and draw hexagons for each cell
+            // Draw hexagons for each cell
             for (row in 0 until boardSize) {
                 for (col in 0 until boardSize) {
                     val centerX = xOffset + col * hexWidth + (row % 2) * (hexWidth / 2)
@@ -121,54 +158,6 @@ fun HexBoard(
                     }
                 }
             }
-            
-            // Create clickable areas over each hexagon
-            for (row in 0 until boardSize) {
-                for (col in 0 until boardSize) {
-                    val centerX = xOffset + col * hexWidth + (row % 2) * (hexWidth / 2)
-                    val centerY = yOffset + row * hexHeight * 0.75f + hexHeight / 2
-                    
-                    // Only add click handlers for empty cells
-                    if (gameState.board[row][col] == GameState.EMPTY && !isGameFrozen) {
-                        // Calculate the clickable area around the hexagon
-                        val clickRadius = hexRadius * 0.9f
-                        val clickArea = Size(clickRadius * 2, clickRadius * 2)
-                        val clickTopLeft = Offset(centerX - clickRadius, centerY - clickRadius)
-                        
-                        // Add invisible clickable box
-                        drawRect(
-                            color = Color.Transparent,
-                            topLeft = clickTopLeft,
-                            size = clickArea
-                        )
-                        
-                        // Handle click events
-                        val clickAreaPath = createHexagonPath(centerX, centerY, clickRadius)
-                        val r = row
-                        val c = col
-                        
-                        if (isPointInPath(clickAreaPath, centerX, centerY)) {
-                            // We can't actually register click events in Canvas directly,
-                            // but we've set up the hitboxes for the cell locations
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Create an overlay of clickable areas
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                // Create a clickable box for each hexagon cell
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            enabled = gameState.board[row][col] == GameState.EMPTY && !isGameFrozen,
-                            onClick = { onTileClick(row, col) }
-                        )
-                )
-            }
         }
     }
 }
@@ -191,13 +180,4 @@ private fun createHexagonPath(centerX: Float, centerY: Float, radius: Float): Pa
         }
         close()
     }
-}
-
-/**
- * Simple check if a point is within a path (approximation).
- */
-private fun isPointInPath(path: Path, x: Float, y: Float): Boolean {
-    // This is a simplified approximation
-    // In a real app, you would use a more sophisticated hit-testing algorithm
-    return true
 }
