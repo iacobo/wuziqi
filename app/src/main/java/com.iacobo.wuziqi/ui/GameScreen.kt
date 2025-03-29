@@ -1,6 +1,7 @@
 package com.iacobo.wuziqi.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -93,28 +94,138 @@ fun GameScreen(
         val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-        Scaffold(
-                topBar = {
-                        CenterAlignedTopAppBar(
-                                title = {
-                                        Text(
-                                                text = appTitle,
-                                                style = MaterialTheme.typography.titleLarge
+        // Calculate the player status text for display
+        val playerStatusText =
+                if (isLoading) {
+                        stringResource(R.string.computer_thinking)
+                } else if (winner == DRAW) {
+                        stringResource(R.string.draw)
+                } else if (winner != null) {
+                        when {
+                                isXandO ->
+                                        stringResource(
+                                                R.string.winner_format,
+                                                if (winner == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_x)
+                                                else stringResource(R.string.player_o)
                                         )
-                                },
-                                colors =
-                                        TopAppBarDefaults.topAppBarColors(
-                                                containerColor =
-                                                        MaterialTheme.colorScheme.background,
-                                                titleContentColor =
-                                                        MaterialTheme.colorScheme.onBackground
+                                isConnect4 ->
+                                        stringResource(
+                                                R.string.winner_format,
+                                                if (winner == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_red)
+                                                else stringResource(R.string.player_yellow)
                                         )
-                        )
-                },
-                bottomBar = {
-                        BottomAppBar(
-                                actions = {
-                                        // Evenly distribute icons with spacers
+                                isHex ->
+                                        stringResource(
+                                                R.string.winner_format,
+                                                if (winner == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_red)
+                                                else stringResource(R.string.player_blue)
+                                        )
+                                else -> {
+                                        if (gameState.againstComputer) {
+                                                if (winner == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.you_won)
+                                                else stringResource(R.string.computer_won)
+                                        } else {
+                                                stringResource(
+                                                        R.string.winner_format,
+                                                        if (winner == GameState.PLAYER_ONE)
+                                                                stringResource(
+                                                                        R.string.player_black
+                                                                )
+                                                        else stringResource(R.string.player_white)
+                                                )
+                                        }
+                                }
+                        }
+                } else {
+                        when {
+                                isXandO ->
+                                        stringResource(
+                                                R.string.player_turn_format,
+                                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_x)
+                                                else stringResource(R.string.player_o)
+                                        )
+                                isConnect4 ->
+                                        stringResource(
+                                                R.string.player_turn_format,
+                                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_red)
+                                                else stringResource(R.string.player_yellow)
+                                        )
+                                isHex ->
+                                        stringResource(
+                                                R.string.player_turn_format,
+                                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.player_red)
+                                                else stringResource(R.string.player_blue)
+                                        )
+                                else -> {
+                                        if (gameState.againstComputer) {
+                                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                                        stringResource(R.string.your_turn)
+                                                else stringResource(R.string.computer_thinking)
+                                        } else {
+                                                stringResource(
+                                                        R.string.player_turn_format,
+                                                        if (gameState.currentPlayer ==
+                                                                        GameState.PLAYER_ONE
+                                                        )
+                                                                stringResource(
+                                                                        R.string.player_black
+                                                                )
+                                                        else stringResource(R.string.player_white)
+                                                )
+                                        }
+                                }
+                        }
+                }
+
+        // Calculate the player color
+        val playerColor =
+                when {
+                        isConnect4 ->
+                                if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE)
+                                        Connect4PieceRed
+                                else Connect4PieceYellow
+                        isHex ->
+                                if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE)
+                                        HexPieceRed
+                                else HexPieceBlue
+                        else ->
+                                if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE)
+                                        MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.secondary
+                }
+
+        // Conditional scaffold based on orientation
+        if (!isLandscape) {
+                // PORTRAIT MODE - Use normal Scaffold with top and bottom bars
+                Scaffold(
+                        topBar = {
+                                CenterAlignedTopAppBar(
+                                        title = {
+                                                Text(
+                                                        text = appTitle,
+                                                        style = MaterialTheme.typography.titleLarge
+                                                )
+                                        },
+                                        colors =
+                                                TopAppBarDefaults.topAppBarColors(
+                                                        containerColor =
+                                                                MaterialTheme.colorScheme
+                                                                        .background,
+                                                        titleContentColor =
+                                                                MaterialTheme.colorScheme
+                                                                        .onBackground
+                                                )
+                                )
+                        },
+                        bottomBar = {
+                                BottomAppBar {
                                         Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -172,423 +283,14 @@ fun GameScreen(
                                                 }
                                         }
                                 }
-                        )
-                }
-        ) { innerPadding ->
-                if (isLandscape) {
-                        // Landscape layout
-                        Row(
-                                modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                                verticalAlignment = Alignment.CenterVertically
-                        ) {
-                                // Left side - Player Status Text
-                                Box(
-                                        modifier =
-                                                Modifier.weight(0.2f)
-                                                        .fillMaxHeight()
-                                                        .padding(horizontal = 16.dp),
-                                        contentAlignment = Alignment.Center
-                                ) {
-                                        // Player status or loading indicator
-                                        if (isLoading) {
-                                                Row(
-                                                        verticalAlignment =
-                                                                Alignment.CenterVertically
-                                                ) {
-                                                        CircularProgressIndicator(
-                                                                modifier = Modifier.size(24.dp),
-                                                                color =
-                                                                        MaterialTheme.colorScheme
-                                                                                .secondary,
-                                                                strokeWidth = 2.dp
-                                                        )
-                                                        Spacer(modifier = Modifier.width(8.dp))
-                                                        Text(
-                                                                text =
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .computer_thinking
-                                                                        ),
-                                                                style =
-                                                                        MaterialTheme.typography
-                                                                                .titleMedium,
-                                                                color =
-                                                                        MaterialTheme.colorScheme
-                                                                                .secondary
-                                                        )
-                                                }
-                                        } else if (winner == DRAW) {
-                                                // Show draw message
-                                                Text(
-                                                        text = stringResource(R.string.draw),
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .titleMedium,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                )
-                                        } else if (winner != null) {
-                                                // Show winner with fireworks emoji
-                                                val winnerText =
-                                                        when {
-                                                                isXandO ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .winner_format,
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_x
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_o
-                                                                                        )
-                                                                        )
-                                                                isConnect4 ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .winner_format,
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_red
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_yellow
-                                                                                        )
-                                                                        )
-                                                                isHex ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .winner_format,
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_red
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_blue
-                                                                                        )
-                                                                        )
-                                                                else -> {
-                                                                        // Handle computer opponent
-                                                                        // case
-                                                                        if (gameState
-                                                                                        .againstComputer
-                                                                        ) {
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .you_won
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .computer_won
-                                                                                        )
-                                                                        } else {
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .winner_format,
-                                                                                        if (winner ==
-                                                                                                        GameState
-                                                                                                                .PLAYER_ONE
-                                                                                        )
-                                                                                                stringResource(
-                                                                                                        R.string
-                                                                                                                .player_black
-                                                                                                )
-                                                                                        else
-                                                                                                stringResource(
-                                                                                                        R.string
-                                                                                                                .player_white
-                                                                                                )
-                                                                                )
-                                                                        }
-                                                                }
-                                                        }
-
-                                                val winnerColor =
-                                                        when {
-                                                                isConnect4 ->
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                Connect4PieceRed
-                                                                        else Connect4PieceYellow
-                                                                isHex ->
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                HexPieceRed
-                                                                        else HexPieceBlue
-                                                                else ->
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .primary
-                                                                        else
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .secondary
-                                                        }
-
-                                                Text(
-                                                        text = winnerText,
-                                                        style =
-                                                                MaterialTheme.typography.titleMedium
-                                                                        .copy(
-                                                                                fontWeight =
-                                                                                        FontWeight
-                                                                                                .Bold
-                                                                        ),
-                                                        color = winnerColor,
-                                                        textAlign = TextAlign.Center
-                                                )
-                                        } else {
-                                                // Show current player
-                                                val playerText =
-                                                        when {
-                                                                isXandO ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .player_turn_format,
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_x
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_o
-                                                                                        )
-                                                                        )
-                                                                isConnect4 ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .player_turn_format,
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_red
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_yellow
-                                                                                        )
-                                                                        )
-                                                                isHex ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .player_turn_format,
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_red
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_blue
-                                                                                        )
-                                                                        )
-                                                                else -> {
-                                                                        // Handle computer opponent
-                                                                        // case
-                                                                        if (gameState
-                                                                                        .againstComputer
-                                                                        ) {
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .your_turn
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .computer_thinking
-                                                                                        )
-                                                                        } else {
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_turn_format,
-                                                                                        if (gameState
-                                                                                                        .currentPlayer ==
-                                                                                                        GameState
-                                                                                                                .PLAYER_ONE
-                                                                                        )
-                                                                                                stringResource(
-                                                                                                        R.string
-                                                                                                                .player_black
-                                                                                                )
-                                                                                        else
-                                                                                                stringResource(
-                                                                                                        R.string
-                                                                                                                .player_white
-                                                                                                )
-                                                                                )
-                                                                        }
-                                                                }
-                                                        }
-
-                                                val playerColor =
-                                                        when {
-                                                                isConnect4 ->
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                Connect4PieceRed
-                                                                        else Connect4PieceYellow
-                                                                isHex ->
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                HexPieceRed
-                                                                        else HexPieceBlue
-                                                                else ->
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .primary
-                                                                        else
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .secondary
-                                                        }
-
-                                                Text(
-                                                        text = playerText,
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .titleMedium,
-                                                        color = playerColor,
-                                                        textAlign = TextAlign.Center
-                                                )
-                                        }
-                                }
-
-                                // Center - Game Board with wider aspect ratio for Hex
-                                Box(
-                                        modifier = Modifier.weight(0.8f).fillMaxHeight(),
-                                        contentAlignment = Alignment.Center
-                                ) {
-                                        when {
-                                                isXandO ->
-                                                        TicTacToeBoard(
-                                                                gameState = gameState,
-                                                                lastPlacedPosition =
-                                                                        lastPlacedPosition,
-                                                                isDarkTheme = isDarkTheme,
-                                                                isGameFrozen =
-                                                                        winner != null || isLoading,
-                                                                onTileClick = { row, col ->
-                                                                        viewModel.placeTile(
-                                                                                row,
-                                                                                col
-                                                                        )
-                                                                }
-                                                        )
-                                                isConnect4 ->
-                                                        Connect4Board(
-                                                                gameState = gameState,
-                                                                lastPlacedPosition =
-                                                                        lastPlacedPosition,
-                                                                isGameFrozen =
-                                                                        winner != null || isLoading,
-                                                                onColumnClick = { col ->
-                                                                        viewModel.placeConnect4Tile(
-                                                                                col
-                                                                        )
-                                                                }
-                                                        )
-                                                isHex ->
-                                                        HexBoard(
-                                                                gameState = gameState,
-                                                                lastPlacedPosition =
-                                                                        lastPlacedPosition,
-                                                                isGameFrozen =
-                                                                        winner != null || isLoading,
-                                                                onTileClick = { row, col ->
-                                                                        viewModel.placeTile(
-                                                                                row,
-                                                                                col
-                                                                        )
-                                                                }
-                                                        )
-                                                else ->
-                                                        GameBoard(
-                                                                gameState = gameState,
-                                                                lastPlacedPosition =
-                                                                        lastPlacedPosition,
-                                                                isDarkTheme = isDarkTheme,
-                                                                isGameFrozen =
-                                                                        winner != null || isLoading,
-                                                                onTileClick = { row, col ->
-                                                                        viewModel.placeTile(
-                                                                                row,
-                                                                                col
-                                                                        )
-                                                                }
-                                                        )
-                                        }
-                                }
                         }
-                } else {
-                        // Portrait layout (original)
+                ) { innerPadding ->
+                        // Portrait Content
                         Column(
                                 modifier = Modifier.padding(innerPadding).fillMaxSize(),
                                 horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                                // Fixed height container for player indicator to prevent layout
-                                // shifts
+                                // Status display
                                 Box(
                                         modifier =
                                                 Modifier.fillMaxWidth()
@@ -623,297 +325,20 @@ fun GameScreen(
                                                                                 .secondary
                                                         )
                                                 }
-                                        } else if (winner == DRAW) {
-                                                // Show draw message
+                                        } else {
                                                 Text(
-                                                        text = stringResource(R.string.draw),
+                                                        text = playerStatusText,
                                                         style =
-                                                                MaterialTheme.typography
-                                                                        .titleMedium,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                )
-                                        } else if (winner != null) {
-                                                // Show winner with fireworks emoji
-                                                val winnerText =
-                                                        when {
-                                                                isXandO ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .winner_format,
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_x
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_o
-                                                                                        )
-                                                                        )
-                                                                isConnect4 ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .winner_format,
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_red
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_yellow
-                                                                                        )
-                                                                        )
-                                                                isHex ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .winner_format,
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_red
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_blue
-                                                                                        )
-                                                                        )
-                                                                else -> {
-                                                                        // Handle computer opponent
-                                                                        // case
-                                                                        if (gameState
-                                                                                        .againstComputer
-                                                                        ) {
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .you_won
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .computer_won
-                                                                                        )
-                                                                        } else {
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .winner_format,
-                                                                                        if (winner ==
-                                                                                                        GameState
-                                                                                                                .PLAYER_ONE
-                                                                                        )
-                                                                                                stringResource(
-                                                                                                        R.string
-                                                                                                                .player_black
-                                                                                                )
-                                                                                        else
-                                                                                                stringResource(
-                                                                                                        R.string
-                                                                                                                .player_white
-                                                                                                )
-                                                                                )
-                                                                        }
-                                                                }
-                                                        }
-
-                                                val winnerColor =
-                                                        when {
-                                                                isConnect4 ->
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                Connect4PieceRed
-                                                                        else Connect4PieceYellow
-                                                                isHex ->
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                HexPieceRed
-                                                                        else HexPieceBlue
-                                                                else ->
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .primary
-                                                                        else
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .secondary
-                                                        }
-
-                                                Text(
-                                                        text = winnerText,
-                                                        style =
-                                                                MaterialTheme.typography.titleMedium
-                                                                        .copy(
+                                                                if (winner != null)
+                                                                        MaterialTheme.typography
+                                                                                .titleMedium.copy(
                                                                                 fontWeight =
                                                                                         FontWeight
                                                                                                 .Bold
-                                                                        ),
-                                                        color = winnerColor
-                                                )
-                                        } else {
-                                                // Show current player
-                                                val playerText =
-                                                        when {
-                                                                isXandO ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .player_turn_format,
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_x
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_o
-                                                                                        )
                                                                         )
-                                                                isConnect4 ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .player_turn_format,
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_red
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_yellow
-                                                                                        )
-                                                                        )
-                                                                isHex ->
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .player_turn_format,
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_red
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_blue
-                                                                                        )
-                                                                        )
-                                                                else -> {
-                                                                        // Handle computer opponent
-                                                                        // case
-                                                                        if (gameState
-                                                                                        .againstComputer
-                                                                        ) {
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .your_turn
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .computer_thinking
-                                                                                        )
-                                                                        } else {
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_turn_format,
-                                                                                        if (gameState
-                                                                                                        .currentPlayer ==
-                                                                                                        GameState
-                                                                                                                .PLAYER_ONE
-                                                                                        )
-                                                                                                stringResource(
-                                                                                                        R.string
-                                                                                                                .player_black
-                                                                                                )
-                                                                                        else
-                                                                                                stringResource(
-                                                                                                        R.string
-                                                                                                                .player_white
-                                                                                                )
-                                                                                )
-                                                                        }
-                                                                }
-                                                        }
-
-                                                val playerColor =
-                                                        when {
-                                                                isConnect4 ->
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                Connect4PieceRed
-                                                                        else Connect4PieceYellow
-                                                                isHex ->
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                HexPieceRed
-                                                                        else HexPieceBlue
-                                                                else ->
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .primary
-                                                                        else
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .secondary
-                                                        }
-
-                                                Text(
-                                                        text = playerText,
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .titleMedium,
+                                                                else
+                                                                        MaterialTheme.typography
+                                                                                .titleMedium,
                                                         color = playerColor
                                                 )
                                         }
@@ -983,6 +408,209 @@ fun GameScreen(
                                                                 }
                                                         )
                                         }
+                                }
+                        }
+                }
+        } else {
+                // LANDSCAPE MODE - Use Box layout without Scaffold to control exact positioning
+                Box(modifier = Modifier.fillMaxSize()) {
+                        // Content area layout
+                        Row(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                                // Left side - Game info column (title and player status)
+                                Box(
+                                        modifier =
+                                                Modifier.weight(0.25f)
+                                                        .fillMaxHeight()
+                                                        .padding(start = 16.dp, end = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                ) {
+                                        Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                        ) {
+                                                // Title - now here instead of in top bar
+                                                Text(
+                                                        text = appTitle,
+                                                        style = MaterialTheme.typography.titleLarge,
+                                                        textAlign = TextAlign.Center
+                                                )
+
+                                                Spacer(modifier = Modifier.height(32.dp))
+
+                                                // Player status
+                                                if (isLoading) {
+                                                        Row(
+                                                                verticalAlignment =
+                                                                        Alignment.CenterVertically
+                                                        ) {
+                                                                CircularProgressIndicator(
+                                                                        modifier =
+                                                                                Modifier.size(
+                                                                                        24.dp
+                                                                                ),
+                                                                        color =
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .secondary,
+                                                                        strokeWidth = 2.dp
+                                                                )
+                                                                Spacer(
+                                                                        modifier =
+                                                                                Modifier.width(8.dp)
+                                                                )
+                                                                Text(
+                                                                        text =
+                                                                                stringResource(
+                                                                                        R.string
+                                                                                                .computer_thinking
+                                                                                ),
+                                                                        style =
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .titleMedium,
+                                                                        color =
+                                                                                MaterialTheme
+                                                                                        .colorScheme
+                                                                                        .secondary
+                                                                )
+                                                        }
+                                                } else {
+                                                        Text(
+                                                                text = playerStatusText,
+                                                                style =
+                                                                        if (winner != null)
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .titleMedium
+                                                                                        .copy(
+                                                                                                fontWeight =
+                                                                                                        FontWeight
+                                                                                                                .Bold
+                                                                                        )
+                                                                        else
+                                                                                MaterialTheme
+                                                                                        .typography
+                                                                                        .titleMedium,
+                                                                color = playerColor,
+                                                                textAlign = TextAlign.Center
+                                                        )
+                                                }
+                                        }
+                                }
+
+                                // Center - Game Board
+                                Box(
+                                        modifier = Modifier.weight(0.75f).fillMaxHeight(),
+                                        contentAlignment = Alignment.Center
+                                ) {
+                                        when {
+                                                isXandO ->
+                                                        TicTacToeBoard(
+                                                                gameState = gameState,
+                                                                lastPlacedPosition =
+                                                                        lastPlacedPosition,
+                                                                isDarkTheme = isDarkTheme,
+                                                                isGameFrozen =
+                                                                        winner != null || isLoading,
+                                                                onTileClick = { row, col ->
+                                                                        viewModel.placeTile(
+                                                                                row,
+                                                                                col
+                                                                        )
+                                                                }
+                                                        )
+                                                isConnect4 ->
+                                                        Connect4Board(
+                                                                gameState = gameState,
+                                                                lastPlacedPosition =
+                                                                        lastPlacedPosition,
+                                                                isGameFrozen =
+                                                                        winner != null || isLoading,
+                                                                onColumnClick = { col ->
+                                                                        viewModel.placeConnect4Tile(
+                                                                                col
+                                                                        )
+                                                                }
+                                                        )
+                                                isHex ->
+                                                        HexBoard(
+                                                                gameState = gameState,
+                                                                lastPlacedPosition =
+                                                                        lastPlacedPosition,
+                                                                isGameFrozen =
+                                                                        winner != null || isLoading,
+                                                                onTileClick = { row, col ->
+                                                                        viewModel.placeTile(
+                                                                                row,
+                                                                                col
+                                                                        )
+                                                                }
+                                                        )
+                                                else ->
+                                                        GameBoard(
+                                                                gameState = gameState,
+                                                                lastPlacedPosition =
+                                                                        lastPlacedPosition,
+                                                                isDarkTheme = isDarkTheme,
+                                                                isGameFrozen =
+                                                                        winner != null || isLoading,
+                                                                onTileClick = { row, col ->
+                                                                        viewModel.placeTile(
+                                                                                row,
+                                                                                col
+                                                                        )
+                                                                }
+                                                        )
+                                        }
+                                }
+                        }
+
+                        // VERTICAL SIDE ACTION BAR for landscape mode - right side
+                        Column(
+                                modifier =
+                                        Modifier.align(Alignment.CenterEnd)
+                                                .fillMaxHeight()
+                                                .width(64.dp)
+                                                .background(
+                                                        MaterialTheme.colorScheme.surfaceVariant
+                                                ),
+                                verticalArrangement = Arrangement.SpaceEvenly,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                                // Home button
+                                IconButton(onClick = onNavigateToHome) {
+                                        Icon(
+                                                imageVector = Icons.Default.Home,
+                                                contentDescription = stringResource(R.string.home)
+                                        )
+                                }
+
+                                // Undo button (disabled if no moves or game frozen)
+                                IconButton(
+                                        onClick = { viewModel.undoMove() },
+                                        enabled = moveHistory.isNotEmpty() && !isLoading
+                                ) {
+                                        Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.Undo,
+                                                contentDescription = stringResource(R.string.undo)
+                                        )
+                                }
+
+                                // Reset button
+                                IconButton(onClick = { viewModel.resetGame() }) {
+                                        Icon(
+                                                imageVector = Icons.Default.Replay,
+                                                contentDescription = stringResource(R.string.reset)
+                                        )
+                                }
+
+                                // Settings button
+                                IconButton(onClick = onNavigateToSettings) {
+                                        Icon(
+                                                imageVector = Icons.Default.Menu,
+                                                contentDescription =
+                                                        stringResource(R.string.settings)
+                                        )
                                 }
                         }
                 }
