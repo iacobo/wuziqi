@@ -12,14 +12,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.AppRegistration
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Grid3x3
 import androidx.compose.material.icons.filled.Hexagon
 import androidx.compose.material.icons.filled.Margin
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ViewComfy
+import androidx.compose.material.icons.filled.TransitionDissolve
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -116,7 +116,7 @@ fun StartScreen(
             GameModeButton(
                     title = stringResource(R.string.standard_wuziqi),
                     description = stringResource(R.string.standard_wuziqi_desc),
-                    icon = Icons.Default.Apps,
+                    icon = Icons.Default.TransitionDissolve,
                     onClick = {
                         currentMode = "standard"
                         showOpponentDialog = true
@@ -128,7 +128,7 @@ fun StartScreen(
             GameModeButton(
                     title = stringResource(R.string.custom_game),
                     description = stringResource(R.string.custom_game_desc),
-                    icon = Icons.Default.ViewComfy,
+                    icon = Icons.Default.AppRegistration,
                     onClick = { showCustomDialog = true }
             )
 
@@ -163,16 +163,13 @@ fun StartScreen(
                 )
             }
 
-            // Add Hex game option when discovered
             if (discoveredEasterEggs.contains("hex")) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 GameModeButton(
                         title = "Hex",
-                        description = "Strategic connection game on hexagonal grid",
-                        icon =
-                                Icons.Default
-                                        .Hexagon, // You'll need to add this icon or use another one
+                        description = "Strategic edge-connection game on hexagonal grid",
+                        icon = Icons.Default.Hexagon,
                         onClick = {
                             // Launch with 11x11 board and 8-in-a-row for Hex
                             currentMode = "hex"
@@ -290,10 +287,7 @@ fun OpponentSelectionDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OpponentButton(
-                            title =
-                                    stringResource(
-                                            R.string.play_against_human
-                                    ), // This string now translates to "Over the board"
+                            title = stringResource(R.string.play_against_human),
                             icon = Icons.Default.Person,
                             onClick = { onSelectOpponent(Opponent.HUMAN) }
                     )
@@ -461,7 +455,7 @@ fun CustomGameDialog(onDismiss: () -> Unit, onStartGame: (boardSize: Int, winLen
 
                     // Only show win length warning if not a special game and if it's a large win
                     // length
-                    if (!isTicTacToe && !isConnect4 && winLength > boardSize / 2 + 1) {
+                    if (!isTicTacToe && !isConnect4 && !isHex && winLength > boardSize / 2 + 1) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                                 text = stringResource(R.string.win_length_warning),
