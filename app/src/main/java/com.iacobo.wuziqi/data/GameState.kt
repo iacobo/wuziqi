@@ -36,6 +36,7 @@ class GameState // Constructor with custom board size and win condition
 
     // Changed board to use mutableStateOf for proper observation
     private val _boardState = mutableStateOf(Array(boardSize) { IntArray(boardSize) { EMPTY } })
+    private val winningPath = mutableSetOf<Pair<Int, Int>>()
 
     // Property for access to the board
     var board: Array<IntArray>
@@ -45,6 +46,8 @@ class GameState // Constructor with custom board size and win condition
         }
 
     var currentPlayer: Int = PLAYER_ONE
+
+    fun getWinningPath(): Set<Pair<Int, Int>> = winningPath
 
     /**
      * Places a tile on the board and switches the current player. FIXED to create a new array for
@@ -180,6 +183,9 @@ class GameState // Constructor with custom board size and win condition
         // Create a visited array to track visited cells in our search
         val visited = Array(boardSize) { BooleanArray(boardSize) }
 
+        // Reset winning path before checking
+        winningPath.clear()
+
         // For Player One (1), check connection from top row to bottom row
         if (playerValue == PLAYER_ONE) {
             // Check all pieces in the top row that belong to player 1
@@ -191,7 +197,7 @@ class GameState // Constructor with custom board size and win condition
                             visited[r][c] = false
                         }
                     }
-                    
+
                     // Start DFS from this top row piece
                     if (isConnectedToBottom(0, col, playerValue, visited)) {
                         return true
@@ -211,7 +217,7 @@ class GameState // Constructor with custom board size and win condition
                             visited[r][c] = false
                         }
                     }
-                    
+
                     // Start DFS from this left column piece
                     if (isConnectedToRight(row, 0, playerValue, visited)) {
                         return true
@@ -225,8 +231,8 @@ class GameState // Constructor with custom board size and win condition
     }
 
     /**
-     * Checks if a cell is connected to the bottom row using DFS.
-     * FIXED: Correct neighbor calculation for hexagonal grid
+     * Checks if a cell is connected to the bottom row using DFS. FIXED: Correct neighbor
+     * calculation for hexagonal grid
      */
     private fun isConnectedToBottom(
             row: Int,
@@ -236,6 +242,7 @@ class GameState // Constructor with custom board size and win condition
     ): Boolean {
         // If we reached the bottom row, we found a path
         if (row == boardSize - 1) {
+            winningPath.add(Pair(row, col))
             return true
         }
 
@@ -243,15 +250,15 @@ class GameState // Constructor with custom board size and win condition
         visited[row][col] = true
 
         // Define all six neighbor directions for a hexagonal grid
-        // These are the 6 directions from any hexagon to its neighbors
-        val neighbors = arrayOf(
-            Pair(-1, 0),  // Top-left
-            Pair(-1, 1),  // Top-right
-            Pair(0, -1),  // Left
-            Pair(0, 1),   // Right
-            Pair(1, -1),  // Bottom-left
-            Pair(1, 0)    // Bottom-right
-        )
+        val neighbors =
+                arrayOf(
+                        Pair(-1, 0), // Top-left
+                        Pair(-1, 1), // Top-right
+                        Pair(0, -1), // Left
+                        Pair(0, 1), // Right
+                        Pair(1, -1), // Bottom-left
+                        Pair(1, 0) // Bottom-right
+                )
 
         // Check all 6 neighbors
         for ((dr, dc) in neighbors) {
@@ -260,12 +267,14 @@ class GameState // Constructor with custom board size and win condition
 
             // Check if the neighbor is valid, not visited, and belongs to the player
             if (newRow in 0 until boardSize &&
-                    newCol in 0 until boardSize &&
-                    !visited[newRow][newCol] &&
-                    board[newRow][newCol] == playerValue
+                            newCol in 0 until boardSize &&
+                            !visited[newRow][newCol] &&
+                            board[newRow][newCol] == playerValue
             ) {
                 // Recursively check if this neighbor leads to the bottom
                 if (isConnectedToBottom(newRow, newCol, playerValue, visited)) {
+                    // Add current cell to the winning path when returning from a successful path
+                    winningPath.add(Pair(row, col))
                     return true
                 }
             }
@@ -273,10 +282,9 @@ class GameState // Constructor with custom board size and win condition
 
         return false
     }
-
     /**
-     * Checks if a cell is connected to the right column using DFS.
-     * FIXED: Correct neighbor calculation for hexagonal grid
+     * Checks if a cell is connected to the right column using DFS. FIXED: Correct neighbor
+     * calculation for hexagonal grid
      */
     private fun isConnectedToRight(
             row: Int,
@@ -286,6 +294,7 @@ class GameState // Constructor with custom board size and win condition
     ): Boolean {
         // If we reached the rightmost column, we found a path
         if (col == boardSize - 1) {
+            winningPath.add(Pair(row, col))
             return true
         }
 
@@ -293,15 +302,15 @@ class GameState // Constructor with custom board size and win condition
         visited[row][col] = true
 
         // Define all six neighbor directions for a hexagonal grid
-        // These are the 6 directions from any hexagon to its neighbors
-        val neighbors = arrayOf(
-            Pair(-1, 0),  // Top-left
-            Pair(-1, 1),  // Top-right
-            Pair(0, -1),  // Left
-            Pair(0, 1),   // Right
-            Pair(1, -1),  // Bottom-left
-            Pair(1, 0)    // Bottom-right
-        )
+        val neighbors =
+                arrayOf(
+                        Pair(-1, 0), // Top-left
+                        Pair(-1, 1), // Top-right
+                        Pair(0, -1), // Left
+                        Pair(0, 1), // Right
+                        Pair(1, -1), // Bottom-left
+                        Pair(1, 0) // Bottom-right
+                )
 
         // Check all 6 neighbors
         for ((dr, dc) in neighbors) {
@@ -310,12 +319,14 @@ class GameState // Constructor with custom board size and win condition
 
             // Check if the neighbor is valid, not visited, and belongs to the player
             if (newRow in 0 until boardSize &&
-                    newCol in 0 until boardSize &&
-                    !visited[newRow][newCol] &&
-                    board[newRow][newCol] == playerValue
+                            newCol in 0 until boardSize &&
+                            !visited[newRow][newCol] &&
+                            board[newRow][newCol] == playerValue
             ) {
                 // Recursively check if this neighbor leads to the right edge
                 if (isConnectedToRight(newRow, newCol, playerValue, visited)) {
+                    // Add current cell to the winning path when returning from a successful path
+                    winningPath.add(Pair(row, col))
                     return true
                 }
             }

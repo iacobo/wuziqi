@@ -48,8 +48,21 @@ fun HexBoard(
         val tertiaryColor = MaterialTheme.colorScheme.tertiary
         val backgroundColor = MaterialTheme.colorScheme.surface
 
+        // New color for highlighting the winning path
+        val winningPathColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
+
         val density = LocalDensity.current
         val strokeWidth = with(density) { 1.5.dp.toPx() }
+
+        // Get the winning path if any
+        val winningPath =
+                remember(gameState.winner) {
+                        if (gameState.winner != null) {
+                                gameState.getWinningPath()
+                        } else {
+                                emptySet()
+                        }
+                }
 
         Box(modifier = Modifier.aspectRatio(1f).padding(16.dp).background(backgroundColor)) {
                 Canvas(
@@ -60,38 +73,34 @@ fun HexBoard(
                                                         val canvasWidth = size.width
                                                         val canvasHeight = size.height
 
-                                                        // FIX 1: Calculate the actual width needed
-                                                        // for the parallelogram shape
-                                                        // Previous calculation was incorrect,
-                                                        // causing extra space on the right
-                                                        // We need space for the board + the shift
-                                                        // from the lower rows
-                                                        val maxShiftWidth = boardSize * 0.5f
-                                                        val widthNeeded = boardSize + maxShiftWidth
+                                                        // FIXED: Calculate the actual width needed
+                                                        // for the hex board
+                                                        // The parallelogram has a width of
+                                                        // boardSize + (boardSize-1)/2
+                                                        // because each row is shifted by half a hex
+                                                        // width
+                                                        val rowOffset = (boardSize - 1) * 0.5f
+                                                        val effectiveWidth = boardSize + rowOffset
 
-                                                        // Scale to ensure the board fits within the
-                                                        // canvas width
+                                                        // Calculate hexagon size to fit the canvas
                                                         val hexRadius =
                                                                 minOf(
                                                                         canvasWidth /
-                                                                                (widthNeeded *
+                                                                                (effectiveWidth *
                                                                                         sqrt(3f)),
                                                                         canvasHeight /
                                                                                 ((boardSize +
                                                                                         0.5f) *
                                                                                         1.5f)
-                                                                ) * 0.98f // Increased from
-                                                        // 0.95f to 0.98f to
-                                                        // fill more space
+                                                                ) * 0.95f
 
                                                         val hexHeight = hexRadius * 2
                                                         val hexWidth = hexRadius * sqrt(3f)
 
-                                                        // Calculate offset to center the
-                                                        // parallelogram
+                                                        // FIXED: Center the board properly
                                                         val totalWidth =
                                                                 hexWidth * boardSize +
-                                                                        (hexWidth * maxShiftWidth)
+                                                                        (rowOffset * hexWidth / 2)
                                                         val totalHeight =
                                                                 hexHeight * boardSize * 0.75f +
                                                                         hexHeight / 4
@@ -101,16 +110,16 @@ fun HexBoard(
 
                                                         for (row in 0 until boardSize) {
                                                                 for (col in 0 until boardSize) {
-                                                                        // Correct offset pattern
-                                                                        // for each row to form a
+                                                                        // Apply correct offset for
+                                                                        // each row to create the
                                                                         // parallelogram
-                                                                        val rowOffset =
+                                                                        val rowShift =
                                                                                 row * (hexWidth / 2)
                                                                         val centerX =
                                                                                 xOffset +
                                                                                         col *
                                                                                                 hexWidth +
-                                                                                        rowOffset
+                                                                                        rowShift
                                                                         val centerY =
                                                                                 yOffset +
                                                                                         row *
@@ -160,35 +169,41 @@ fun HexBoard(
                         val canvasWidth = size.width
                         val canvasHeight = size.height
 
-                        // FIX 1: Improved calculation of the actual width needed
-                        val maxShiftWidth = (boardSize - 1) * 0.5f
-                        val widthNeeded = boardSize + maxShiftWidth
+                        // FIXED: Calculate the actual width needed for the hex board
+                        val rowOffset = (boardSize - 1) * 0.5f
+                        val effectiveWidth = boardSize + rowOffset
 
-                        // Scale to ensure the board fits within the canvas width
+                        // Calculate hexagon size to fit the canvas
                         val hexRadius =
                                 minOf(
-                                        canvasWidth / (widthNeeded * sqrt(3f)),
+                                        canvasWidth / (effectiveWidth * sqrt(3f)),
                                         canvasHeight / ((boardSize + 0.5f) * 1.5f)
-                                ) * 0.98f // Increased from 0.95f to fill more space
+                                ) * 0.95f
 
                         val hexHeight = hexRadius * 2
                         val hexWidth = hexRadius * sqrt(3f)
 
-                        // Calculate offset to center the parallelogram
-                        val totalWidth = hexWidth * boardSize + (hexWidth * maxShiftWidth)
+                        // FIXED: Center the board properly
+                        val totalWidth = hexWidth * boardSize + (rowOffset * hexWidth / 2)
                         val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
                         val xOffset = (canvasWidth - totalWidth) / 2
                         val yOffset = (canvasHeight - totalHeight) / 2
 
+                        // Map of positions to center coordinates for highlighting winning path
+                        val hexCenters = mutableMapOf<Pair<Int, Int>, Offset>()
+
                         // Draw all hexagons
                         for (row in 0 until boardSize) {
                                 for (col in 0 until boardSize) {
-                                        // Correct offset pattern for each row to form a
+                                        // Apply correct offset for each row to create the
                                         // parallelogram
-                                        val rowOffset = row * (hexWidth / 2)
-                                        val centerX = xOffset + col * hexWidth + rowOffset
+                                        val rowShift = row * (hexWidth / 2)
+                                        val centerX = xOffset + col * hexWidth + rowShift
                                         val centerY =
                                                 yOffset + row * hexHeight * 0.75f + hexHeight / 2
+
+                                        // Store the center for later use in path highlighting
+                                        hexCenters[Pair(row, col)] = Offset(centerX, centerY)
 
                                         // Store vertices for border edge coloring
                                         val hexVertices =
@@ -242,7 +257,6 @@ fun HexBoard(
                                                 )
                                         } else {
                                                 // For edge hexagons, color each edge appropriately
-                                                // FIX 2 & 3: Corrected edge coloring logic
                                                 for (i in 0 until 6) {
                                                         val nextIdx = (i + 1) % 6
                                                         val startX = hexVertices[i].first
@@ -254,7 +268,6 @@ fun HexBoard(
                                                                 isRightCol && (i == 4 || i == 5)
                                                         val isLeftEdge =
                                                                 isLeftCol && (i == 1 || i == 2)
-
                                                         val isTopEdge =
                                                                 isTopRow && (i == 3 || i == 4)
                                                         val isBottomEdge =
@@ -287,9 +300,72 @@ fun HexBoard(
                                                         )
                                                 }
                                         }
+                                }
+                        }
 
-                                        // Draw game pieces
+                        // Highlight the winning path if there is one
+                        if (winningPath.isNotEmpty() && winningPath.size > 1) {
+                                // Draw lines connecting the winning pieces
+                                val pathList = winningPath.toList()
+
+                                // Draw a glow under the winning path pieces
+                                for (pos in pathList) {
+                                        val center = hexCenters[pos] ?: continue
+                                        drawCircle(
+                                                color = winningPathColor,
+                                                radius = hexRadius * 0.7f,
+                                                center = center,
+                                                alpha = 0.5f
+                                        )
+                                }
+
+                                // Draw connectors between the winning path pieces
+                                for (i in 0 until pathList.size - 1) {
+                                        val startCenter = hexCenters[pathList[i]] ?: continue
+
+                                        // Find all connected neighbors in the path
+                                        val current = pathList[i]
+
+                                        // Define the neighbor directions
+                                        val neighbors =
+                                                arrayOf(
+                                                        Pair(-1, 0), // Top-left
+                                                        Pair(-1, 1), // Top-right
+                                                        Pair(0, -1), // Left
+                                                        Pair(0, 1), // Right
+                                                        Pair(1, -1), // Bottom-left
+                                                        Pair(1, 0) // Bottom-right
+                                                )
+
+                                        // Check each neighbor
+                                        for ((dr, dc) in neighbors) {
+                                                val neighborRow = current.first + dr
+                                                val neighborCol = current.second + dc
+                                                val neighbor = Pair(neighborRow, neighborCol)
+
+                                                // If the neighbor is part of the winning path, draw
+                                                // a connector line
+                                                if (winningPath.contains(neighbor)) {
+                                                        val endCenter =
+                                                                hexCenters[neighbor] ?: continue
+                                                        drawLine(
+                                                                color = winningPathColor,
+                                                                start = startCenter,
+                                                                end = endCenter,
+                                                                strokeWidth = strokeWidth * 3f
+                                                        )
+                                                }
+                                        }
+                                }
+                        }
+
+                        // Draw game pieces (after winning path so pieces are on top)
+                        for (row in 0 until boardSize) {
+                                for (col in 0 until boardSize) {
                                         if (gameState.board[row][col] != GameState.EMPTY) {
+                                                val pos = Pair(row, col)
+                                                val center = hexCenters[pos] ?: continue
+
                                                 val pieceColor =
                                                         when (gameState.board[row][col]) {
                                                                 GameState.PLAYER_ONE ->
@@ -301,7 +377,7 @@ fun HexBoard(
                                                 drawCircle(
                                                         color = pieceColor,
                                                         radius = hexRadius * 0.42f,
-                                                        center = Offset(centerX, centerY)
+                                                        center = center
                                                 )
 
                                                 // Add a subtle highlight to the top-left of the
@@ -311,19 +387,21 @@ fun HexBoard(
                                                         radius = hexRadius * 0.32f,
                                                         center =
                                                                 Offset(
-                                                                        centerX - hexRadius * 0.1f,
-                                                                        centerY - hexRadius * 0.1f
+                                                                        center.x - hexRadius * 0.1f,
+                                                                        center.y - hexRadius * 0.1f
                                                                 )
                                                 )
 
-                                                // Highlight the last placed piece
+                                                // Highlight the last placed piece if not part of
+                                                // the winning path
                                                 if (lastPlacedPosition?.row == row &&
-                                                                lastPlacedPosition.col == col
+                                                                lastPlacedPosition.col == col &&
+                                                                winningPath.isEmpty()
                                                 ) {
                                                         drawCircle(
                                                                 color = tertiaryColor,
                                                                 radius = hexRadius * 0.5f,
-                                                                center = Offset(centerX, centerY),
+                                                                center = center,
                                                                 style =
                                                                         Stroke(
                                                                                 width =
