@@ -75,7 +75,6 @@
     <string name="play_against_computer">Computer</string>
     <string name="ai_not_supported">AI unavailable for this configuration</string>
     <string name="start_game">Start Game</string>
-    <string name="cancel">Cancel</string>
     
     <!-- Custom Game Settings -->
     <string name="custom_game_settings">Custom Game Settings</string>
