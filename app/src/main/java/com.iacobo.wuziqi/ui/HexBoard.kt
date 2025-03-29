@@ -54,15 +54,8 @@ fun HexBoard(
         val density = LocalDensity.current
         val strokeWidth = with(density) { 1.5.dp.toPx() }
 
-        // Get the winning path if any
-        val winningPath =
-                remember(gameState.winner) {
-                        if (gameState.winner != null) {
-                                gameState.getWinningPath()
-                        } else {
-                                emptySet()
-                        }
-                }
+        // Get the winning path if the game is over (there's a winner)
+        val winningPath = if (isGameFrozen) gameState.getWinningPath() else emptySet()
 
         Box(modifier = Modifier.aspectRatio(1f).padding(16.dp).background(backgroundColor)) {
                 Canvas(
@@ -184,7 +177,7 @@ fun HexBoard(
                         val hexWidth = hexRadius * sqrt(3f)
 
                         // FIXED: Center the board properly
-                        val totalWidth = hexWidth * boardSize + (rowOffset * hexWidth / 2)
+                        val totalWidth = hexWidth * boardSize + (rowOffset * hexWidth)
                         val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
                         val xOffset = (canvasWidth - totalWidth) / 2
                         val yOffset = (canvasHeight - totalHeight) / 2
@@ -303,13 +296,10 @@ fun HexBoard(
                                 }
                         }
 
-                        // Highlight the winning path if there is one
-                        if (winningPath.isNotEmpty() && winningPath.size > 1) {
-                                // Draw lines connecting the winning pieces
-                                val pathList = winningPath.toList()
-
+                        // Highlight the winning path cells if there is a winner
+                        if (winningPath.isNotEmpty()) {
                                 // Draw a glow under the winning path pieces
-                                for (pos in pathList) {
+                                for (pos in winningPath) {
                                         val center = hexCenters[pos] ?: continue
                                         drawCircle(
                                                 color = winningPathColor,
@@ -319,12 +309,10 @@ fun HexBoard(
                                         )
                                 }
 
-                                // Draw connectors between the winning path pieces
-                                for (i in 0 until pathList.size - 1) {
-                                        val startCenter = hexCenters[pathList[i]] ?: continue
-
-                                        // Find all connected neighbors in the path
-                                        val current = pathList[i]
+                                // Draw connectors between adjacent pieces in the winning path
+                                val pathList = winningPath.toList()
+                                for (posA in pathList) {
+                                        val centerA = hexCenters[posA] ?: continue
 
                                         // Define the neighbor directions
                                         val neighbors =
@@ -337,23 +325,30 @@ fun HexBoard(
                                                         Pair(1, 0) // Bottom-right
                                                 )
 
-                                        // Check each neighbor
+                                        // Check each direction for adjacent pieces in the path
                                         for ((dr, dc) in neighbors) {
-                                                val neighborRow = current.first + dr
-                                                val neighborCol = current.second + dc
-                                                val neighbor = Pair(neighborRow, neighborCol)
+                                                val neighborPos =
+                                                        Pair(posA.first + dr, posA.second + dc)
 
-                                                // If the neighbor is part of the winning path, draw
-                                                // a connector line
-                                                if (winningPath.contains(neighbor)) {
-                                                        val endCenter =
-                                                                hexCenters[neighbor] ?: continue
-                                                        drawLine(
-                                                                color = winningPathColor,
-                                                                start = startCenter,
-                                                                end = endCenter,
-                                                                strokeWidth = strokeWidth * 3f
-                                                        )
+                                                // If the neighbor is in the winning path, draw a
+                                                // connector
+                                                if (winningPath.contains(neighborPos)) {
+                                                        val centerB =
+                                                                hexCenters[neighborPos] ?: continue
+
+                                                        // Only draw the connection once (from lower
+                                                        // to higher index)
+                                                        val idxA = pathList.indexOf(posA)
+                                                        val idxB = pathList.indexOf(neighborPos)
+                                                        if (idxA < idxB) {
+                                                                drawLine(
+                                                                        color = winningPathColor,
+                                                                        start = centerA,
+                                                                        end = centerB,
+                                                                        strokeWidth =
+                                                                                strokeWidth * 3f
+                                                                )
+                                                        }
                                                 }
                                         }
                                 }
