@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Grid3x3
+import androidx.compose.material.icons.filled.Hexagon
 import androidx.compose.material.icons.filled.Margin
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
