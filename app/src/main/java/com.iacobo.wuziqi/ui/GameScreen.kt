@@ -63,12 +63,14 @@ fun GameScreen(
         // Determine game type for easter eggs
         val isXandO = boardSize == 3 && winLength == 3
         val isConnect4 = boardSize == 7 && winLength == 4
+        val isHex = boardSize == 11 && winLength == 8 // New Hex game detection
 
         // Determine app title based on easter egg mode
         val appTitle =
                 when {
                         isXandO -> "X's & O's"
                         isConnect4 -> "Connect 4"
+                        isHex -> "Hex" // Add Hex title
                         else -> stringResource(R.string.app_name)
                 }
 
@@ -413,6 +415,15 @@ fun GameScreen(
                                                         isGameFrozen = winner != null || isLoading,
                                                         onColumnClick = { col ->
                                                                 viewModel.placeConnect4Tile(col)
+                                                        }
+                                                )
+                                        isHex ->
+                                                HexBoard( // Add Hex board option
+                                                        gameState = gameState,
+                                                        lastPlacedPosition = lastPlacedPosition,
+                                                        isGameFrozen = winner != null || isLoading,
+                                                        onTileClick = { row, col ->
+                                                                viewModel.placeTile(row, col)
                                                         }
                                                 )
                                         else ->

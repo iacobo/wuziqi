@@ -143,6 +143,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         } else if (boardSize == 7 && winLength == 4) {
             easterEggManager.addDiscoveredEasterEgg("connect4")
             discoveredEasterEggs = easterEggManager.getDiscoveredEasterEggs()
+        } else if (boardSize == 11 && winLength == 8) {
+            easterEggManager.addDiscoveredEasterEgg("hex")
+            discoveredEasterEggs = easterEggManager.getDiscoveredEasterEggs()
         }
 
         // Play sound effect if enabled AND we should not skip it
@@ -186,8 +189,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             playTileSound()
         }
 
-        // Check for win
-        if (gameState.checkWin(row, col, currentPlayer)) {
+        // For Hex game, use its special win condition
+        if (gameState.boardSize == 11 && gameState.winCondition == 8) {
+            if (gameState.checkHexWin(currentPlayer)) {
+                winner = currentPlayer
+
+                // Play win sound if enabled
+                if (soundEnabled) {
+                    playWinSound()
+                }
+
+                // Clear saved state if game is over
+                viewModelScope.launch { gameState.clearSavedState(getApplication()) }
+
+                return
+            }
+        }
+
+        // Standard win check for other games
+        else if (gameState.checkWin(row, col, currentPlayer)) {
             winner = currentPlayer
 
             // Play win sound if enabled

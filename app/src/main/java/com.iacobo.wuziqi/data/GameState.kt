@@ -162,6 +162,175 @@ class GameState // Constructor with custom board size and win condition
         return row in 0 until boardSize && col in 0 until boardSize
     }
 
+    /**
+     * Special win checker for Hex game. In Hex, a player wins by connecting their two opposite
+     * edges. Player One connects top-left to bottom-right. Player Two connects top-right to
+     * bottom-left.
+     *
+     * @param playerValue The player value to check for
+     * @return True if the player has won, false otherwise
+     */
+    fun checkHexWin(playerValue: Int): Boolean {
+        // Only run hex win check for 11x11 board with 8 win condition
+        if (boardSize != 11 || winCondition != 8) {
+            return false
+        }
+
+        // Create a visited array to track connected cells
+        val visited = Array(boardSize) { BooleanArray(boardSize) }
+
+        // For Player One (1), check connection from top row to bottom row
+        if (playerValue == PLAYER_ONE) {
+            // Check if any piece in top row belongs to player
+            for (col in 0 until boardSize) {
+                if (board[0][col] == playerValue) {
+                    // Start DFS from this piece
+                    if (isConnectedToBottom(0, col, playerValue, visited)) {
+                        return true
+                    }
+                }
+            }
+        }
+        // For Player Two (2), check connection from left column to right column
+        else if (playerValue == PLAYER_TWO) {
+            // Check if any piece in leftmost column belongs to player
+            for (row in 0 until boardSize) {
+                if (board[row][0] == playerValue) {
+                    // Start DFS from this piece
+                    if (isConnectedToRight(row, 0, playerValue, visited)) {
+                        return true
+                    }
+                }
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Checks if a cell is connected to the bottom row using DFS. For Player One's win condition.
+     */
+    private fun isConnectedToBottom(
+            row: Int,
+            col: Int,
+            playerValue: Int,
+            visited: Array<BooleanArray>
+    ): Boolean {
+        // If we reached the bottom row, we found a path
+        if (row == boardSize - 1) {
+            return true
+        }
+
+        // Mark current cell as visited
+        visited[row][col] = true
+
+        // Define neighbor offsets for hexagonal grid
+        // Include both even and odd row neighbors
+        val neighbors =
+                if (row % 2 == 0) {
+                    arrayOf(
+                            Pair(-1, -1),
+                            Pair(-1, 0), // Upper left, Upper right
+                            Pair(0, -1),
+                            Pair(0, 1), // Left, Right
+                            Pair(1, -1),
+                            Pair(1, 0) // Lower left, Lower right
+                    )
+                } else {
+                    arrayOf(
+                            Pair(-1, 0),
+                            Pair(-1, 1), // Upper left, Upper right
+                            Pair(0, -1),
+                            Pair(0, 1), // Left, Right
+                            Pair(1, 0),
+                            Pair(1, 1) // Lower left, Lower right
+                    )
+                }
+
+        // Check all neighbors
+        for ((dr, dc) in neighbors) {
+            val newRow = row + dr
+            val newCol = col + dc
+
+            // Check if the neighbor is valid and not visited
+            if (newRow in 0 until boardSize &&
+                            newCol in 0 until boardSize &&
+                            !visited[newRow][newCol] &&
+                            board[newRow][newCol] == playerValue
+            ) {
+
+                // Recursively check if this neighbor leads to the bottom
+                if (isConnectedToBottom(newRow, newCol, playerValue, visited)) {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Checks if a cell is connected to the right column using DFS. For Player Two's win condition.
+     */
+    private fun isConnectedToRight(
+            row: Int,
+            col: Int,
+            playerValue: Int,
+            visited: Array<BooleanArray>
+    ): Boolean {
+        // If we reached the rightmost column, we found a path
+        if (col == boardSize - 1) {
+            return true
+        }
+
+        // Mark current cell as visited
+        visited[row][col] = true
+
+        // Define neighbor offsets for hexagonal grid
+        // Include both even and odd row neighbors
+        val neighbors =
+                if (row % 2 == 0) {
+                    arrayOf(
+                            Pair(-1, -1),
+                            Pair(-1, 0), // Upper left, Upper right
+                            Pair(0, -1),
+                            Pair(0, 1), // Left, Right
+                            Pair(1, -1),
+                            Pair(1, 0) // Lower left, Lower right
+                    )
+                } else {
+                    arrayOf(
+                            Pair(-1, 0),
+                            Pair(-1, 1), // Upper left, Upper right
+                            Pair(0, -1),
+                            Pair(0, 1), // Left, Right
+                            Pair(1, 0),
+                            Pair(1, 1) // Lower left, Lower right
+                    )
+                }
+
+        // Check all neighbors
+        for ((dr, dc) in neighbors) {
+            val newRow = row + dr
+            val newCol = col + dc
+
+            // Check if the neighbor is valid and not visited
+            if (newRow in 0 until boardSize &&
+                            newCol in 0 until boardSize &&
+                            !visited[newRow][newCol] &&
+                            board[newRow][newCol] == playerValue
+            ) {
+
+                // Recursively check if this neighbor leads to the right
+                if (isConnectedToRight(newRow, newCol, playerValue, visited)) {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
+
     /** Saves the current game state to persistent storage */
     suspend fun saveState(context: Context) =
             withContext(Dispatchers.IO) {

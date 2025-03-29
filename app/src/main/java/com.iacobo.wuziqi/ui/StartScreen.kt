@@ -161,6 +161,24 @@ fun StartScreen(
                         }
                 )
             }
+
+            // Add Hex game option when discovered
+            if (discoveredEasterEggs.contains("hex")) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                GameModeButton(
+                        title = "Hex",
+                        description = "Strategic connection game on hexagonal grid",
+                        icon =
+                                Icons.Default
+                                        .Hexagon, // You'll need to add this icon or use another one
+                        onClick = {
+                            // Launch with 11x11 board and 8-in-a-row for Hex
+                            currentMode = "hex"
+                            showOpponentDialog = true
+                        }
+                )
+            }
         }
     }
 
@@ -175,6 +193,7 @@ fun StartScreen(
                         "standard" -> onNavigateToStandardGame(opponent)
                         "tictactoe" -> onNavigateToCustomGame(3, 3, opponent)
                         "connect4" -> onNavigateToCustomGame(7, 4, opponent)
+                        "hex" -> onNavigateToCustomGame(11, 8, opponent)
                         "custom" -> onNavigateToCustomGame(boardSize, winLength, opponent)
                     }
                 },
@@ -356,6 +375,7 @@ fun CustomGameDialog(onDismiss: () -> Unit, onStartGame: (boardSize: Int, winLen
     // Check if this is a special game
     val isTicTacToe = boardSize == 3 && winLength == 3
     val isConnect4 = boardSize == 7 && winLength == 4
+    val isHex = boardSize == 11 && winLength == 8
 
     AlertDialog(
             onDismissRequest = onDismiss,
@@ -450,7 +470,7 @@ fun CustomGameDialog(onDismiss: () -> Unit, onStartGame: (boardSize: Int, winLen
                     }
 
                     // Easter egg hint for special board configurations
-                    if (isTicTacToe || isConnect4) {
+                    if (isTicTacToe || isConnect4 || isHex) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                                 text = stringResource(R.string.special_game_hint),
