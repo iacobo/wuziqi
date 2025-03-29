@@ -25,7 +25,6 @@ import kotlin.math.sqrt
 
 /**
  * Hex game board implementation.
- * Displays a hexagonal grid using a custom canvas drawing.
  */
 @Composable
 fun HexBoard(
@@ -51,102 +50,103 @@ fun HexBoard(
             .padding(16.dp)
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        // Draw hexagonal grid and handle clicks with a single Canvas
-        Canvas(modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(isGameFrozen) {
-                if (!isGameFrozen) {
-                    detectTapGestures { tapOffset ->
-                        // Calculate hex dimensions same as in drawing
-                        val hexRadius = size.minDimension / (boardSize * 2)
-                        val hexHeight = hexRadius * 2
-                        val hexWidth = hexRadius * sqrt(3f)
-                        
-                        val xOffset = (size.width - hexWidth * (boardSize + 0.5f)) / 2
-                        val yOffset = (size.height - hexHeight * boardSize * 0.75f - hexHeight / 4) / 2
-                        
-                        // Find which hex was clicked
-                        for (row in 0 until boardSize) {
-                            for (col in 0 until boardSize) {
-                                val centerX = xOffset + col * hexWidth + (row % 2) * (hexWidth / 2)
-                                val centerY = yOffset + row * hexHeight * 0.75f + hexHeight / 2
-                                
-                                // Distance check with a bit of margin for hexagonal shape
-                                val distance = sqrt(
-                                    (tapOffset.x - centerX).pow(2) + 
-                                    (tapOffset.y - centerY).pow(2)
-                                )
-                                
-                                if (distance < hexRadius * 0.9f && 
-                                    gameState.board[row][col] == GameState.EMPTY) {
-                                    onTileClick(row, col)
-                                    return@detectTapGestures
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(isGameFrozen) {
+                    if (!isGameFrozen) {
+                        detectTapGestures { tapOffset ->
+                            // Calculate which hex was tapped
+                            val canvasWidth = size.width
+                            val canvasHeight = size.height
+                            val hexRadius = minOf(canvasWidth, canvasHeight) / (boardSize * 2)
+                            val hexHeight = hexRadius * 2
+                            val hexWidth = hexRadius * sqrt(3f)
+                            
+                            // Center the grid
+                            val xOffset = (canvasWidth - hexWidth * (boardSize + 0.5f)) / 2
+                            val yOffset = (canvasHeight - hexHeight * boardSize * 0.75f - hexHeight / 4) / 2
+                            
+                            // Find which hex was clicked
+                            for (row in 0 until boardSize) {
+                                for (col in 0 until boardSize) {
+                                    val centerX = xOffset + col * hexWidth + (row % 2) * (hexWidth / 2)
+                                    val centerY = yOffset + row * hexHeight * 0.75f + hexHeight / 2
+                                    
+                                    // Simple distance check
+                                    val distance = sqrt(
+                                        (tapOffset.x - centerX).pow(2) + 
+                                        (tapOffset.y - centerY).pow(2)
+                                    )
+                                    
+                                    if (distance < hexRadius * 0.9f && 
+                                        gameState.board[row][col] == GameState.EMPTY) {
+                                        onTileClick(row, col)
+                                        return@detectTapGestures
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
         ) {
-            val hexRadius = size.minDimension / (boardSize * 2)
+            // Get canvas dimensions
+            val canvasWidth = size.width
+            val canvasHeight = size.height
+            
+            // Calculate hex dimensions based on canvas size
+            val hexRadius = minOf(canvasWidth, canvasHeight) / (boardSize * 2)
             val hexHeight = hexRadius * 2
             val hexWidth = hexRadius * sqrt(3f)
             
-            // Adjustments to center the grid
-            val xOffset = (size.width - hexWidth * (boardSize + 0.5f)) / 2
-            val yOffset = (size.height - hexHeight * boardSize * 0.75f - hexHeight / 4) / 2
+            // Center the grid within the canvas
+            val xOffset = (canvasWidth - hexWidth * (boardSize + 0.5f)) / 2
+            val yOffset = (canvasHeight - hexHeight * boardSize * 0.75f - hexHeight / 4) / 2
             
-            // Draw board edges (player goal indicators)
-            // Top-left to bottom-right (Player 1)
-            val edgePath1 = Path().apply {
-                moveTo(xOffset, yOffset + hexHeight / 2)
-                lineTo(xOffset + hexWidth * boardSize, yOffset + hexHeight * boardSize * 0.75f + hexHeight / 2)
-                lineTo(xOffset + hexWidth * boardSize, yOffset + hexHeight * boardSize * 0.75f + hexHeight)
-                lineTo(xOffset, yOffset + hexHeight)
-                close()
-            }
-            drawPath(edgePath1, color = edgeColor1.copy(alpha = 0.2f), style = Fill)
-            
-            // Top-right to bottom-left (Player 2)
-            val edgePath2 = Path().apply {
-                moveTo(xOffset + hexWidth * boardSize, yOffset + hexHeight / 2)
-                lineTo(xOffset, yOffset + hexHeight * boardSize * 0.75f + hexHeight / 2)
-                lineTo(xOffset, yOffset + hexHeight * boardSize * 0.75f + hexHeight)
-                lineTo(xOffset + hexWidth * boardSize, yOffset + hexHeight)
-                close()
-            }
-            drawPath(edgePath2, color = edgeColor2.copy(alpha = 0.2f), style = Fill)
-            
-            // Draw hexagons for each cell
+            // Draw hexagons for each board position
             for (row in 0 until boardSize) {
                 for (col in 0 until boardSize) {
                     val centerX = xOffset + col * hexWidth + (row % 2) * (hexWidth / 2)
                     val centerY = yOffset + row * hexHeight * 0.75f + hexHeight / 2
                     
-                    // Create hexagon path
-                    val hexPath = createHexagonPath(centerX, centerY, hexRadius)
+                    // Draw the hexagon
+                    val hexPath = Path().apply {
+                        val angles = List(6) { Math.toRadians((60 * it + 30).toDouble()).toFloat() }
+                        moveTo(
+                            centerX + hexRadius * kotlin.math.cos(angles[0]),
+                            centerY + hexRadius * kotlin.math.sin(angles[0])
+                        )
+                        for (i in 1 until 6) {
+                            lineTo(
+                                centerX + hexRadius * kotlin.math.cos(angles[i]),
+                                centerY + hexRadius * kotlin.math.sin(angles[i])
+                            )
+                        }
+                        close()
+                    }
                     
                     // Fill with alternating colors
                     val fillColor = if ((row + col) % 2 == 0) hexColor1 else hexColor2
                     drawPath(hexPath, color = fillColor, style = Fill)
                     
-                    // Draw border
+                    // Draw hexagon border
                     drawPath(hexPath, color = gridLineColor, style = Stroke(width = strokeWidth))
                     
-                    // Draw game pieces
+                    // Draw game pieces if there are any
                     if (gameState.board[row][col] != GameState.EMPTY) {
                         val pieceColor = when (gameState.board[row][col]) {
                             GameState.PLAYER_ONE -> edgeColor1
                             else -> edgeColor2
                         }
                         
+                        // Draw the game piece
                         drawCircle(
                             color = pieceColor,
                             radius = hexRadius * 0.45f,
                             center = Offset(centerX, centerY)
                         )
                         
-                        // Highlight the last placed piece with a stroke
+                        // Highlight the last placed piece
                         if (lastPlacedPosition?.row == row && lastPlacedPosition.col == col) {
                             drawCircle(
                                 color = MaterialTheme.colorScheme.tertiary,
@@ -159,25 +159,5 @@ fun HexBoard(
                 }
             }
         }
-    }
-}
-
-/**
- * Creates a hexagon path for drawing on canvas.
- */
-private fun createHexagonPath(centerX: Float, centerY: Float, radius: Float): Path {
-    return Path().apply {
-        val angles = List(6) { Math.toRadians((60 * it + 30).toDouble()).toFloat() }
-        moveTo(
-            centerX + radius * kotlin.math.cos(angles[0]),
-            centerY + radius * kotlin.math.sin(angles[0])
-        )
-        for (i in 1 until 6) {
-            lineTo(
-                centerX + radius * kotlin.math.cos(angles[i]),
-                centerY + radius * kotlin.math.sin(angles[i])
-            )
-        }
-        close()
     }
 }
