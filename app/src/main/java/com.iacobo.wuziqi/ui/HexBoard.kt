@@ -66,20 +66,17 @@ fun HexBoard(
                                                         val canvasWidth = size.width
                                                         val canvasHeight = size.height
 
-                                                        // FIXED: Calculate the actual width needed
-                                                        // for the hex board
-                                                        // The parallelogram has a width of
-                                                        // boardSize + (boardSize-1)/2
-                                                        // because each row is shifted by half a hex
-                                                        // width
-                                                        val rowOffset = (boardSize - 1) * 0.5f
-                                                        val effectiveWidth = boardSize + rowOffset
+                                                        // Calculate the maximum row offset for the
+                                                        // board
+                                                        val maxRowOffset = (boardSize - 1) * 0.5f
 
-                                                        // Calculate hexagon size to fit the canvas
+                                                        // Size the hexagons to fit the total width
+                                                        // (including offset)
                                                         val hexRadius =
                                                                 minOf(
                                                                         canvasWidth /
-                                                                                (effectiveWidth *
+                                                                                ((boardSize +
+                                                                                        maxRowOffset) *
                                                                                         sqrt(3f)),
                                                                         canvasHeight /
                                                                                 ((boardSize +
@@ -90,22 +87,31 @@ fun HexBoard(
                                                         val hexHeight = hexRadius * 2
                                                         val hexWidth = hexRadius * sqrt(3f)
 
-                                                        // FIXED: Center the board properly
+                                                        // Calculate the total width and height of
+                                                        // the board
                                                         val totalWidth =
-                                                                hexWidth * boardSize +
-                                                                        (rowOffset * hexWidth)
+                                                                (boardSize + maxRowOffset) *
+                                                                        hexWidth
                                                         val totalHeight =
                                                                 hexHeight * boardSize * 0.75f +
                                                                         hexHeight / 4
+
+                                                        // Calculate offset to center the board
                                                         val xOffset = (canvasWidth - totalWidth) / 2
                                                         val yOffset =
                                                                 (canvasHeight - totalHeight) / 2
 
+                                                        // Simplified approach: find the closest
+                                                        // hexagon to the tap
+                                                        var bestRow = -1
+                                                        var bestCol = -1
+                                                        var bestDistance = Float.MAX_VALUE
+
+                                                        // Check all possible positions
                                                         for (row in 0 until boardSize) {
                                                                 for (col in 0 until boardSize) {
-                                                                        // Apply correct offset for
-                                                                        // each row to create the
-                                                                        // parallelogram
+                                                                        // Calculate the center
+                                                                        // position of this hexagon
                                                                         val rowShift =
                                                                                 row * (hexWidth / 2)
                                                                         val centerX =
@@ -121,6 +127,8 @@ fun HexBoard(
                                                                                         hexHeight /
                                                                                                 2
 
+                                                                        // Calculate distance to tap
+                                                                        // point
                                                                         val distance =
                                                                                 sqrt(
                                                                                         (tapOffset
@@ -137,34 +145,29 @@ fun HexBoard(
                                                                                                         )
                                                                                 )
 
-                                                                        if (distance <
-                                                                                        hexRadius *
-                                                                                                0.9f &&
-                                                                                        gameState
-                                                                                                .board[
-                                                                                                row][
-                                                                                                col] ==
-                                                                                                GameState
-                                                                                                        .EMPTY
+                                                                        // If this is closer than
+                                                                        // the previous best and is
+                                                                        // empty, track it
+                                                                        if (distance < bestDistance
                                                                         ) {
-                                                                                onTileClick(
-                                                                                        row,
-                                                                                        col
-                                                                                )
-                                                                                return@detectTapGestures
+                                                                                bestDistance =
+                                                                                        distance
+                                                                                bestRow = row
+                                                                                bestCol = col
                                                                         }
                                                                 }
                                                         }
 
-                                                        // Only place a piece if the distance is
-                                                        // reasonably close to the hex center
-                                                        // and the cell is empty
-                                                        if (minDistance < hexRadius * 1.2f &&
-                                                                        gameState.board[closestRow][
-                                                                                closestCol] ==
+                                                        // Only place a tile if we found a valid
+                                                        // position and it's close enough
+                                                        if (bestRow >= 0 &&
+                                                                        bestDistance <
+                                                                                hexRadius * 1.5f &&
+                                                                        gameState.board[bestRow][
+                                                                                bestCol] ==
                                                                                 GameState.EMPTY
                                                         ) {
-                                                                onTileClick(closestRow, closestCol)
+                                                                onTileClick(bestRow, bestCol)
                                                         }
                                                 }
                                         }
@@ -173,14 +176,10 @@ fun HexBoard(
                         val canvasWidth = size.width
                         val canvasHeight = size.height
 
-                        // Calculate the proper width for the hex board
-                        // For a boardSize of n, the parallelogram width is:
-                        // n hexagons wide, plus additional width from the row offset
-                        // The last row is offset by (boardSize-1)/2 hexagons
+                        // Calculate the maximum row offset for the board
                         val maxRowOffset = (boardSize - 1) * 0.5f
 
-                        // Calculate hexagon size to fit the canvas
-                        // The total width is boardSize + maxRowOffset hexagons
+                        // Size the hexagons to fit the total width (including offset)
                         val hexRadius =
                                 minOf(
                                         canvasWidth / ((boardSize + maxRowOffset) * sqrt(3f)),
@@ -190,10 +189,11 @@ fun HexBoard(
                         val hexHeight = hexRadius * 2
                         val hexWidth = hexRadius * sqrt(3f)
 
-                        // The total width is the width of boardSize hexagons plus
-                        // the additional width from the maximum row offset
+                        // Calculate the total width and height of the board
                         val totalWidth = (boardSize + maxRowOffset) * hexWidth
                         val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
+
+                        // Calculate offset to center the board
                         val xOffset = (canvasWidth - totalWidth) / 2
                         val yOffset = (canvasHeight - totalHeight) / 2
 
