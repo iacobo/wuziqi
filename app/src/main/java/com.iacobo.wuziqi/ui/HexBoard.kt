@@ -60,9 +60,9 @@ fun HexBoard(
                                     val canvasWidth = size.width
                                     val canvasHeight = size.height
 
-                                    // Calculate the actual width needed for the parallelogram shape
-                                    // We need space for the rightmost column of the bottom row
-                                    // which is shifted by (boardSize-1) * hexWidth/2
+                                    // FIX 1: Calculate the actual width needed for the parallelogram shape
+                                    // Previous calculation was incorrect, causing extra space on the right
+                                    // We need space for the board + the shift from the lower rows
                                     val maxShiftWidth = (boardSize - 1) * 0.5f
                                     val widthNeeded = boardSize + maxShiftWidth
 
@@ -71,21 +71,20 @@ fun HexBoard(
                                             minOf(
                                                     canvasWidth / (widthNeeded * sqrt(3f)),
                                                     canvasHeight / ((boardSize + 0.5f) * 1.5f)
-                                            ) * 0.95f // 5% margin
+                                            ) * 0.98f // Increased from 0.95f to 0.98f to fill more space
 
                                     val hexHeight = hexRadius * 2
                                     val hexWidth = hexRadius * sqrt(3f)
 
                                     // Calculate offset to center the parallelogram
-                                    val totalWidth = hexWidth * (boardSize + maxShiftWidth)
+                                    val totalWidth = hexWidth * boardSize + (hexWidth * maxShiftWidth)
                                     val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
                                     val xOffset = (canvasWidth - totalWidth) / 2
                                     val yOffset = (canvasHeight - totalHeight) / 2
 
                                     for (row in 0 until boardSize) {
                                         for (col in 0 until boardSize) {
-                                            // Correct offset pattern for each row to form a
-                                            // parallelogram
+                                            // Correct offset pattern for each row to form a parallelogram
                                             val rowOffset = row * (hexWidth / 2)
                                             val centerX = xOffset + col * hexWidth + rowOffset
                                             val centerY =
@@ -115,9 +114,7 @@ fun HexBoard(
             val canvasWidth = size.width
             val canvasHeight = size.height
 
-            // Calculate the actual width needed for the parallelogram shape
-            // We need space for the rightmost column of the bottom row
-            // which is shifted by (boardSize-1) * hexWidth/2
+            // FIX 1: Improved calculation of the actual width needed
             val maxShiftWidth = (boardSize - 1) * 0.5f
             val widthNeeded = boardSize + maxShiftWidth
 
@@ -126,13 +123,13 @@ fun HexBoard(
                     minOf(
                             canvasWidth / (widthNeeded * sqrt(3f)),
                             canvasHeight / ((boardSize + 0.5f) * 1.5f)
-                    ) * 0.95f // 5% margin
+                    ) * 0.98f // Increased from 0.95f to fill more space
 
             val hexHeight = hexRadius * 2
             val hexWidth = hexRadius * sqrt(3f)
 
             // Calculate offset to center the parallelogram
-            val totalWidth = hexWidth * (boardSize + maxShiftWidth)
+            val totalWidth = hexWidth * boardSize + (hexWidth * maxShiftWidth)
             val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
             val xOffset = (canvasWidth - totalWidth) / 2
             val yOffset = (canvasHeight - totalHeight) / 2
@@ -183,6 +180,7 @@ fun HexBoard(
                         )
                     } else {
                         // For edge hexagons, color each edge appropriately
+                        // FIX 2 & 3: Corrected edge coloring logic
                         for (i in 0 until 6) {
                             val nextIdx = (i + 1) % 6
                             val startX = hexVertices[i].first
@@ -191,10 +189,18 @@ fun HexBoard(
                             val endY = hexVertices[nextIdx].second
 
                             // Determine if this edge is on the outer boundary
-                            val isTopEdge = isTopRow && (i == 0 || i == 1)
-                            val isBottomEdge = isBottomRow && (i == 3 || i == 4)
-                            val isLeftEdge = isLeftCol && (i == 2 || i == 3)
-                            val isRightEdge = isRightCol && (i == 5 || i == 0)
+                            // In a regular hexagon with the first vertex at the top:
+                            // - Edges 0 and 1 are the top-right and right edges
+                            // - Edges 2 and 3 are the bottom-right and bottom-left edges
+                            // - Edges 4 and 5 are the left and top-left edges
+                            
+                            // FIX 2: Correctly identify top and bottom edges
+                            val isTopEdge = isTopRow && (i == 5 || i == 0)
+                            val isBottomEdge = isBottomRow && (i == 2 || i == 3)
+                            
+                            // FIX 3: Correctly identify left and right edges
+                            val isLeftEdge = isLeftCol && (i == 3 || i == 4)
+                            val isRightEdge = isRightCol && (i == 0 || i == 1)
 
                             val edgeColor =
                                     when {

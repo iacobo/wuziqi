@@ -348,6 +348,24 @@ fun GameScreen(
                                                                                                 .player_yellow
                                                                                 )
                                                                 )
+                                                        isHex ->
+                                                                stringResource(
+                                                                        R.string.player_turn_format,
+                                                                        if (gameState
+                                                                                        .currentPlayer ==
+                                                                                        GameState
+                                                                                                .PLAYER_ONE
+                                                                        )
+                                                                                stringResource(
+                                                                                        R.string
+                                                                                                .player_red
+                                                                                )
+                                                                        else
+                                                                                stringResource(
+                                                                                        R.string
+                                                                                                .player_blue
+                                                                                )
+                                                                )
                                                         else -> {
                                                                 // Handle computer opponent case
                                                                 if (gameState.againstComputer) {
@@ -397,7 +415,9 @@ fun GameScreen(
                                                                         Connect4PieceRed
                                                                 else Connect4PieceYellow
                                                         isHex ->
-                                                                if (winner == GameState.PLAYER_ONE)
+                                                                if (gameState.currentPlayer ==
+                                                                                GameState.PLAYER_ONE
+                                                                )
                                                                         HexPieceRed
                                                                 else HexPieceBlue
                                                         else ->
