@@ -66,7 +66,7 @@ fun HexBoard(
                                                         // causing extra space on the right
                                                         // We need space for the board + the shift
                                                         // from the lower rows
-                                                        val maxShiftWidth = (boardSize + 1) * 0.5f
+                                                        val maxShiftWidth = boardSize * 0.5f
                                                         val widthNeeded = boardSize + maxShiftWidth
 
                                                         // Scale to ensure the board fits within the
@@ -251,12 +251,12 @@ fun HexBoard(
                                                         val endY = hexVertices[nextIdx].second
 
                                                         val isRightEdge =
-                                                                isRightCol && (i == 5 || i == 0)
+                                                                isRightCol && (i == 4 || i == 5)
                                                         val isLeftEdge =
                                                                 isLeftCol && (i == 1 || i == 2)
 
                                                         val isTopEdge =
-                                                                isTopRow && (i == 4 || i == 5)
+                                                                isTopRow && (i == 3 || i == 4)
                                                         val isBottomEdge =
                                                                 isBottomRow && (i == 0 || i == 1)
 
