@@ -31,6 +31,7 @@
     <string name="player_white">白</string>
     <string name="player_red">红</string>
     <string name="player_yellow">黄</string>
+    <string name="player_blue">蓝</string>
     <string name="player_x">✕</string>
     <string name="player_o">◯</string>
 

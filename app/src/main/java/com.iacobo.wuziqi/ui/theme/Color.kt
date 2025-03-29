@@ -26,3 +26,7 @@ val Connect4PieceRed = Color(0xFFE53935)
 val Connect4PieceRedBright = Color(0xFFEF5350)
 val Connect4PieceYellow = Color(0xFFFFC107)
 val Connect4PieceYellowBright = Color(0xFFFFD600)
+
+// Hex colours
+val HexPieceRed = Color(0xFFB71C1C) // Muted red
+val HexPieceBlue = Color(0xFF1565C0) // Muted blue

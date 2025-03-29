@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -19,13 +18,15 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
+import com.iacobo.wuziqi.ui.theme.HexPieceBlue
+import com.iacobo.wuziqi.ui.theme.HexPieceRed
 import com.iacobo.wuziqi.viewmodel.Position
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/** Hex game board implementation. */
+/** Hex game board implementation with proper edge coloring and centered layout. */
 @Composable
 fun HexBoard(
         gameState: GameState,
@@ -33,11 +34,12 @@ fun HexBoard(
         isGameFrozen: Boolean,
         onTileClick: (Int, Int) -> Unit
 ) {
+    // Extract boardSize to make it accessible to lambdas
     val boardSize = gameState.boardSize
 
     // Define custom colors for better visibility
-    val playerOneColor = Color(0xFFB71C1C) // Muted red
-    val playerTwoColor = Color(0xFF1565C0) // Muted blue
+    val playerOneColor = HexPieceRed
+    val playerTwoColor = HexPieceBlue
 
     // Extract all MaterialTheme colors here in the composable context
     val hexColor1 = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -58,15 +60,25 @@ fun HexBoard(
                                     val canvasWidth = size.width
                                     val canvasHeight = size.height
 
-                                    // Make hexagons larger so they touch
+                                    // Calculate the actual width needed for the parallelogram shape
+                                    // We need space for the rightmost column of the bottom row
+                                    // which is shifted by (boardSize-1) * hexWidth/2
+                                    val maxShiftWidth = (boardSize - 1) * 0.5f
+                                    val widthNeeded = boardSize + maxShiftWidth
+
+                                    // Scale to ensure the board fits within the canvas width
                                     val hexRadius =
-                                            (minOf(canvasWidth, canvasHeight) / (boardSize * 1.8f))
+                                            minOf(
+                                                    canvasWidth / (widthNeeded * sqrt(3f)),
+                                                    canvasHeight / ((boardSize + 0.5f) * 1.5f)
+                                            ) * 0.95f // 5% margin
+
                                     val hexHeight = hexRadius * 2
                                     val hexWidth = hexRadius * sqrt(3f)
 
                                     // Calculate offset to center the parallelogram
-                                    val totalWidth = hexWidth * boardSize
-                                    val totalHeight = hexHeight * 0.75f * (boardSize + 0.5f)
+                                    val totalWidth = hexWidth * (boardSize + maxShiftWidth)
+                                    val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
                                     val xOffset = (canvasWidth - totalWidth) / 2
                                     val yOffset = (canvasHeight - totalHeight) / 2
 
@@ -103,47 +115,27 @@ fun HexBoard(
             val canvasWidth = size.width
             val canvasHeight = size.height
 
-            // Make hexagons larger so they touch
-            val hexRadius = (minOf(canvasWidth, canvasHeight) / (boardSize * 1.8f))
+            // Calculate the actual width needed for the parallelogram shape
+            // We need space for the rightmost column of the bottom row
+            // which is shifted by (boardSize-1) * hexWidth/2
+            val maxShiftWidth = (boardSize - 1) * 0.5f
+            val widthNeeded = boardSize + maxShiftWidth
+
+            // Scale to ensure the board fits within the canvas width
+            val hexRadius =
+                    minOf(
+                            canvasWidth / (widthNeeded * sqrt(3f)),
+                            canvasHeight / ((boardSize + 0.5f) * 1.5f)
+                    ) * 0.95f // 5% margin
+
             val hexHeight = hexRadius * 2
             val hexWidth = hexRadius * sqrt(3f)
 
             // Calculate offset to center the parallelogram
-            val totalWidth = hexWidth * boardSize
-            val totalHeight = hexHeight * 0.75f * (boardSize + 0.5f)
+            val totalWidth = hexWidth * (boardSize + maxShiftWidth)
+            val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
             val xOffset = (canvasWidth - totalWidth) / 2
             val yOffset = (canvasHeight - totalHeight) / 2
-
-            // Draw player territory indicators
-            // Player One (red) - connects top to bottom
-            drawRect(
-                    color = playerOneColor.copy(alpha = 0.1f),
-                    topLeft = Offset(xOffset, yOffset),
-                    size = androidx.compose.ui.geometry.Size(totalWidth, hexHeight * 0.75f)
-            )
-
-            drawRect(
-                    color = playerOneColor.copy(alpha = 0.1f),
-                    topLeft =
-                            Offset(
-                                    xOffset + 0.5f * hexWidth * (boardSize - 1),
-                                    yOffset + totalHeight - hexHeight * 0.75f
-                            ),
-                    size = androidx.compose.ui.geometry.Size(totalWidth, hexHeight * 0.75f)
-            )
-
-            // Player Two (blue) - connects left to right
-            drawRect(
-                    color = playerTwoColor.copy(alpha = 0.1f),
-                    topLeft = Offset(xOffset, yOffset),
-                    size = androidx.compose.ui.geometry.Size(hexWidth, totalHeight)
-            )
-
-            drawRect(
-                    color = playerTwoColor.copy(alpha = 0.1f),
-                    topLeft = Offset(xOffset + totalWidth - hexWidth, yOffset),
-                    size = androidx.compose.ui.geometry.Size(hexWidth, totalHeight)
-            )
 
             // Draw all hexagons
             for (row in 0 until boardSize) {
@@ -153,21 +145,21 @@ fun HexBoard(
                     val centerX = xOffset + col * hexWidth + rowOffset
                     val centerY = yOffset + row * hexHeight * 0.75f + hexHeight / 2
 
+                    // Store vertices for border edge coloring
+                    val hexVertices =
+                            List(6) { idx ->
+                                val angle = Math.toRadians((60 * idx + 30).toDouble()).toFloat()
+                                Pair(
+                                        centerX + hexRadius * cos(angle),
+                                        centerY + hexRadius * sin(angle)
+                                )
+                            }
+
                     val hexPath =
                             Path().apply {
-                                val angles =
-                                        List(6) {
-                                            Math.toRadians((60 * it + 30).toDouble()).toFloat()
-                                        }
-                                moveTo(
-                                        centerX + hexRadius * cos(angles[0]),
-                                        centerY + hexRadius * sin(angles[0])
-                                )
+                                moveTo(hexVertices[0].first, hexVertices[0].second)
                                 for (i in 1 until 6) {
-                                    lineTo(
-                                            centerX + hexRadius * cos(angles[i]),
-                                            centerY + hexRadius * sin(angles[i])
-                                    )
+                                    lineTo(hexVertices[i].first, hexVertices[i].second)
                                 }
                                 close()
                             }
@@ -175,7 +167,57 @@ fun HexBoard(
                     // Alternate fill colors
                     val fillColor = if ((row + col) % 2 == 0) hexColor1 else hexColor2
                     drawPath(hexPath, color = fillColor, style = Fill)
-                    drawPath(hexPath, color = gridLineColor, style = Stroke(width = strokeWidth))
+
+                    // Draw standard grid lines for interior hexagons
+                    val isTopRow = row == 0
+                    val isBottomRow = row == boardSize - 1
+                    val isLeftCol = col == 0
+                    val isRightCol = col == boardSize - 1
+
+                    // For interior hexagons or non-edge sides, use standard grid color
+                    if (!isTopRow && !isBottomRow && !isLeftCol && !isRightCol) {
+                        drawPath(
+                                hexPath,
+                                color = gridLineColor,
+                                style = Stroke(width = strokeWidth)
+                        )
+                    } else {
+                        // For edge hexagons, color each edge appropriately
+                        for (i in 0 until 6) {
+                            val nextIdx = (i + 1) % 6
+                            val startX = hexVertices[i].first
+                            val startY = hexVertices[i].second
+                            val endX = hexVertices[nextIdx].first
+                            val endY = hexVertices[nextIdx].second
+
+                            // Determine if this edge is on the outer boundary
+                            val isTopEdge = isTopRow && i in 0..1
+                            val isBottomEdge = isBottomRow && i in 3..4
+                            val isLeftEdge = isLeftCol && i in 2..3
+                            val isRightEdge = isRightCol && i in 5 || (i == 0 && isRightCol)
+
+                            val edgeColor =
+                                    when {
+                                        isTopEdge || isBottomEdge -> playerOneColor
+                                        isLeftEdge || isRightEdge -> playerTwoColor
+                                        else -> gridLineColor
+                                    }
+
+                            val edgeWidth =
+                                    when {
+                                        isTopEdge || isBottomEdge || isLeftEdge || isRightEdge ->
+                                                strokeWidth * 2.5f
+                                        else -> strokeWidth
+                                    }
+
+                            drawLine(
+                                    color = edgeColor,
+                                    start = Offset(startX, startY),
+                                    end = Offset(endX, endY),
+                                    strokeWidth = edgeWidth
+                            )
+                        }
+                    }
 
                     // Draw game pieces
                     if (gameState.board[row][col] != GameState.EMPTY) {
@@ -215,47 +257,6 @@ fun HexBoard(
                     }
                 }
             }
-
-            // Draw edge labels to indicate player goals
-            val textSize = hexRadius * 0.6f
-
-            // Player One (red) goals - connect top to bottom
-            drawLine(
-                    color = playerOneColor,
-                    strokeWidth = hexRadius * 0.2f,
-                    start = Offset(xOffset, yOffset),
-                    end = Offset(xOffset + totalWidth, yOffset)
-            )
-
-            drawLine(
-                    color = playerOneColor,
-                    strokeWidth = hexRadius * 0.2f,
-                    start =
-                            Offset(
-                                    xOffset + 0.5f * hexWidth * (boardSize - 1),
-                                    yOffset + totalHeight
-                            ),
-                    end =
-                            Offset(
-                                    xOffset + 0.5f * hexWidth * (boardSize - 1) + totalWidth,
-                                    yOffset + totalHeight
-                            )
-            )
-
-            // Player Two (blue) goals - connect left to right
-            drawLine(
-                    color = playerTwoColor,
-                    strokeWidth = hexRadius * 0.2f,
-                    start = Offset(xOffset, yOffset),
-                    end = Offset(xOffset, yOffset + totalHeight)
-            )
-
-            drawLine(
-                    color = playerTwoColor,
-                    strokeWidth = hexRadius * 0.2f,
-                    start = Offset(xOffset + totalWidth, yOffset),
-                    end = Offset(xOffset + totalWidth, yOffset + totalHeight)
-            )
         }
     }
 }

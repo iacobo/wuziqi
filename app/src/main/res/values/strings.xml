@@ -8,6 +8,7 @@
     <string name="player_white">White</string>
     <string name="player_red">Red</string>
     <string name="player_yellow">Yellow</string>
+    <string name="player_blue">Blue</string>
     <string name="player_x">X</string>
     <string name="player_o">O</string>
     <string name="draw">Draw</string>

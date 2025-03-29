@@ -37,6 +37,8 @@ import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.ThemeMode
 import com.iacobo.wuziqi.ui.theme.Connect4PieceRed
 import com.iacobo.wuziqi.ui.theme.Connect4PieceYellow
+import com.iacobo.wuziqi.ui.theme.HexPieceBlue
+import com.iacobo.wuziqi.ui.theme.HexPieceRed
 import com.iacobo.wuziqi.viewmodel.DRAW
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 
@@ -224,6 +226,23 @@ fun GameScreen(
                                                                                                 .player_yellow
                                                                                 )
                                                                 )
+                                                        isHex ->
+                                                                stringResource(
+                                                                        R.string.winner_format,
+                                                                        if (winner ==
+                                                                                        GameState
+                                                                                                .PLAYER_ONE
+                                                                        )
+                                                                                stringResource(
+                                                                                        R.string
+                                                                                                .player_red
+                                                                                )
+                                                                        else
+                                                                                stringResource(
+                                                                                        R.string
+                                                                                                .player_blue
+                                                                                )
+                                                                )
                                                         else -> {
                                                                 // Handle computer opponent case
                                                                 if (gameState.againstComputer) {
@@ -268,6 +287,10 @@ fun GameScreen(
                                                                 if (winner == GameState.PLAYER_ONE)
                                                                         Connect4PieceRed
                                                                 else Connect4PieceYellow
+                                                        isHex ->
+                                                                if (winner == GameState.PLAYER_ONE)
+                                                                        HexPieceRed
+                                                                else HexPieceBlue
                                                         else ->
                                                                 if (winner == GameState.PLAYER_ONE)
                                                                         MaterialTheme.colorScheme
@@ -373,6 +396,10 @@ fun GameScreen(
                                                                 )
                                                                         Connect4PieceRed
                                                                 else Connect4PieceYellow
+                                                        isHex ->
+                                                                if (winner == GameState.PLAYER_ONE)
+                                                                        HexPieceRed
+                                                                else HexPieceBlue
                                                         else ->
                                                                 if (gameState.currentPlayer ==
                                                                                 GameState.PLAYER_ONE
