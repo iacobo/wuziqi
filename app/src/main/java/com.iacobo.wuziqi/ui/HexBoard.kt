@@ -93,7 +93,7 @@ fun HexBoard(
                                                         // FIXED: Center the board properly
                                                         val totalWidth =
                                                                 hexWidth * boardSize +
-                                                                        (rowOffset * hexWidth / 2)
+                                                                        (rowOffset * hexWidth)
                                                         val totalHeight =
                                                                 hexHeight * boardSize * 0.75f +
                                                                         hexHeight / 4
@@ -155,6 +155,17 @@ fun HexBoard(
                                                                         }
                                                                 }
                                                         }
+
+                                                        // Only place a piece if the distance is
+                                                        // reasonably close to the hex center
+                                                        // and the cell is empty
+                                                        if (minDistance < hexRadius * 1.2f &&
+                                                                        gameState.board[closestRow][
+                                                                                closestCol] ==
+                                                                                GameState.EMPTY
+                                                        ) {
+                                                                onTileClick(closestRow, closestCol)
+                                                        }
                                                 }
                                         }
                                 }
@@ -162,22 +173,26 @@ fun HexBoard(
                         val canvasWidth = size.width
                         val canvasHeight = size.height
 
-                        // FIXED: Calculate the actual width needed for the hex board
-                        val rowOffset = (boardSize - 1) * 0.5f
-                        val effectiveWidth = boardSize + rowOffset
+                        // Calculate the proper width for the hex board
+                        // For a boardSize of n, the parallelogram width is:
+                        // n hexagons wide, plus additional width from the row offset
+                        // The last row is offset by (boardSize-1)/2 hexagons
+                        val maxRowOffset = (boardSize - 1) * 0.5f
 
                         // Calculate hexagon size to fit the canvas
+                        // The total width is boardSize + maxRowOffset hexagons
                         val hexRadius =
                                 minOf(
-                                        canvasWidth / (effectiveWidth * sqrt(3f)),
+                                        canvasWidth / ((boardSize + maxRowOffset) * sqrt(3f)),
                                         canvasHeight / ((boardSize + 0.5f) * 1.5f)
                                 ) * 0.95f
 
                         val hexHeight = hexRadius * 2
                         val hexWidth = hexRadius * sqrt(3f)
 
-                        // FIXED: Center the board properly
-                        val totalWidth = hexWidth * boardSize + (rowOffset * hexWidth)
+                        // The total width is the width of boardSize hexagons plus
+                        // the additional width from the maximum row offset
+                        val totalWidth = (boardSize + maxRowOffset) * hexWidth
                         val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
                         val xOffset = (canvasWidth - totalWidth) / 2
                         val yOffset = (canvasHeight - totalHeight) / 2
