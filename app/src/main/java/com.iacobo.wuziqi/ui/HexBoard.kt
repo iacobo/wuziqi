@@ -66,7 +66,7 @@ fun HexBoard(
                                                         // causing extra space on the right
                                                         // We need space for the board + the shift
                                                         // from the lower rows
-                                                        val maxShiftWidth = boardSize * 0.5f
+                                                        val maxShiftWidth = (boardSize + 1) * 0.5f
                                                         val widthNeeded = boardSize + maxShiftWidth
 
                                                         // Scale to ensure the board fits within the
@@ -250,30 +250,15 @@ fun HexBoard(
                                                         val endX = hexVertices[nextIdx].first
                                                         val endY = hexVertices[nextIdx].second
 
-                                                        // Determine if this edge is on the outer
-                                                        // boundary
-                                                        // In a regular hexagon with the first
-                                                        // vertex at the top:
-                                                        // - Edges 0 and 1 are the top-right and
-                                                        // right edges
-                                                        // - Edges 2 and 3 are the bottom-right and
-                                                        // bottom-left edges
-                                                        // - Edges 4 and 5 are the left and top-left
-                                                        // edges
-
-                                                        // FIX 2: Correctly identify top and bottom
-                                                        // edges
                                                         val isRightEdge =
-                                                                isTopRow && (i == 5 || i == 0)
+                                                                isRightCol && (i == 5 || i == 0)
                                                         val isLeftEdge =
-                                                                isBottomRow && (i == 2 || i == 3)
+                                                                isLeftCol && (i == 1 || i == 2)
 
-                                                        // FIX 3: Correctly identify left and right
-                                                        // edges
                                                         val isTopEdge =
-                                                                isLeftCol && (i == 3 || i == 4)
+                                                                isTopRow && (i == 4 || i == 5)
                                                         val isBottomEdge =
-                                                                isRightCol && (i == 0 || i == 1)
+                                                                isBottomRow && (i == 0 || i == 1)
 
                                                         val edgeColor =
                                                                 when {
