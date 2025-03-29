@@ -227,7 +227,12 @@ fun GameScreen(
                         bottomBar = {
                                 BottomAppBar {
                                         Row(
-                                                modifier = Modifier.fillMaxWidth(),
+                                                modifier =
+                                                        Modifier.fillMaxWidth()
+                                                                .background(
+                                                                        MaterialTheme.colorScheme
+                                                                                .background
+                                                                ),
                                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                                 verticalAlignment = Alignment.CenterVertically
                                         ) {
@@ -571,17 +576,25 @@ fun GameScreen(
                                         Modifier.align(Alignment.CenterEnd)
                                                 .fillMaxHeight()
                                                 .width(64.dp)
-                                                .background(
-                                                        MaterialTheme.colorScheme.surfaceVariant
-                                                ),
+                                                .background(MaterialTheme.colorScheme.background),
                                 verticalArrangement = Arrangement.SpaceEvenly,
                                 horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                                // Home button
-                                IconButton(onClick = onNavigateToHome) {
+
+                                // Settings button
+                                IconButton(onClick = onNavigateToSettings) {
                                         Icon(
-                                                imageVector = Icons.Default.Home,
-                                                contentDescription = stringResource(R.string.home)
+                                                imageVector = Icons.Default.Menu,
+                                                contentDescription =
+                                                        stringResource(R.string.settings)
+                                        )
+                                }
+
+                                // Reset button
+                                IconButton(onClick = { viewModel.resetGame() }) {
+                                        Icon(
+                                                imageVector = Icons.Default.Replay,
+                                                contentDescription = stringResource(R.string.reset)
                                         )
                                 }
 
@@ -596,20 +609,11 @@ fun GameScreen(
                                         )
                                 }
 
-                                // Reset button
-                                IconButton(onClick = { viewModel.resetGame() }) {
+                                // Home button
+                                IconButton(onClick = onNavigateToHome) {
                                         Icon(
-                                                imageVector = Icons.Default.Replay,
-                                                contentDescription = stringResource(R.string.reset)
-                                        )
-                                }
-
-                                // Settings button
-                                IconButton(onClick = onNavigateToSettings) {
-                                        Icon(
-                                                imageVector = Icons.Default.Menu,
-                                                contentDescription =
-                                                        stringResource(R.string.settings)
+                                                imageVector = Icons.Default.Home,
+                                                contentDescription = stringResource(R.string.home)
                                         )
                                 }
                         }
