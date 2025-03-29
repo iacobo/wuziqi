@@ -164,8 +164,9 @@ class GameState // Constructor with custom board size and win condition
 
     /**
      * Special win checker for Hex game. In Hex, a player wins by connecting their two opposite
-     * edges. Player One connects top-left to bottom-right. Player Two connects top-right to
-     * bottom-left.
+     * edges. Player One connects top to bottom. Player Two connects left to right.
+     *
+     * FIXED: Properly check for any path (direct or indirect) between the edges
      *
      * @param playerValue The player value to check for
      * @return True if the player has won, false otherwise
@@ -176,39 +177,56 @@ class GameState // Constructor with custom board size and win condition
             return false
         }
 
-        // Create a visited array to track connected cells
+        // Create a visited array to track visited cells in our search
         val visited = Array(boardSize) { BooleanArray(boardSize) }
 
         // For Player One (1), check connection from top row to bottom row
         if (playerValue == PLAYER_ONE) {
-            // Check if any piece in top row belongs to player
+            // Check all pieces in the top row that belong to player 1
             for (col in 0 until boardSize) {
                 if (board[0][col] == playerValue) {
-                    // Start DFS from this piece
+                    // Reset visited array for each starting position
+                    for (r in 0 until boardSize) {
+                        for (c in 0 until boardSize) {
+                            visited[r][c] = false
+                        }
+                    }
+                    
+                    // Start DFS from this top row piece
                     if (isConnectedToBottom(0, col, playerValue, visited)) {
                         return true
                     }
                 }
             }
+            return false
         }
         // For Player Two (2), check connection from left column to right column
         else if (playerValue == PLAYER_TWO) {
-            // Check if any piece in leftmost column belongs to player
+            // Check all pieces in the leftmost column that belong to player 2
             for (row in 0 until boardSize) {
                 if (board[row][0] == playerValue) {
-                    // Start DFS from this piece
+                    // Reset visited array for each starting position
+                    for (r in 0 until boardSize) {
+                        for (c in 0 until boardSize) {
+                            visited[r][c] = false
+                        }
+                    }
+                    
+                    // Start DFS from this left column piece
                     if (isConnectedToRight(row, 0, playerValue, visited)) {
                         return true
                     }
                 }
             }
+            return false
         }
 
         return false
     }
 
     /**
-     * Checks if a cell is connected to the bottom row using DFS. For Player One's win condition.
+     * Checks if a cell is connected to the bottom row using DFS.
+     * FIXED: Correct neighbor calculation for hexagonal grid
      */
     private fun isConnectedToBottom(
             row: Int,
@@ -224,41 +242,28 @@ class GameState // Constructor with custom board size and win condition
         // Mark current cell as visited
         visited[row][col] = true
 
-        // Define neighbor offsets for hexagonal grid
-        // Include both even and odd row neighbors
-        val neighbors =
-                if (row % 2 == 0) {
-                    arrayOf(
-                            Pair(-1, -1),
-                            Pair(-1, 0), // Upper left, Upper right
-                            Pair(0, -1),
-                            Pair(0, 1), // Left, Right
-                            Pair(1, -1),
-                            Pair(1, 0) // Lower left, Lower right
-                    )
-                } else {
-                    arrayOf(
-                            Pair(-1, 0),
-                            Pair(-1, 1), // Upper left, Upper right
-                            Pair(0, -1),
-                            Pair(0, 1), // Left, Right
-                            Pair(1, 0),
-                            Pair(1, 1) // Lower left, Lower right
-                    )
-                }
+        // Define all six neighbor directions for a hexagonal grid
+        // These are the 6 directions from any hexagon to its neighbors
+        val neighbors = arrayOf(
+            Pair(-1, 0),  // Top-left
+            Pair(-1, 1),  // Top-right
+            Pair(0, -1),  // Left
+            Pair(0, 1),   // Right
+            Pair(1, -1),  // Bottom-left
+            Pair(1, 0)    // Bottom-right
+        )
 
-        // Check all neighbors
+        // Check all 6 neighbors
         for ((dr, dc) in neighbors) {
             val newRow = row + dr
             val newCol = col + dc
 
-            // Check if the neighbor is valid and not visited
+            // Check if the neighbor is valid, not visited, and belongs to the player
             if (newRow in 0 until boardSize &&
-                            newCol in 0 until boardSize &&
-                            !visited[newRow][newCol] &&
-                            board[newRow][newCol] == playerValue
+                    newCol in 0 until boardSize &&
+                    !visited[newRow][newCol] &&
+                    board[newRow][newCol] == playerValue
             ) {
-
                 // Recursively check if this neighbor leads to the bottom
                 if (isConnectedToBottom(newRow, newCol, playerValue, visited)) {
                     return true
@@ -270,7 +275,8 @@ class GameState // Constructor with custom board size and win condition
     }
 
     /**
-     * Checks if a cell is connected to the right column using DFS. For Player Two's win condition.
+     * Checks if a cell is connected to the right column using DFS.
+     * FIXED: Correct neighbor calculation for hexagonal grid
      */
     private fun isConnectedToRight(
             row: Int,
@@ -286,42 +292,29 @@ class GameState // Constructor with custom board size and win condition
         // Mark current cell as visited
         visited[row][col] = true
 
-        // Define neighbor offsets for hexagonal grid
-        // Include both even and odd row neighbors
-        val neighbors =
-                if (row % 2 == 0) {
-                    arrayOf(
-                            Pair(-1, -1),
-                            Pair(-1, 0), // Upper left, Upper right
-                            Pair(0, -1),
-                            Pair(0, 1), // Left, Right
-                            Pair(1, -1),
-                            Pair(1, 0) // Lower left, Lower right
-                    )
-                } else {
-                    arrayOf(
-                            Pair(-1, 0),
-                            Pair(-1, 1), // Upper left, Upper right
-                            Pair(0, -1),
-                            Pair(0, 1), // Left, Right
-                            Pair(1, 0),
-                            Pair(1, 1) // Lower left, Lower right
-                    )
-                }
+        // Define all six neighbor directions for a hexagonal grid
+        // These are the 6 directions from any hexagon to its neighbors
+        val neighbors = arrayOf(
+            Pair(-1, 0),  // Top-left
+            Pair(-1, 1),  // Top-right
+            Pair(0, -1),  // Left
+            Pair(0, 1),   // Right
+            Pair(1, -1),  // Bottom-left
+            Pair(1, 0)    // Bottom-right
+        )
 
-        // Check all neighbors
+        // Check all 6 neighbors
         for ((dr, dc) in neighbors) {
             val newRow = row + dr
             val newCol = col + dc
 
-            // Check if the neighbor is valid and not visited
+            // Check if the neighbor is valid, not visited, and belongs to the player
             if (newRow in 0 until boardSize &&
-                            newCol in 0 until boardSize &&
-                            !visited[newRow][newCol] &&
-                            board[newRow][newCol] == playerValue
+                    newCol in 0 until boardSize &&
+                    !visited[newRow][newCol] &&
+                    board[newRow][newCol] == playerValue
             ) {
-
-                // Recursively check if this neighbor leads to the right
+                // Recursively check if this neighbor leads to the right edge
                 if (isConnectedToRight(newRow, newCol, playerValue, visited)) {
                     return true
                 }
