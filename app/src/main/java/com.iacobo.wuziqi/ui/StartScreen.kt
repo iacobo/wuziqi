@@ -137,8 +137,8 @@ fun StartScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 GameModeButton(
-                        title = "X's & O's",
-                        description = "Classic 3×3 tic-tac-toe game",
+                        title = stringResource(R.string.tictactoe_title),
+                        description = stringResource(R.string.tictactoe_description),
                         icon = Icons.Default.Grid3x3,
                         onClick = {
                             // Launch directly with 3x3 board and 3-in-a-row
@@ -152,8 +152,8 @@ fun StartScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 GameModeButton(
-                        title = "Connect 4",
-                        description = "Classic Connect 4 game with vertical drops",
+                        title = stringResource(R.string.connect4_title),
+                        description = stringResource(R.string.connect4_description),
                         icon = Icons.Default.Margin,
                         onClick = {
                             // Launch directly with 7x7 board and 4-in-a-row
@@ -167,8 +167,8 @@ fun StartScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 GameModeButton(
-                        title = "Hex",
-                        description = "Strategic edge-connection game on hexagonal grid",
+                        title = stringResource(R.string.hex_title),
+                        description = stringResource(R.string.hex_description),
                         icon = Icons.Default.Hexagon,
                         onClick = {
                             // Launch with 11x11 board and 8-in-a-row for Hex

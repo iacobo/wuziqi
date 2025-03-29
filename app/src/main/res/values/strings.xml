@@ -34,6 +34,12 @@
     <string name="cd_undo_move">Undo move</string>
     <string name="cd_reset_game">Reset game</string>
 
+    <!-- Reset dialogue box -->
+    <string name="confirm_reset_title">Restart game?</string>
+    <string name="confirm_reset_message">Are you sure you want to restart the current game?</string>
+    <string name="yes">Yes</string>
+    <string name="cancel">Cancel</string>
+
     <!-- Settings -->
     <string name="settings">Settings</string>
     <string name="back">Back</string>
@@ -61,6 +67,8 @@
     <string name="connect4_description">Classic Connect 4 game with vertical drops</string>
     <string name="tictactoe_title">X\'s &amp; O\'s</string>
     <string name="tictactoe_description">Classic 3×3 tic-tac-toe game</string>
+    <string name="hex_title">Hex</string>
+    <string name="hex_description">Strategic edge-connection on a hexagonal grid</string>
 
     <string name="choose_opponent">Choose your opponent</string>
     <string name="play_against_human">Over the board</string>

@@ -1,5 +1,9 @@
 package com.iacobo.wuziqi.ui
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -48,7 +52,42 @@ fun AppNavigation(
     // Observe user preferences for theme
     val preferences = settingsViewModel.userPreferences.value
 
-    NavHost(navController = navController, startDestination = Routes.HOME) {
+    NavHost(
+            navController = navController,
+            startDestination = Routes.HOME,
+            enterTransition = {
+                // Reduce default enter transition duration to half (was previously ~300ms)
+                fadeIn(animationSpec = tween(150)) +
+                        slideIntoContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                animationSpec = tween(150)
+                        )
+            },
+            exitTransition = {
+                // Reduce default exit transition duration to half
+                fadeOut(animationSpec = tween(150)) +
+                        slideOutOfContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                animationSpec = tween(150)
+                        )
+            },
+            popEnterTransition = {
+                // Reduce default pop enter transition duration to half
+                fadeIn(animationSpec = tween(150)) +
+                        slideIntoContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                animationSpec = tween(150)
+                        )
+            },
+            popExitTransition = {
+                // Reduce default pop exit transition duration to half
+                fadeOut(animationSpec = tween(150)) +
+                        slideOutOfContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                animationSpec = tween(150)
+                        )
+            }
+    ) {
         // Home/Start Screen
         composable(Routes.HOME) {
             StartScreen(

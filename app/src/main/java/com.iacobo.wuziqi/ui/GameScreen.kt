@@ -20,7 +20,9 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -60,6 +63,8 @@ fun GameScreen(
         onNavigateToHome: () -> Unit,
         themeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
+        var showResetConfirmation by remember { mutableStateOf(false) }
+
         val gameState = viewModel.gameState
         val winner = viewModel.winner
         val lastPlacedPosition = viewModel.lastPlacedPosition
@@ -71,14 +76,14 @@ fun GameScreen(
         // Determine game type for easter eggs
         val isXandO = boardSize == 3 && winLength == 3
         val isConnect4 = boardSize == 7 && winLength == 4
-        val isHex = boardSize == 11 && winLength == 8 // Hex game detection
+        val isHex = boardSize == 11 && winLength == 8
 
         // Determine app title based on easter egg mode
         val appTitle =
                 when {
-                        isXandO -> "X's & O's"
-                        isConnect4 -> "Connect 4"
-                        isHex -> "Hex"
+                        isXandO -> stringResource(R.string.tictactoe_title)
+                        isConnect4 -> stringResource(R.string.connect4_title)
+                        isHex -> stringResource(R.string.hex_title)
                         else -> stringResource(R.string.app_name)
                 }
 
@@ -266,7 +271,18 @@ fun GameScreen(
                                                 }
 
                                                 // Reset button
-                                                IconButton(onClick = { viewModel.resetGame() }) {
+                                                IconButton(
+                                                        onClick = {
+                                                                if (winner == null &&
+                                                                                moveHistory
+                                                                                        .isNotEmpty()
+                                                                ) {
+                                                                        showResetConfirmation = true
+                                                                } else {
+                                                                        viewModel.resetGame()
+                                                                }
+                                                        }
+                                                ) {
                                                         Icon(
                                                                 imageVector = Icons.Default.Replay,
                                                                 contentDescription =
@@ -591,7 +607,15 @@ fun GameScreen(
                                 }
 
                                 // Reset button
-                                IconButton(onClick = { viewModel.resetGame() }) {
+                                IconButton(
+                                        onClick = {
+                                                if (winner == null && moveHistory.isNotEmpty()) {
+                                                        showResetConfirmation = true
+                                                } else {
+                                                        viewModel.resetGame()
+                                                }
+                                        }
+                                ) {
                                         Icon(
                                                 imageVector = Icons.Default.Replay,
                                                 contentDescription = stringResource(R.string.reset)
@@ -619,4 +643,30 @@ fun GameScreen(
                         }
                 }
         }
+
+        if (showResetConfirmation) {
+                ResetConfirmationDialog(
+                        onConfirm = {
+                                viewModel.resetGame()
+                                showResetConfirmation = false
+                        },
+                        onDismiss = { showResetConfirmation = false }
+                )
+        }
+}
+
+/** Dialog to confirm game reset when the game is still in progress. */
+@Composable
+fun ResetConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+        AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text(stringResource(R.string.confirm_reset_title)) },
+                text = { Text(stringResource(R.string.confirm_reset_message)) },
+                confirmButton = {
+                        Button(onClick = onConfirm) { Text(stringResource(R.string.yes)) }
+                },
+                dismissButton = {
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                }
+        )
 }
