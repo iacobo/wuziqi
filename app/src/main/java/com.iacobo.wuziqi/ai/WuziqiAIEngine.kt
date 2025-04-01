@@ -30,9 +30,9 @@ class MoveEvaluation(
 
 /**
  * A pattern-based Wuziqi (Gomoku) AI that focuses on recognizing and creating strategic patterns
- * rather than deep tree searching.
+ * rather than deep tree searching. Now implements the GameAI interface.
  */
-class WuziqiAIEngine(private val random: Random = Random()) {
+class WuziqiAIEngine(private val random: Random = Random()) : GameAI {
 
     companion object {
         // Player constants
@@ -99,7 +99,7 @@ class WuziqiAIEngine(private val random: Random = Random()) {
     }
 
     /** Finds the best move for the current game state. */
-    fun findBestMove(gameState: GameState): Pair<Int, Int>? {
+    override fun findBestMove(gameState: GameState): Pair<Int, Int>? {
         // Handle special game variants
         return when {
             gameState.boardSize == 3 && gameState.winCondition == 3 -> {

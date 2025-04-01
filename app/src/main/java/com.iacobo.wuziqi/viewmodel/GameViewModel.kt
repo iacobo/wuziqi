@@ -1,40 +1,34 @@
 package com.iacobo.wuziqi.viewmodel
 
 import android.app.Application
-import android.media.AudioAttributes
-import android.media.SoundPool
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.iacobo.wuziqi.R
-import com.iacobo.wuziqi.ai.WuziqiAIEngine
-import com.iacobo.wuziqi.ai.HexAlphaBetaEngine
+import com.iacobo.wuziqi.ai.AIFactory
+import com.iacobo.wuziqi.audio.SoundManager
 import com.iacobo.wuziqi.data.GameState
+import com.iacobo.wuziqi.data.GameStateRepository
+import com.iacobo.wuziqi.data.GameType
 import com.iacobo.wuziqi.data.UserPreferencesRepository
 import com.iacobo.wuziqi.ui.Opponent
-import java.util.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-private val aiEngine = WuziqiAIEngine(Random())
-// Use our new Alpha-Beta based Hex AI engine
-private val hexAiEngine = HexAlphaBetaEngine(Random())
-
-/** Represents a move in the game with position and player information. */
-data class Move(val row: Int, val col: Int, val player: Int)
+// Constants for player results
+const val DRAW = -1
 
 /** Represents a position on the board. */
 data class Position(val row: Int, val col: Int)
 
-// Constants for player results
-const val DRAW = -1
+/** Represents a move in the game with position and player information. */
+data class Move(val row: Int, val col: Int, val player: Int)
 
 /**
- * ViewModel that manages the game state and provides actions and state for the UI. Handles move
- * history and state persistence across configuration changes.
+ * ViewModel that manages the game state and provides actions and state for the UI.
+ * Final refactored version with proper separation of concerns.
  */
 class GameViewModel(application: Application) : AndroidViewModel(application) {
     // Game state
@@ -57,42 +51,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var isLoading by mutableStateOf(false)
         private set
 
+    // State data repositories
+    private val gameStateRepository = GameStateRepository(application)
+    private val userPreferencesRepository = UserPreferencesRepository(application)
+    
+    // Sound management
+    private val soundManager = SoundManager(application)
+    private var soundEnabled = false
+    
     // Easter eggs tracking
-    private val easterEggManager = GameState.EasterEggManager(application)
     var discoveredEasterEggs by mutableStateOf(emptySet<String>())
         private set
 
-    // Sound settings
-    private val userPreferencesRepository = UserPreferencesRepository(application)
-    private var soundEnabled = false
-
-    // SoundPool for softer, more natural sounds
-    private val soundPool: SoundPool
-    private val soundWin: Int
-    private val soundUndo: Int
-    private val soundReset: Int
-    private val soundPlaceTile: Int
-    private val soundPlaceTicTacToe: Int
-    private val soundPlaceConnect4: Int
-
     init {
-        // Initialize SoundPool
-        val audioAttributes =
-                AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_GAME)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-
-        soundPool = SoundPool.Builder().setMaxStreams(4).setAudioAttributes(audioAttributes).build()
-
-        // Load sound effects
-        soundPlaceTile = soundPool.load(application, R.raw.soft_tap, 1)
-        soundPlaceTicTacToe = soundPool.load(application, R.raw.soft_scratch, 1)
-        soundPlaceConnect4 = soundPool.load(application, R.raw.soft_drop, 1)
-        soundWin = soundPool.load(application, R.raw.soft_success, 1)
-        soundUndo = soundPool.load(application, R.raw.soft_pop, 1)
-        soundReset = soundPool.load(application, R.raw.soft_click, 1)
-
         // Observe sound settings
         viewModelScope.launch {
             userPreferencesRepository.userPreferencesFlow.collectLatest { preferences ->
@@ -101,30 +72,27 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Load discovered easter eggs
-        discoveredEasterEggs = easterEggManager.getDiscoveredEasterEggs()
+        discoveredEasterEggs = gameStateRepository.getDiscoveredEasterEggs()
 
         // Try to load saved game state
-        viewModelScope.launch { gameState.loadState(application) }
+        viewModelScope.launch { 
+            gameStateRepository.loadGameState(gameState) 
+        }
     }
 
     override fun onCleared() {
         super.onCleared()
-        soundPool.release()
+        soundManager.release()
     }
 
     /**
      * Sets up a new game with the specified parameters
-     *
-     * @param boardSize The size of the game board
-     * @param winLength The number of consecutive pieces needed to win
-     * @param opponent The type of opponent (human or computer)
-     * @param skipStartSound Flag to skip playing the reset sound on initial setup
      */
     fun setupGame(
-            boardSize: Int,
-            winLength: Int,
-            opponent: Opponent,
-            skipStartSound: Boolean = false
+        boardSize: Int,
+        winLength: Int,
+        opponent: Opponent,
+        skipStartSound: Boolean = false
     ) {
         // Clear any existing game
         winner = null
@@ -132,40 +100,39 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         moveHistory = emptyList()
 
         // Create new game state
-        gameState =
-                GameState(
-                        boardSize = boardSize,
-                        winCondition = winLength,
-                        againstComputer = opponent == Opponent.COMPUTER
-                )
+        gameState = GameState(
+            boardSize = boardSize,
+            winCondition = winLength,
+            againstComputer = opponent == Opponent.COMPUTER
+        )
 
         // Check for easter eggs
-        if (boardSize == 3 && winLength == 3) {
-            easterEggManager.addDiscoveredEasterEgg("tictactoe")
-            discoveredEasterEggs = easterEggManager.getDiscoveredEasterEggs()
-        } else if (boardSize == 7 && winLength == 4) {
-            easterEggManager.addDiscoveredEasterEgg("connect4")
-            discoveredEasterEggs = easterEggManager.getDiscoveredEasterEggs()
-        } else if (boardSize == 11 && winLength == 8) {
-            easterEggManager.addDiscoveredEasterEgg("hex")
-            discoveredEasterEggs = easterEggManager.getDiscoveredEasterEggs()
+        when {
+            boardSize == 3 && winLength == 3 -> {
+                gameStateRepository.addDiscoveredEasterEgg("tictactoe")
+            }
+            boardSize == 7 && winLength == 4 -> {
+                gameStateRepository.addDiscoveredEasterEgg("connect4")
+            }
+            boardSize == 11 && winLength == 8 -> {
+                gameStateRepository.addDiscoveredEasterEgg("hex")
+            }
         }
+        discoveredEasterEggs = gameStateRepository.getDiscoveredEasterEggs()
 
         // Play sound effect if enabled AND we should not skip it
         if (soundEnabled && !skipStartSound) {
-            soundPool.play(soundReset, 0.7f, 0.7f, 1, 0, 1.0f)
+            soundManager.playResetSound()
         }
 
         // Save initial state
-        viewModelScope.launch { gameState.saveState(getApplication()) }
+        viewModelScope.launch { 
+            gameStateRepository.saveGameState(gameState) 
+        }
     }
 
     /**
-     * Places a tile at the specified position if valid. Updates state and checks for win condition.
-     *
-     * @param row The row position
-     * @param col The column position
-     * @param bypassLoading Set to true for AI moves to bypass the isLoading check
+     * Places a tile at the specified position if valid.
      */
     fun placeTile(row: Int, col: Int, bypassLoading: Boolean = false) {
         // Skip the isLoading check if bypassLoading is true (AI move)
@@ -178,6 +145,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
 
+        // Get the current player before placing the tile
         val currentPlayer = gameState.currentPlayer
 
         // Save the move to history before making it
@@ -189,56 +157,43 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // Play sound effect if enabled
         if (soundEnabled) {
-            playTileSound()
+            val gameType = GameType.fromGameState(gameState)
+            soundManager.playTileSound(gameType)
         }
 
-        // For Hex game, use its special win condition
-        if (gameState.boardSize == 11 && gameState.winCondition == 8) {
-            if (gameState.checkHexWin(currentPlayer)) {
-                winner = currentPlayer
+        // Determine the game type to handle special win conditions
+        val gameType = GameType.fromGameState(gameState)
 
-                // Play win sound if enabled
-                if (soundEnabled) {
-                    playWinSound()
+        // Check for win condition
+        when (gameType) {
+            GameType.Hex -> {
+                // For Hex game, use its special win condition
+                if (gameState.checkHexWin(currentPlayer)) {
+                    handleWin(currentPlayer)
+                    return
                 }
-
-                // Clear saved state if game is over
-                viewModelScope.launch { gameState.clearSavedState(getApplication()) }
-
-                return
             }
-        }
-
-        // Standard win check for other games
-        else if (gameState.checkWin(row, col, currentPlayer)) {
-            winner = currentPlayer
-
-            // Play win sound if enabled
-            if (soundEnabled) {
-                playWinSound()
+            else -> {
+                // Standard win check for other games
+                if (gameState.checkWin(row, col, currentPlayer)) {
+                    handleWin(currentPlayer)
+                    return
+                }
             }
-
-            // Clear saved state if game is over
-            viewModelScope.launch { gameState.clearSavedState(getApplication()) }
-
-            return
         }
 
         // Check for draw
         if (gameState.isBoardFull()) {
-            winner = DRAW
-
-            // Clear saved state if game is over
-            viewModelScope.launch { gameState.clearSavedState(getApplication()) }
-
+            handleDraw()
             return
         }
 
         // Save state after move
-        viewModelScope.launch { gameState.saveState(getApplication()) }
+        viewModelScope.launch { 
+            gameStateRepository.saveGameState(gameState) 
+        }
 
-        // Only trigger computer move if this wasn't already a computer move
-        // This prevents infinite recursion
+        // Trigger computer move if playing against computer
         if (gameState.againstComputer && winner == null && !bypassLoading) {
             makeComputerMove()
         }
@@ -249,12 +204,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      */
     private fun findBottomEmptyRow(col: Int): Int {
         // For Connect4 (7x6 board), we need to only check the 6 rows (0-5)
-        val maxRow =
-                if (gameState.boardSize == 7 && gameState.winCondition == 4) {
-                    5 // 6 rows (0-5) for Connect4
-                } else {
-                    gameState.boardSize - 1
-                }
+        val maxRow = if (gameState.boardSize == 7 && gameState.winCondition == 4) {
+            5 // 6 rows (0-5) for Connect4
+        } else {
+            gameState.boardSize - 1
+        }
 
         for (row in maxRow downTo 0) {
             if (gameState.board[row][col] == GameState.EMPTY) {
@@ -282,65 +236,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val row = findBottomEmptyRow(col)
         if (row == -1) return // Column is full
 
-        // Place the tile normally
-        val currentPlayer = gameState.currentPlayer
-
-        // Save the move to history before making it
-        moveHistory = moveHistory + Move(row, col, currentPlayer)
-
-        // Place the tile
-        gameState.placeTile(row, col)
-        lastPlacedPosition = Position(row, col)
-
-        // Play sound effect if enabled
-        if (soundEnabled) {
-            playTileSound()
-        }
-
-        // Check for win
-        if (gameState.checkWin(row, col, currentPlayer)) {
-            winner = currentPlayer
-
-            // Play win sound if enabled
-            if (soundEnabled) {
-                playWinSound()
-            }
-
-            // Clear saved state if game is over
-            viewModelScope.launch { gameState.clearSavedState(getApplication()) }
-
-            return
-        }
-
-        // Check for draw - for Connect4, we need to check if all columns are full
-        var isFull = true
-        for (c in 0 until gameState.boardSize) {
-            if (findBottomEmptyRow(c) != -1) {
-                isFull = false
-                break
-            }
-        }
-
-        if (isFull) {
-            winner = DRAW
-
-            // Clear saved state if game is over
-            viewModelScope.launch { gameState.clearSavedState(getApplication()) }
-
-            return
-        }
-
-        // Save state after move
-        viewModelScope.launch { gameState.saveState(getApplication()) }
-
-        // Make computer move if playing against computer
-        // Only do this for human moves (not AI moves)
-        if (gameState.againstComputer && winner == null && !bypassLoading) {
-            makeComputerMove()
-        }
+        // Place the tile using the standard placeTile method
+        placeTile(row, col, bypassLoading)
     }
 
-    /** Makes a computer move based on the current game type. */
+    /**
+     * Makes a computer move based on the current game type.
+     */
     private fun makeComputerMove() {
         if (winner != null || isLoading) return
 
@@ -350,24 +252,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             // Short delay to simulate thinking (and avoid UI flicker)
             delay(700)
 
-            // Get best move based on the game type
-            val bestMove =
-                    when {
-                        // Hex game - use the HexAlphaBetaEngine
-                        gameState.boardSize == 11 && gameState.winCondition == 8 -> {
-                            hexAiEngine.findBestMove(gameState)
-                        }
-                        // Other games - use the WuziqiAIEngine
-                        else -> {
-                            aiEngine.findBestMove(gameState)
-                        }
-                    }
+            // Get the current game type
+            val gameType = GameType.fromGameState(gameState)
+            
+            // Get the appropriate AI based on game type
+            val ai = AIFactory.createAI(gameType)
+            
+            // Get best move from the AI
+            val bestMove = ai.findBestMove(gameState)
 
             if (bestMove != null) {
                 val (row, col) = bestMove
 
                 // Check for Connect4 special case
-                if (gameState.boardSize == 7 && gameState.winCondition == 4) {
+                if (gameType == GameType.Connect4) {
                     placeConnect4Tile(col, bypassLoading = true)
                 } else {
                     placeTile(row, col, bypassLoading = true)
@@ -378,29 +276,37 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Plays the appropriate sound effect for placing a tile based on the game type. */
-    private fun playTileSound() {
-        val soundId =
-                when {
-                    // TicTacToe game - use soft_scratch
-                    gameState.boardSize == 3 && gameState.winCondition == 3 -> soundPlaceTicTacToe
-                    // Connect4 game - use soft_drop
-                    gameState.boardSize == 7 && gameState.winCondition == 4 -> soundPlaceConnect4
-                    // Default Wuziqi game - use soft_tap
-                    else -> soundPlaceTile
-                }
+    /**
+     * Handle a win by a player.
+     */
+    private fun handleWin(player: Int) {
+        winner = player
 
-        soundPool.play(soundId, 0.7f, 0.7f, 1, 0, 1.0f)
-    }
+        // Play win sound if enabled
+        if (soundEnabled) {
+            soundManager.playWinSound()
+        }
 
-    /** Plays a sound effect for winning the game. */
-    private fun playWinSound() {
-        soundPool.play(soundWin, 0.7f, 0.7f, 1, 0, 1.0f)
+        // Clear saved state if game is over
+        viewModelScope.launch { 
+            gameStateRepository.clearSavedState() 
+        }
     }
 
     /**
-     * Undoes the last move if possible. If playing against the computer, undoes both player's and
-     * computer's moves.
+     * Handle a draw game.
+     */
+    private fun handleDraw() {
+        winner = DRAW
+
+        // Clear saved state if game is over
+        viewModelScope.launch { 
+            gameStateRepository.clearSavedState() 
+        }
+    }
+
+    /**
+     * Undoes the last move if possible.
      */
     fun undoMove() {
         if (moveHistory.isEmpty() || winner != null || isLoading) {
@@ -442,24 +348,27 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Update last placed position
-        lastPlacedPosition =
-                if (moveHistory.isNotEmpty()) {
-                    val previousMove = moveHistory.last()
-                    Position(previousMove.row, previousMove.col)
-                } else {
-                    null
-                }
+        lastPlacedPosition = if (moveHistory.isNotEmpty()) {
+            val previousMove = moveHistory.last()
+            Position(previousMove.row, previousMove.col)
+        } else {
+            null
+        }
 
         // Play sound effect if enabled
         if (soundEnabled) {
-            soundPool.play(soundUndo, 0.7f, 0.7f, 1, 0, 1.0f)
+            soundManager.playUndoSound()
         }
 
         // Save state after undo
-        viewModelScope.launch { gameState.saveState(getApplication()) }
+        viewModelScope.launch { 
+            gameStateRepository.saveGameState(gameState) 
+        }
     }
 
-    /** Resets the game to initial state. */
+    /**
+     * Resets the game to initial state.
+     */
     fun resetGame() {
         gameState.reset()
         winner = null
@@ -468,10 +377,26 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // Play sound effect if enabled
         if (soundEnabled) {
-            soundPool.play(soundReset, 0.7f, 0.7f, 1, 0, 1.0f)
+            soundManager.playResetSound()
         }
 
         // Clear saved state
-        viewModelScope.launch { gameState.clearSavedState(getApplication()) }
+        viewModelScope.launch { 
+            gameStateRepository.clearSavedState() 
+        }
+    }
+    
+    /**
+     * Checks if the undo operation is available.
+     */
+    fun canUndo(): Boolean {
+        return moveHistory.isNotEmpty() && winner == null && !isLoading
+    }
+    
+    /**
+     * Checks if the reset confirmation should be shown.
+     */
+    fun shouldConfirmReset(): Boolean {
+        return winner == null && moveHistory.isNotEmpty()
     }
 }
