@@ -15,12 +15,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Routine
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -246,7 +246,7 @@ fun getThemeIcon(themeMode: ThemeMode) =
         when (themeMode) {
                 ThemeMode.LIGHT -> Icons.Default.LightMode
                 ThemeMode.DARK -> Icons.Default.DarkMode
-                ThemeMode.SYSTEM -> Icons.Default.Routine
+                ThemeMode.SYSTEM -> Icons.Default.Brightness4
         }
 
 /** Switch preference item with icon. */
