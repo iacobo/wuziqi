@@ -16,6 +16,7 @@ object BoardFactory {
             GameType.TicTacToe -> TicTacToeBoard()
             GameType.Connect4 -> Connect4Board()
             GameType.Hex -> HexBoard()
+            GameType.Havannah -> HavannahBoard()
         }
     }
 }

@@ -413,4 +413,500 @@ class GameState // Constructor with custom board size and win condition
             prefs.edit { putStringSet(KEY_EASTER_EGGS, currentEggs) }
         }
     }
+
+    /**
+     * Special win checker for Havannah game that checks for rings, bridges, and forks.
+     *
+     * @param playerValue The player value to check for
+     * @return True if the player has won, false otherwise
+     */
+    fun checkHavannahWin(playerValue: Int): Boolean {
+        // Only run Havannah win check for 10x10 board with 9 win condition
+        if (boardSize != 10 || winCondition != 9) {
+            return false
+        }
+
+        // Reset winning path before checking
+        winningPath.clear()
+
+        // Variable to store the win type (1=ring, 2=bridge, 3=fork)
+        var winType = 0
+
+        // Check for rings
+        if (checkHavannahRing(playerValue)) {
+            winType = 1
+            return true
+        }
+
+        // Check for bridges (connections between corners)
+        if (checkHavannahBridge(playerValue)) {
+            winType = 2
+            return true
+        }
+
+        // Check for forks (connections between three sides)
+        if (checkHavannahFork(playerValue)) {
+            winType = 3
+            return true
+        }
+
+        return false
+    }
+
+    /** Store the win type for Havannah (1=ring, 2=bridge, 3=fork) */
+    private var havannahWinType: Int = 0
+
+    /** Gets the Havannah win type (1=ring, 2=bridge, 3=fork) */
+    fun getWinningType(): Int = havannahWinType
+
+    /**
+     * Checks if a player has formed a ring in Havannah. A ring is a loop that surrounds at least
+     * one cell.
+     */
+    private fun checkHavannahRing(playerValue: Int): Boolean {
+        // Create a visited array to track visited cells in our search
+        val visited = Array(boardSize) { BooleanArray(boardSize) }
+
+        // Reset the winning path
+        winningPath.clear()
+
+        // Look for rings starting from each player's stone
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] == playerValue) {
+                    // Reset visited for each starting point
+                    for (r in 0 until boardSize) {
+                        for (c in 0 until boardSize) {
+                            visited[r][c] = false
+                        }
+                    }
+
+                    // Try to find a ring starting from this cell
+                    val ringPath = mutableSetOf<Pair<Int, Int>>()
+                    if (findRing(row, col, row, col, playerValue, visited, ringPath, 0)) {
+                        // Copy the ring path to the winning path
+                        winningPath.addAll(ringPath)
+                        havannahWinType = 1 // Ring win
+                        return true
+                    }
+                }
+            }
+        }
+
+        return false
+    }
+
+    /** Recursively searches for a ring starting from the given cell. */
+    private fun findRing(
+            startRow: Int,
+            startCol: Int,
+            row: Int,
+            col: Int,
+            playerValue: Int,
+            visited: Array<BooleanArray>,
+            path: MutableSet<Pair<Int, Int>>,
+            depth: Int
+    ): Boolean {
+        // Base case: if we've returned to the start after visiting at least 3 cells, we've found a
+        // ring
+        if (depth > 2 && row == startRow && col == startCol) {
+            return true
+        }
+
+        // Mark current cell as visited
+        visited[row][col] = true
+        path.add(Pair(row, col))
+
+        // Define all six neighbor directions for a hexagonal grid
+        val neighbors =
+                arrayOf(
+                        Pair(-1, 0), // Top-left
+                        Pair(-1, 1), // Top-right
+                        Pair(0, -1), // Left
+                        Pair(0, 1), // Right
+                        Pair(1, -1), // Bottom-left
+                        Pair(1, 0) // Bottom-right
+                )
+
+        // Check all neighbors
+        for ((dr, dc) in neighbors) {
+            val newRow = row + dr
+            val newCol = col + dc
+
+            // Check if the neighbor is valid, belongs to the player
+            if (newRow in 0 until boardSize &&
+                            newCol in 0 until boardSize &&
+                            board[newRow][newCol] == playerValue
+            ) {
+
+                // If it's the starting cell and we've visited at least 3 cells, we've found a ring
+                if (newRow == startRow && newCol == startCol && depth >= 2) {
+                    return true
+                }
+
+                // Only visit unvisited cells except for the starting cell
+                if (!visited[newRow][newCol] ||
+                                (newRow == startRow && newCol == startCol && depth >= 2)
+                ) {
+                    if (findRing(
+                                    startRow,
+                                    startCol,
+                                    newRow,
+                                    newCol,
+                                    playerValue,
+                                    visited,
+                                    path,
+                                    depth + 1
+                            )
+                    ) {
+                        return true
+                    }
+                }
+            }
+        }
+
+        // Backtrack
+        path.remove(Pair(row, col))
+        return false
+    }
+
+    /**
+     * Checks if a player has formed a bridge in Havannah. A bridge connects any two corners of the
+     * hexagonal board.
+     */
+    private fun checkHavannahBridge(playerValue: Int): Boolean {
+        // Define the six corners in our board representation
+        val corners =
+                listOf(
+                        Pair(0, 0), // Top-left
+                        Pair(0, boardSize - 1), // Top-right
+                        Pair(boardSize / 2, boardSize - 1), // Right
+                        Pair(boardSize - 1, boardSize / 2), // Bottom-right
+                        Pair(boardSize - 1, 0), // Bottom-left
+                        Pair(boardSize / 2, 0) // Left
+                )
+
+        // Reset the winning path
+        winningPath.clear()
+
+        // Check for a bridge between each pair of corners
+        for (i in 0 until corners.size) {
+            for (j in i + 1 until corners.size) {
+                val corner1 = corners[i]
+                val corner2 = corners[j]
+
+                // Skip if either corner doesn't belong to the player
+                if (board[corner1.first][corner1.second] != playerValue ||
+                                board[corner2.first][corner2.second] != playerValue
+                ) {
+                    continue
+                }
+
+                // Create a visited array to track visited cells
+                val visited = Array(boardSize) { BooleanArray(boardSize) }
+
+                // Reset the temporary path
+                val tempPath = mutableSetOf<Pair<Int, Int>>()
+
+                // Check if there's a path between these two corners
+                if (isConnected(
+                                corner1.first,
+                                corner1.second,
+                                corner2.first,
+                                corner2.second,
+                                playerValue,
+                                visited,
+                                tempPath
+                        )
+                ) {
+                    // We found a bridge
+                    winningPath.addAll(tempPath)
+                    havannahWinType = 2 // Bridge win
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Checks if a player has formed a fork in Havannah. A fork connects any three edges of the
+     * hexagonal board.
+     */
+    private fun checkHavannahFork(playerValue: Int): Boolean {
+        // Define the six edges in our board representation (excluding corners)
+        val edges =
+                listOf(
+                        "top", // Top edge
+                        "topright", // Top-right edge
+                        "bottomright", // Bottom-right edge
+                        "bottom", // Bottom edge
+                        "bottomleft", // Bottom-left edge
+                        "topleft" // Top-left edge
+                )
+
+        // Reset the winning path
+        winningPath.clear()
+
+        // First, check which edges the player has pieces on
+        val connectedEdges = mutableSetOf<String>()
+
+        // Check for top edge
+        for (col in 1 until boardSize - 1) {
+            if (board[0][col] == playerValue) {
+                connectedEdges.add("top")
+                break
+            }
+        }
+
+        // Check for top-right edge
+        for (row in 1 until boardSize / 2) {
+            if (board[row][boardSize - 1] == playerValue) {
+                connectedEdges.add("topright")
+                break
+            }
+        }
+
+        // Check for bottom-right edge
+        for (row in boardSize / 2 + 1 until boardSize - 1) {
+            if (board[row][boardSize - 1] == playerValue) {
+                connectedEdges.add("bottomright")
+                break
+            }
+        }
+
+        // Check for bottom edge
+        for (col in 1 until boardSize - 1) {
+            if (board[boardSize - 1][col] == playerValue) {
+                connectedEdges.add("bottom")
+                break
+            }
+        }
+
+        // Check for bottom-left edge
+        for (row in boardSize / 2 + 1 until boardSize - 1) {
+            if (board[row][0] == playerValue) {
+                connectedEdges.add("bottomleft")
+                break
+            }
+        }
+
+        // Check for top-left edge
+        for (row in 1 until boardSize / 2) {
+            if (board[row][0] == playerValue) {
+                connectedEdges.add("topleft")
+                break
+            }
+        }
+
+        // If the player has pieces on fewer than three edges, they can't have a fork
+        if (connectedEdges.size < 3) {
+            return false
+        }
+
+        // Check for all possible combinations of three edges
+        for (i in 0 until edges.size) {
+            for (j in i + 1 until edges.size) {
+                for (k in j + 1 until edges.size) {
+                    val edge1 = edges[i]
+                    val edge2 = edges[j]
+                    val edge3 = edges[k]
+
+                    // Skip if the player doesn't have pieces on all three edges
+                    if (!connectedEdges.contains(edge1) ||
+                                    !connectedEdges.contains(edge2) ||
+                                    !connectedEdges.contains(edge3)
+                    ) {
+                        continue
+                    }
+
+                    // Check if there's a common connection point for all three edges
+                    if (areForkEdgesConnected(edge1, edge2, edge3, playerValue)) {
+                        havannahWinType = 3 // Fork win
+                        return true
+                    }
+                }
+            }
+        }
+
+        return false
+    }
+
+    /** Checks if three edges are connected by the player's pieces. */
+    private fun areForkEdgesConnected(
+            edge1: String,
+            edge2: String,
+            edge3: String,
+            playerValue: Int
+    ): Boolean {
+        // Find sample points on each edge
+        val point1 = getSamplePointOnEdge(edge1, playerValue) ?: return false
+        val point2 = getSamplePointOnEdge(edge2, playerValue) ?: return false
+        val point3 = getSamplePointOnEdge(edge3, playerValue) ?: return false
+
+        // Check if there's a path connecting all three points
+        // Create a visited array to track visited cells
+        val visited = Array(boardSize) { BooleanArray(boardSize) }
+
+        // First check if points 1 and 2 are connected
+        val path12 = mutableSetOf<Pair<Int, Int>>()
+        if (!isConnected(
+                        point1.first,
+                        point1.second,
+                        point2.first,
+                        point2.second,
+                        playerValue,
+                        visited,
+                        path12
+                )
+        ) {
+            return false
+        }
+
+        // Reset visited array
+        for (r in 0 until boardSize) {
+            for (c in 0 until boardSize) {
+                visited[r][c] = false
+            }
+        }
+
+        // Now check if any point in the path from 1 to 2 connects to point 3
+        val finalPath = mutableSetOf<Pair<Int, Int>>()
+        for (point in path12) {
+            // Reset visited again for each starting point
+            for (r in 0 until boardSize) {
+                for (c in 0 until boardSize) {
+                    visited[r][c] = false
+                }
+            }
+
+            val tempPath = mutableSetOf<Pair<Int, Int>>()
+            if (isConnected(
+                            point.first,
+                            point.second,
+                            point3.first,
+                            point3.second,
+                            playerValue,
+                            visited,
+                            tempPath
+                    )
+            ) {
+                // We found a fork
+                finalPath.addAll(path12)
+                finalPath.addAll(tempPath)
+                winningPath.addAll(finalPath)
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Gets a sample point on an edge where the player has a piece. (continued from previous
+     * implementation)
+     */
+    private fun getSamplePointOnEdge(edge: String, playerValue: Int): Pair<Int, Int>? {
+        when (edge) {
+            "top" -> {
+                for (col in 1 until boardSize - 1) {
+                    if (board[0][col] == playerValue) {
+                        return Pair(0, col)
+                    }
+                }
+            }
+            "topright" -> {
+                for (row in 1 until boardSize / 2) {
+                    if (board[row][boardSize - 1] == playerValue) {
+                        return Pair(row, boardSize - 1)
+                    }
+                }
+            }
+            "bottomright" -> {
+                for (row in boardSize / 2 + 1 until boardSize - 1) {
+                    if (board[row][boardSize - 1] == playerValue) {
+                        return Pair(row, boardSize - 1)
+                    }
+                }
+            }
+            "bottom" -> {
+                for (col in 1 until boardSize - 1) {
+                    if (board[boardSize - 1][col] == playerValue) {
+                        return Pair(boardSize - 1, col)
+                    }
+                }
+            }
+            "bottomleft" -> {
+                for (row in boardSize / 2 + 1 until boardSize - 1) {
+                    if (board[row][0] == playerValue) {
+                        return Pair(row, 0)
+                    }
+                }
+            }
+            "topleft" -> {
+                for (row in 1 until boardSize / 2) {
+                    if (board[row][0] == playerValue) {
+                        return Pair(row, 0)
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    /** Checks if there's a path connecting two points on the board. */
+    private fun isConnected(
+            startRow: Int,
+            startCol: Int,
+            endRow: Int,
+            endCol: Int,
+            playerValue: Int,
+            visited: Array<BooleanArray>,
+            path: MutableSet<Pair<Int, Int>>
+    ): Boolean {
+        // Base case: we've reached the destination
+        if (startRow == endRow && startCol == endCol) {
+            path.add(Pair(startRow, startCol))
+            return true
+        }
+
+        // Mark current cell as visited
+        visited[startRow][startCol] = true
+        path.add(Pair(startRow, startCol))
+
+        // Define all six neighbor directions for a hexagonal grid
+        val neighbors =
+                arrayOf(
+                        Pair(-1, 0), // Top-left
+                        Pair(-1, 1), // Top-right
+                        Pair(0, -1), // Left
+                        Pair(0, 1), // Right
+                        Pair(1, -1), // Bottom-left
+                        Pair(1, 0) // Bottom-right
+                )
+
+        // Check all neighbors
+        for ((dr, dc) in neighbors) {
+            val newRow = startRow + dr
+            val newCol = startCol + dc
+
+            // Check if the neighbor is valid, unvisited, and belongs to the player
+            if (newRow in 0 until boardSize &&
+                            newCol in 0 until boardSize &&
+                            !visited[newRow][newCol] &&
+                            board[newRow][newCol] == playerValue
+            ) {
+
+                // Recursively check this neighbor
+                if (isConnected(newRow, newCol, endRow, endCol, playerValue, visited, path)) {
+                    return true
+                }
+            }
+        }
+
+        // Backtrack
+        path.remove(Pair(startRow, startCol))
+        return false
+    }
 }

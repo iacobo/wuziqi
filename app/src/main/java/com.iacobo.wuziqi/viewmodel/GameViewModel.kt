@@ -166,6 +166,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     return
                 }
             }
+            GameType.Havannah -> {
+                // For Havannah game, use its special win conditions
+                if (gameState.checkHavannahWin(currentPlayer)) {
+                    handleWin(currentPlayer)
+                    return
+                }
+            }
             else -> {
                 // Standard win check for other games
                 if (gameState.checkWin(row, col, currentPlayer)) {

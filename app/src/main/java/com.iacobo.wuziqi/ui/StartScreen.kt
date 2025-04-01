@@ -47,8 +47,8 @@ import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 
 /**
- * Start screen that allows users to select game modes and options. Now includes Easter egg games
- * once discovered.
+ * Start screen that allows users to select game modes and options. Reorganized with category
+ * headings and two games per row.
  */
 @Composable
 fun StartScreen(
@@ -66,7 +66,9 @@ fun StartScreen(
     var winLength by remember { mutableIntStateOf(5) }
 
     // Determine AI support for different game modes
-    val aiSupportedModes = remember { setOf("standard", "tictactoe", "connect4", "hex") }
+    val aiSupportedModes = remember {
+        setOf("standard", "tictactoe", "connect4", "hex", "havannah")
+    }
 
     Scaffold(
             bottomBar = {
@@ -86,12 +88,9 @@ fun StartScreen(
         Column(
                 modifier = Modifier.padding(innerPadding).fillMaxSize().padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Top
         ) {
-            // App logo or icon (optional)
-            // Logo()
-
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Title
             Text(
@@ -110,71 +109,106 @@ fun StartScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-            // Game mode buttons
-            GameModeButton(
-                    title = stringResource(R.string.standard_wuziqi),
-                    description = stringResource(R.string.standard_wuziqi_desc),
-                    icon = Icons.Default.Apps,
-                    onClick = {
-                        currentMode = "standard"
-                        showOpponentDialog = true
-                    }
-            )
+            // N-in-a-row games category
+            CategoryHeader(title = "N-in-a-row Games")
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            GameModeButton(
-                    title = stringResource(R.string.custom_game),
-                    description = stringResource(R.string.custom_game_desc),
-                    icon = Icons.Default.AppRegistration,
-                    onClick = { showCustomDialog = true }
-            )
-
-            // Easter Egg options (if discovered)
-            if (discoveredEasterEggs.contains("tictactoe")) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                GameModeButton(
-                        title = stringResource(R.string.tictactoe_title),
-                        description = stringResource(R.string.tictactoe_description),
-                        icon = Icons.Default.Grid3x3,
+            // Row 1: Wuziqi and Connect4
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Wuziqi (Standard)
+                GameModeButtonSmall(
+                        title = stringResource(R.string.standard_wuziqi),
+                        description = stringResource(R.string.standard_wuziqi_desc),
+                        icon = Icons.Default.Apps,
                         onClick = {
-                            // Launch directly with 3x3 board and 3-in-a-row
-                            currentMode = "tictactoe"
+                            currentMode = "standard"
                             showOpponentDialog = true
-                        }
+                        },
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )
-            }
 
-            if (discoveredEasterEggs.contains("connect4")) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                GameModeButton(
+                // Connect4
+                GameModeButtonSmall(
                         title = stringResource(R.string.connect4_title),
                         description = stringResource(R.string.connect4_description),
                         icon = Icons.Default.Margin,
                         onClick = {
-                            // Launch directly with 7x7 board and 4-in-a-row
                             currentMode = "connect4"
                             showOpponentDialog = true
-                        }
+                        },
+                        modifier = Modifier.weight(1f).padding(start = 8.dp)
                 )
             }
 
-            if (discoveredEasterEggs.contains("hex")) {
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                GameModeButton(
+            // Row 2: TicTacToe and Custom
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // TicTacToe
+                GameModeButtonSmall(
+                        title = stringResource(R.string.tictactoe_title),
+                        description = stringResource(R.string.tictactoe_description),
+                        icon = Icons.Default.Grid3x3,
+                        onClick = {
+                            currentMode = "tictactoe"
+                            showOpponentDialog = true
+                        },
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                )
+
+                // Custom Game
+                GameModeButtonSmall(
+                        title = stringResource(R.string.custom_game),
+                        description = stringResource(R.string.custom_game_desc),
+                        icon = Icons.Default.AppRegistration,
+                        onClick = { showCustomDialog = true },
+                        modifier = Modifier.weight(1f).padding(start = 8.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Connection games category
+            CategoryHeader(title = "Connection Games")
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Row 3: Hex and Havannah
+            Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Hex
+                GameModeButtonSmall(
                         title = stringResource(R.string.hex_title),
                         description = stringResource(R.string.hex_description),
                         icon = Icons.Default.Hexagon,
                         onClick = {
-                            // Launch with 11x11 board and 8-in-a-row for Hex
                             currentMode = "hex"
                             showOpponentDialog = true
-                        }
+                        },
+                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                )
+
+                // Havannah
+                GameModeButtonSmall(
+                        title = stringResource(R.string.havannah_title),
+                        description = stringResource(R.string.havannah_description),
+                        icon = Icons.Default.Hexagon,
+                        onClick = {
+                            currentMode = "havannah"
+                            showOpponentDialog = true
+                        },
+                        modifier = Modifier.weight(1f).padding(start = 8.dp)
                 )
             }
         }
@@ -192,6 +226,7 @@ fun StartScreen(
                         "tictactoe" -> onNavigateToCustomGame(3, 3, opponent)
                         "connect4" -> onNavigateToCustomGame(7, 4, opponent)
                         "hex" -> onNavigateToCustomGame(11, 8, opponent)
+                        "havannah" -> onNavigateToCustomGame(10, 9, opponent)
                         "custom" -> onNavigateToCustomGame(boardSize, winLength, opponent)
                     }
                 },
@@ -232,21 +267,29 @@ fun StartScreen(
     }
 }
 
-/** Button representing a game mode option. */
+/** Header for game categories. */
 @Composable
-fun GameModeButton(
+fun CategoryHeader(title: String) {
+    Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth()
+    )
+}
+
+/** Smaller button for game modes (fits two per row). */
+@Composable
+fun GameModeButtonSmall(
         title: String,
         description: String,
         icon: androidx.compose.ui.graphics.vector.ImageVector,
-        onClick: () -> Unit
+        onClick: () -> Unit,
+        modifier: Modifier = Modifier
 ) {
     Button(
             onClick = onClick,
-            modifier =
-                    Modifier.fillMaxWidth()
-                            .height(90.dp)
-                            .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(12.dp)),
+            modifier = modifier.height(100.dp).clip(RoundedCornerShape(12.dp)),
             colors =
                     ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -254,18 +297,28 @@ fun GameModeButton(
                     ),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+        ) {
             Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(24.dp))
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            Column(horizontalAlignment = Alignment.Start) {
-                Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    textAlign = TextAlign.Center
+            )
 
-                Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
-                Text(text = description, style = MaterialTheme.typography.bodySmall)
-            }
+            Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
+            )
         }
     }
 }

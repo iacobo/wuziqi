@@ -8,6 +8,7 @@ object AIFactory {
     private val random = Random()
     private val wuziqiAI by lazy { WuziqiAIEngine(random) }
     private val hexAI by lazy { HexAlphaBetaEngine(random) }
+    private val havannahAI by lazy { HavannahAIEngine(random) }
 
     /**
      * Returns the appropriate AI implementation for the given game type.
@@ -21,6 +22,7 @@ object AIFactory {
             GameType.TicTacToe -> wuziqiAI // Wuziqi AI works for TicTacToe
             GameType.Connect4 -> wuziqiAI // Wuziqi AI handles Connect4 special case
             GameType.Hex -> hexAI
+            GameType.Havannah -> havannahAI
         }
     }
 }

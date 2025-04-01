@@ -19,6 +19,9 @@ sealed class GameType(@StringRes val titleResId: Int, val boardSize: Int, val wi
 
     /** Hex game with 11x11 board and 8-in-a-row win condition */
     object Hex : GameType(R.string.hex_title, 11, 8)
+    
+    /** Havannah game with 10x10 hexagonal board (size 10) */
+    object Havannah : GameType(R.string.havannah_title, 10, 9) // Using 9 as a special code for Havannah rules
 
     companion object {
         /** Determine the game type from a game state */
@@ -27,6 +30,7 @@ sealed class GameType(@StringRes val titleResId: Int, val boardSize: Int, val wi
                 gameState.boardSize == 3 && gameState.winCondition == 3 -> TicTacToe
                 gameState.boardSize == 7 && gameState.winCondition == 4 -> Connect4
                 gameState.boardSize == 11 && gameState.winCondition == 8 -> Hex
+                gameState.boardSize == 10 && gameState.winCondition == 9 -> Havannah
                 else -> Standard
             }
         }

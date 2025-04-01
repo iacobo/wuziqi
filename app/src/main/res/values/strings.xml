@@ -93,4 +93,9 @@
     <string name="connect4_rules">Connect 4 is a vertical game where pieces drop to the bottom of the board.\n\nRules:\n\n• Players take turns dropping colored discs into a 7×6 grid.\n\n• The discs fall straight down to the lowest available position in the column.\n\n• Red plays first, followed by Yellow.\n\n• The goal is to connect four of your discs horizontally, vertically, or diagonally.\n\n• The first player to connect four discs wins.\n\n• If the grid fills up completely with no winner, the game is a draw.</string>
     <string name="hex_rules">Hex is a strategic connection game played on a hexagonal grid.\n\nRules:\n\n• Players take turns placing stones of their color on the board.\n\n• Red connects the top and bottom edges, while Blue connects the left and right edges.\n\n• The goal is to create a continuous path connecting your two edges.\n\n• Red plays first, followed by Blue.\n\n• The first player to complete a path between their edges wins.\n\n• There are no draws in Hex - someone always wins!</string>
 
+    <!-- Havannah game -->
+    <string name="havannah_title">Havannah</string>
+    <string name="havannah_description">Hexagonal connection game with three ways to win</string>
+    <string name="havannah_rules">Havannah is a sophisticated connection game played on a hexagonal board. Players take turns placing stones on the hexagonal grid.\n\nRules:\n\n• The game is played on a hexagonal board with 10 cells per side.\n\n• Red plays first, followed by Blue.\n\n• Once placed, pieces are never moved or removed.\n\n• The goal is to create one of three winning structures:\n\n1. A Ring: A loop that surrounds at least one cell (empty or not).\n\n2. A Bridge: A connection between any two corner cells of the board.\n\n3. A Fork: A connection between any three board edges (corners don't count as edges).\n\n• The first player to create any of these structures wins.</string>
+
 </resources>
