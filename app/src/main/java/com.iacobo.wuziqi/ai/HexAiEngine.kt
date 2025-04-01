@@ -4,15 +4,14 @@ import com.iacobo.wuziqi.data.GameState
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
+import java.util.PriorityQueue
 import java.util.Random
 
 /**
  * A strong Hex AI player using Alpha-Beta pruning with flow-based heuristics.
- * 
- * This implementation is based on classic alpha-beta search with pattern recognition
- * and flow heuristics specifically designed for Hex strategy.
+ * Implements the GameAI interface for consistent interaction.
  */
-class HexAlphaBetaEngine(private val random: Random = Random()) {
+class HexAlphaBetaEngine(private val random: Random = Random()) : GameAI {
 
     companion object {
         // Board values for easy reference
@@ -136,8 +135,9 @@ class HexAlphaBetaEngine(private val random: Random = Random()) {
     
     /**
      * Find the best move for the AI player.
+     * Implements the GameAI interface method.
      */
-    fun findBestMove(gameState: GameState): Pair<Int, Int>? {
+    override fun findBestMove(gameState: GameState): Pair<Int, Int>? {
         nodesEvaluated = 0
         
         // Handle special cases first
