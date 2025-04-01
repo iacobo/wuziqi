@@ -1,6 +1,11 @@
 package com.iacobo.wuziqi.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameType
 import com.iacobo.wuziqi.data.ThemeMode
 import com.iacobo.wuziqi.ui.board.GameBoardRenderer
