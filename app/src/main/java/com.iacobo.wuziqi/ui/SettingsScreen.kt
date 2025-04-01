@@ -13,11 +13,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Routine
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -119,11 +122,11 @@ fun SettingsScreen(viewModel: SettingsViewModel, onNavigateBack: () -> Unit) {
                                 )
                         }
 
-                        // Theme selector
+                        // Theme selector with dynamic icon
                         item {
                                 DropdownPreference(
                                         title = stringResource(R.string.theme),
-                                        icon = Icons.Default.DarkMode,
+                                        icon = getThemeIcon(preferences.themeMode),
                                         selectedValue = preferences.themeMode.name,
                                         options = ThemeMode.entries.map { it.name },
                                         onOptionSelected = {
@@ -175,7 +178,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onNavigateBack: () -> Unit) {
                                 )
                         }
 
-                        // Links
+                        // Links with external link indicators
                         item {
                                 LinkPreference(
                                         title = stringResource(R.string.source_code),
@@ -184,7 +187,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onNavigateBack: () -> Unit) {
                                                 uriHandler.openUri(
                                                         "https://github.com/iacobo/wuziqi"
                                                 )
-                                        }
+                                        },
+                                        isExternalLink = true
                                 )
                         }
 
@@ -196,7 +200,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onNavigateBack: () -> Unit) {
                                                 uriHandler.openUri(
                                                         "https://github.com/iacobo/wuziqi/issues"
                                                 )
-                                        }
+                                        },
+                                        isExternalLink = true
                                 )
                         }
 
@@ -233,6 +238,14 @@ fun SettingsScreen(viewModel: SettingsViewModel, onNavigateBack: () -> Unit) {
                         }
                 }
         }
+}
+
+/** Function to get the appropriate theme icon based on the current theme mode */
+@Composable
+fun getThemeIcon(themeMode: ThemeMode) = when (themeMode) {
+    ThemeMode.LIGHT -> Icons.Default.LightMode
+    ThemeMode.DARK -> Icons.Default.DarkMode
+    ThemeMode.SYSTEM -> Icons.Default.Routine
 }
 
 /** Switch preference item with icon. */
@@ -318,12 +331,13 @@ fun DropdownPreference(
         }
 }
 
-/** Link preference item. */
+/** Link preference item with optional external link indicator. */
 @Composable
 fun LinkPreference(
         title: String,
         icon: androidx.compose.ui.graphics.vector.ImageVector,
-        onClick: () -> Unit
+        onClick: () -> Unit,
+        isExternalLink: Boolean = false
 ) {
         Row(
                 modifier =
@@ -338,6 +352,19 @@ fun LinkPreference(
                         tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(32.dp))
-                Text(text = title, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
+                )
+                
+                if (isExternalLink) {
+                        Icon(
+                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 8.dp)
+                        )
+                }
         }
 }
