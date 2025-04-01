@@ -14,13 +14,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.MusicOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -116,7 +117,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onNavigateBack: () -> Unit) {
                         item {
                                 SwitchPreference(
                                         title = stringResource(R.string.sounds),
-                                        icon = Icons.AutoMirrored.Filled.VolumeUp,
+                                        icon = getSoundIcon(preferences.soundEnabled),
                                         isChecked = preferences.soundEnabled,
                                         onCheckedChange = { viewModel.updateSoundEnabled(it) }
                                 )
@@ -248,6 +249,11 @@ fun getThemeIcon(themeMode: ThemeMode) =
                 ThemeMode.DARK -> Icons.Default.DarkMode
                 ThemeMode.SYSTEM -> Icons.Default.Brightness4
         }
+
+/** Function to get the appropriate sound icon based on the current sound setting */
+@Composable
+fun getSoundIcon(isEnabled: Boolean) =
+        if (isEnabled) Icons.Default.MusicNote else Icons.Default.MusicOff
 
 /** Switch preference item with icon. */
 @Composable
