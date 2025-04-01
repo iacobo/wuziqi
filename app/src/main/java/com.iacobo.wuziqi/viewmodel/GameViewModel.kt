@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private val aiEngine = WuziqiAIEngine(Random())
-private val hexAiEngine = HexAIEngine(Random.Default)
+private val hexAiEngine = HexAIEngine(Random())
 
 /** Represents a move in the game with position and player information. */
 data class Move(val row: Int, val col: Int, val player: Int)
