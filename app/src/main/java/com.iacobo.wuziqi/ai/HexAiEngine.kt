@@ -19,7 +19,7 @@ import kotlin.math.sqrt
  * 3. Strategic pattern recognition - for edge templates and common patterns
  * 4. Bridge and connection analysis - to maintain connectivity
  */
-class HexAIEngine(private val random: Random = Random) {
+class HexAIEngine(private val random: Random = Random()) {
 
     companion object {
         // Board values for easy reference
