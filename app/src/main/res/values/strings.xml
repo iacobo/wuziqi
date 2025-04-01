@@ -8,6 +8,7 @@
     <string name="player_white">White</string>
     <string name="player_red">Red</string>
     <string name="player_yellow">Yellow</string>
+    <string name="player_blue">Blue</string>
     <string name="player_x">X</string>
     <string name="player_o">O</string>
     <string name="draw">Draw</string>
@@ -33,6 +34,12 @@
     <string name="cd_undo_move">Undo move</string>
     <string name="cd_reset_game">Reset game</string>
 
+    <!-- Reset dialogue box -->
+    <string name="confirm_reset_title">Restart game?</string>
+    <string name="confirm_reset_message">Are you sure you want to restart the current game?</string>
+    <string name="yes">Yes</string>
+    <string name="cancel">Cancel</string>
+
     <!-- Settings -->
     <string name="settings">Settings</string>
     <string name="back">Back</string>
@@ -52,21 +59,22 @@
     <!-- Game Mode Selection -->
     <string name="welcome_wuziqi">Welcome to Wuziqi</string>
     <string name="choose_game_mode">Choose a game mode</string>
-    <string name="standard_wuziqi">Standard Wuziqi</string>
+    <string name="standard_wuziqi">Wuziqi</string>
     <string name="standard_wuziqi_desc">15×15 board with 5-in-a-row to win</string>
-    <string name="custom_game">Custom Game</string>
+    <string name="custom_game">Custom</string>
     <string name="custom_game_desc">Choose your own board size and win condition</string>
     <string name="connect4_title">Connect 4</string>
     <string name="connect4_description">Classic Connect 4 game with vertical drops</string>
     <string name="tictactoe_title">X\'s &amp; O\'s</string>
     <string name="tictactoe_description">Classic 3×3 tic-tac-toe game</string>
+    <string name="hex_title">Hex</string>
+    <string name="hex_description">Strategic edge-connection on a hexagonal grid</string>
 
     <string name="choose_opponent">Choose your opponent</string>
     <string name="play_against_human">Over the board</string>
-    <string name="play_against_computer">Play against Computer</string>
-    <string name="ai_not_supported">AI not available for this custom game size</string>
+    <string name="play_against_computer">Computer</string>
+    <string name="ai_not_supported">AI unavailable for this configuration</string>
     <string name="start_game">Start Game</string>
-    <string name="cancel">Cancel</string>
     
     <!-- Custom Game Settings -->
     <string name="custom_game_settings">Custom Game Settings</string>

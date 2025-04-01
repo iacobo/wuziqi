@@ -2,43 +2,18 @@
 <resources>
     <string name="app_name">五子棋</string>
 
-    <!-- Start screen -->
-    <string name="welcome_wuziqi">欢迎来到五子棋</string>
-    <string name="choose_game_mode">选择游戏模式</string>
-    <string name="standard_wuziqi">标准五子棋</string>
-    <string name="standard_wuziqi_desc">15×15棋盘，五子连珠获胜</string>
-    <string name="custom_game">自定义游戏</string>
-    <string name="custom_game_desc">自定义棋盘大小和获胜条件</string>
-    <string name="choose_opponent">选择对手</string>
-    <string name="play_against_human">面对面对战</string>
-    <string name="play_against_computer">电脑对手</string>
-    <string name="ai_not_supported">此游戏尺寸不支持AI</string>
-    <string name="custom_game_settings">自定义游戏设置</string>
-    <string name="board_size">棋盘大小: %1$d×%2$d</string>
-    <string name="win_length">获胜长度: %1$d 子连珠</string>
-    <string name="win_length_warning">较大的获胜长度可能使游戏难以获胜！</string>
-    <string name="start_game">开始游戏</string>
-    <string name="cancel">取消</string>
-    <string name="home">主页</string>
-    <string name="computer_thinking">电脑思考中…</string>
-    
-    <!-- Easter egg hint -->
-    <string name="special_game_hint">你可能会发现这个配置有些特别…</string>
-
     <!-- Game UI -->
-    <string name="player_turn_format">%s子</string>
-    <string name="player_black">黑</string>
-    <string name="player_white">白</string>
-    <string name="player_red">红</string>
-    <string name="player_yellow">黄</string>
+    <string name="player_turn_format">%s的回合</string>
+    <string name="player_black">黑方</string>
+    <string name="player_white">白方</string>
+    <string name="player_red">红方</string>
+    <string name="player_yellow">黄方</string>
+    <string name="player_blue">蓝方</string>
     <string name="player_x">✕</string>
     <string name="player_o">◯</string>
-
-    <!-- Game Titles -->
-    <string name="connect4_title">四子连线</string>
-    <string name="connect4_description">经典四子连线游戏</string>
-    <string name="tictactoe_title">井字棋</string>
-    <string name="tictactoe_description">经典3×3井字棋游戏</string>
+    <string name="draw">平局!</string>
+    <string name="home">主页</string>
+    <string name="computer_thinking">电脑思考中…</string>
 
     <!-- Computer player text -->
     <string name="your_turn">你的回合</string>
@@ -46,25 +21,30 @@
     <string name="computer_won">电脑赢了！🎆</string>
 
     <!-- Game controls -->
-    <string name="undo">撤消</string>
+    <string name="undo">撤销</string>
     <string name="reset">重置</string>
 
     <!-- Dialogs -->
     <string name="game_over">游戏结束</string>
     <string name="winner_format">%s赢了！🎆</string>
-    <string name="draw">平局!</string>
-    <string name="rematch">重赛</string>
+    <string name="rematch">再来一局</string>
     <string name="close">关闭</string>
 
     <!-- Content descriptions -->
-    <string name="cd_undo_move">撤消移动</string>
+    <string name="cd_undo_move">撤销上一步</string>
     <string name="cd_reset_game">重置游戏</string>
+
+    <!-- Reset dialogue box -->
+    <string name="confirm_reset_title">重新开始游戏？</string>
+    <string name="confirm_reset_message">你确定要重新开始当前游戏吗？</string>
+    <string name="yes">是</string>
+    <string name="cancel">取消</string>
 
     <!-- Settings -->
     <string name="settings">设置</string>
     <string name="back">返回</string>
     <string name="game_settings">游戏设置</string>
-    <string name="sounds">声音</string>
+    <string name="sounds">音效</string>
     <string name="theme">主题</string>
     <string name="theme_system">系统</string>
     <string name="theme_light">浅色</string>
@@ -75,4 +55,31 @@
     <string name="report_bug">报告问题</string>
     <string name="version_format">版本 %s</string>
     <string name="app_tagline">免费开源，没有广告或跟踪器</string>
+    
+    <!-- Game Mode Selection -->
+    <string name="welcome_wuziqi">欢迎来到五子棋</string>
+    <string name="choose_game_mode">选择游戏模式</string>
+    <string name="standard_wuziqi">五子棋</string>
+    <string name="standard_wuziqi_desc">15×15棋盘，五子连珠获胜</string>
+    <string name="custom_game">自定义</string>
+    <string name="custom_game_desc">自定义棋盘大小和获胜条件</string>
+    <string name="connect4_title">四子连线</string>
+    <string name="connect4_description">经典四子连线游戏，垂直下子</string>
+    <string name="tictactoe_title">井字棋</string>
+    <string name="tictactoe_description">经典3×3井字棋游戏</string>
+    <string name="hex_title">六边形棋</string>
+    <string name="hex_description">六边形棋盘上的边缘连接策略游戏</string>
+
+    <string name="choose_opponent">选择你的对手</string>
+    <string name="play_against_human">面对面对战</string>
+    <string name="play_against_computer">电脑对手</string>
+    <string name="ai_not_supported">此配置不支持AI</string>
+    <string name="start_game">开始游戏</string>
+    
+    <!-- Custom Game Settings -->
+    <string name="custom_game_settings">自定义游戏设置</string>
+    <string name="board_size">棋盘大小: %1$d×%2$d</string>
+    <string name="win_length">获胜条件: %d 子连珠</string>
+    <string name="win_length_warning">较大的获胜长度可能使游戏难以完成</string>
+    <string name="special_game_hint">你发现了一个特殊的游戏模式！</string>
 </resources>

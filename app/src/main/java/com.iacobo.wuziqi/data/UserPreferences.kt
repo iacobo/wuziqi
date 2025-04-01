@@ -20,7 +20,7 @@ enum class ThemeMode {
 
 /** Data class holding user preferences for the app. */
 data class UserPreferences(
-        val soundEnabled: Boolean = false,
+        val soundEnabled: Boolean = true,
         val themeMode: ThemeMode = ThemeMode.SYSTEM,
         val languageCode: String =
                 Locale.getDefault().language.let { if (it == "zh") "zh" else "en" }
@@ -41,7 +41,7 @@ class UserPreferencesRepository(private val context: Context) {
     /** Get user preferences as a Flow. */
     val userPreferencesFlow: Flow<UserPreferences> =
             context.dataStore.data.map { preferences ->
-                val soundEnabled = preferences[SOUND_ENABLED] == true
+                val soundEnabled = preferences[SOUND_ENABLED] ?: true
                 val themeMode =
                         preferences[THEME_MODE]?.let {
                             try {

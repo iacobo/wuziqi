@@ -13,7 +13,7 @@ android {
         minSdk 33
         targetSdk 35
         versionCode 1
-        versionName "1.1.0"
+        versionName "1.2.0"
     }
 
     // Add signing configuration here
@@ -70,6 +70,8 @@ dependencies {
     implementation "androidx.compose.material:material-icons-core"
     implementation "androidx.compose.material:material-icons-extended"
     implementation "androidx.compose.runtime:runtime-saveable"
+
+    implementation "androidx.appcompat:appcompat:1.7.0"
 
     // DataStore for preferences
     implementation "androidx.datastore:datastore-preferences:1.1.3"

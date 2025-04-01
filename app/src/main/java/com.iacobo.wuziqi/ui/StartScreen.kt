@@ -12,13 +12,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AppRegistration
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Grid3x3
+import androidx.compose.material.icons.filled.Hexagon
 import androidx.compose.material.icons.filled.Margin
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.ViewComfy
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -65,7 +66,7 @@ fun StartScreen(
     var winLength by remember { mutableIntStateOf(5) }
 
     // Determine AI support for different game modes
-    val aiSupportedModes = remember { setOf("standard", "tictactoe", "connect4") }
+    val aiSupportedModes = remember { setOf("standard", "tictactoe", "connect4", "hex") }
 
     Scaffold(
             bottomBar = {
@@ -127,7 +128,7 @@ fun StartScreen(
             GameModeButton(
                     title = stringResource(R.string.custom_game),
                     description = stringResource(R.string.custom_game_desc),
-                    icon = Icons.Default.ViewComfy,
+                    icon = Icons.Default.AppRegistration,
                     onClick = { showCustomDialog = true }
             )
 
@@ -136,8 +137,8 @@ fun StartScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 GameModeButton(
-                        title = "X's & O's",
-                        description = "Classic 3×3 tic-tac-toe game",
+                        title = stringResource(R.string.tictactoe_title),
+                        description = stringResource(R.string.tictactoe_description),
                         icon = Icons.Default.Grid3x3,
                         onClick = {
                             // Launch directly with 3x3 board and 3-in-a-row
@@ -151,12 +152,27 @@ fun StartScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 GameModeButton(
-                        title = "Connect 4",
-                        description = "Classic Connect 4 game with vertical drops",
+                        title = stringResource(R.string.connect4_title),
+                        description = stringResource(R.string.connect4_description),
                         icon = Icons.Default.Margin,
                         onClick = {
                             // Launch directly with 7x7 board and 4-in-a-row
                             currentMode = "connect4"
+                            showOpponentDialog = true
+                        }
+                )
+            }
+
+            if (discoveredEasterEggs.contains("hex")) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                GameModeButton(
+                        title = stringResource(R.string.hex_title),
+                        description = stringResource(R.string.hex_description),
+                        icon = Icons.Default.Hexagon,
+                        onClick = {
+                            // Launch with 11x11 board and 8-in-a-row for Hex
+                            currentMode = "hex"
                             showOpponentDialog = true
                         }
                 )
@@ -175,6 +191,7 @@ fun StartScreen(
                         "standard" -> onNavigateToStandardGame(opponent)
                         "tictactoe" -> onNavigateToCustomGame(3, 3, opponent)
                         "connect4" -> onNavigateToCustomGame(7, 4, opponent)
+                        "hex" -> onNavigateToCustomGame(11, 8, opponent)
                         "custom" -> onNavigateToCustomGame(boardSize, winLength, opponent)
                     }
                 },
@@ -270,10 +287,7 @@ fun OpponentSelectionDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     OpponentButton(
-                            title =
-                                    stringResource(
-                                            R.string.play_against_human
-                                    ), // This string now translates to "Over the board"
+                            title = stringResource(R.string.play_against_human),
                             icon = Icons.Default.Person,
                             onClick = { onSelectOpponent(Opponent.HUMAN) }
                     )
@@ -356,6 +370,7 @@ fun CustomGameDialog(onDismiss: () -> Unit, onStartGame: (boardSize: Int, winLen
     // Check if this is a special game
     val isTicTacToe = boardSize == 3 && winLength == 3
     val isConnect4 = boardSize == 7 && winLength == 4
+    val isHex = boardSize == 11 && winLength == 8
 
     AlertDialog(
             onDismissRequest = onDismiss,
@@ -440,7 +455,7 @@ fun CustomGameDialog(onDismiss: () -> Unit, onStartGame: (boardSize: Int, winLen
 
                     // Only show win length warning if not a special game and if it's a large win
                     // length
-                    if (!isTicTacToe && !isConnect4 && winLength > boardSize / 2 + 1) {
+                    if (!isTicTacToe && !isConnect4 && !isHex && winLength > boardSize / 2 + 1) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                                 text = stringResource(R.string.win_length_warning),
@@ -450,7 +465,7 @@ fun CustomGameDialog(onDismiss: () -> Unit, onStartGame: (boardSize: Int, winLen
                     }
 
                     // Easter egg hint for special board configurations
-                    if (isTicTacToe || isConnect4) {
+                    if (isTicTacToe || isConnect4 || isHex) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                                 text = stringResource(R.string.special_game_hint),

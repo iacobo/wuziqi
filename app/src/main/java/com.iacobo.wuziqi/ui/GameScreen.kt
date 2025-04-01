@@ -1,50 +1,33 @@
 package com.iacobo.wuziqi.ui
 
+import android.content.res.Configuration
+import android.view.Surface
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
-import com.iacobo.wuziqi.data.GameState
+import com.iacobo.wuziqi.data.GameType
 import com.iacobo.wuziqi.data.ThemeMode
-import com.iacobo.wuziqi.ui.theme.Connect4PieceRed
-import com.iacobo.wuziqi.ui.theme.Connect4PieceYellow
-import com.iacobo.wuziqi.viewmodel.DRAW
+import com.iacobo.wuziqi.ui.board.GameBoardRenderer
+import com.iacobo.wuziqi.ui.components.GameControls
+import com.iacobo.wuziqi.ui.components.GameStatusBar
+import com.iacobo.wuziqi.ui.layout.GameLayoutScaffold
 import com.iacobo.wuziqi.viewmodel.GameViewModel
 
 /**
- * Main game screen composable. Displays the game board, status, and controls. Supports standard
- * game and easter eggs.
+ * Main game screen that displays the game board and controls. This is a refactored version with
+ * better separation of concerns.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
         viewModel: GameViewModel,
@@ -52,381 +35,112 @@ fun GameScreen(
         onNavigateToHome: () -> Unit,
         themeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
+        // Handle reset confirmation dialog
+        var showResetConfirmation by remember { mutableStateOf(false) }
+
+        // Get the device orientation
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        // Get device rotation from the window manager
+        val context = LocalContext.current
+        val windowManager = context.getSystemService(android.view.WindowManager::class.java)
+        val rotation = windowManager.defaultDisplay.rotation
+
+        // Extract game state
         val gameState = viewModel.gameState
+        val gameType = GameType.fromGameState(gameState)
         val winner = viewModel.winner
         val lastPlacedPosition = viewModel.lastPlacedPosition
         val moveHistory = viewModel.moveHistory
         val isLoading = viewModel.isLoading
-        val boardSize = gameState.boardSize
-        val winLength = gameState.winCondition
 
-        // Determine game type for easter eggs
-        val isXandO = boardSize == 3 && winLength == 3
-        val isConnect4 = boardSize == 7 && winLength == 4
+        // Get the appropriate game title
+        val gameTitle = stringResource(id = gameType.titleResId)
 
-        // Determine app title based on easter egg mode
-        val appTitle =
-                when {
-                        isXandO -> "X's & O's"
-                        isConnect4 -> "Connect 4"
-                        else -> stringResource(R.string.app_name)
-                }
-
-        // Determine if we're in dark theme based on the theme mode
+        // Determine the appropriate theme mode (light/dark)
         val isDarkTheme =
                 when (themeMode) {
                         ThemeMode.LIGHT -> false
                         ThemeMode.DARK -> true
-                        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                        ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
                 }
 
-        Scaffold(
-                topBar = {
-                        CenterAlignedTopAppBar(
-                                title = {
-                                        Text(
-                                                text = appTitle,
-                                                style = MaterialTheme.typography.titleLarge
-                                        )
-                                },
-                                colors =
-                                        TopAppBarDefaults.topAppBarColors(
-                                                containerColor =
-                                                        MaterialTheme.colorScheme.background,
-                                                titleContentColor =
-                                                        MaterialTheme.colorScheme.onBackground
-                                        )
+        // Use the unified game layout scaffold
+        GameLayoutScaffold(
+                title = gameTitle,
+                isLandscape = isLandscape,
+                rotation = rotation,
+                statusContent = {
+                        GameStatusBar(
+                                gameState = gameState,
+                                gameType = gameType,
+                                winner = winner,
+                                isLoading = isLoading
                         )
                 },
-                bottomBar = {
-                        BottomAppBar(
-                                actions = {
-                                        // Home button
-                                        IconButton(onClick = onNavigateToHome) {
-                                                Icon(
-                                                        imageVector = Icons.Default.Home,
-                                                        contentDescription =
-                                                                stringResource(R.string.home)
-                                                )
-                                        }
-
-                                        // Undo button (disabled if no moves or game frozen)
-                                        IconButton(
-                                                onClick = { viewModel.undoMove() },
-                                                enabled = moveHistory.isNotEmpty() && !isLoading
-                                        ) {
-                                                Icon(
-                                                        imageVector =
-                                                                Icons.AutoMirrored.Filled.Undo,
-                                                        contentDescription =
-                                                                stringResource(R.string.undo)
-                                                )
-                                        }
-
-                                        // Reset button
-                                        IconButton(onClick = { viewModel.resetGame() }) {
-                                                Icon(
-                                                        imageVector = Icons.Default.Replay,
-                                                        contentDescription =
-                                                                stringResource(R.string.reset)
-                                                )
-                                        }
-
-                                        Spacer(Modifier.weight(1f))
-
-                                        // Settings button (right aligned)
-                                        IconButton(onClick = onNavigateToSettings) {
-                                                Icon(
-                                                        imageVector = Icons.Default.Menu,
-                                                        contentDescription =
-                                                                stringResource(R.string.settings)
-                                                )
+                boardContent = {
+                        GameBoardRenderer(
+                                gameType = gameType,
+                                gameState = gameState,
+                                lastPlacedPosition = lastPlacedPosition,
+                                isDarkTheme = isDarkTheme,
+                                isGameFrozen = winner != null || isLoading,
+                                onMoveSelected = { row, col ->
+                                        if (row < 0 && gameType == GameType.Connect4) {
+                                                // Special case for Connect4 which only needs column
+                                                // input
+                                                viewModel.placeConnect4Tile(col)
+                                        } else {
+                                                viewModel.placeTile(row, col)
                                         }
                                 }
                         )
-                }
-        ) { innerPadding ->
-                Column(
-                        modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                        // Fixed height container for player indicator to prevent layout shifts
-                        Box(
-                                modifier =
-                                        Modifier.fillMaxWidth()
-                                                .height(56.dp)
-                                                .padding(horizontal = 16.dp),
-                                contentAlignment = Alignment.Center
-                        ) {
-                                if (isLoading) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                CircularProgressIndicator(
-                                                        modifier = Modifier.size(24.dp),
-                                                        color = MaterialTheme.colorScheme.secondary,
-                                                        strokeWidth = 2.dp
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text(
-                                                        text =
-                                                                stringResource(
-                                                                        R.string.computer_thinking
-                                                                ),
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .titleMedium,
-                                                        color = MaterialTheme.colorScheme.secondary
-                                                )
+                },
+                controlsContent = {
+                        GameControls(
+                                isLandscape = isLandscape,
+                                isAppBarOnLeft = rotation == Surface.ROTATION_270,
+                                onHome = onNavigateToHome,
+                                onUndo = { viewModel.undoMove() },
+                                onReset = {
+                                        if (winner == null && moveHistory.isNotEmpty()) {
+                                                showResetConfirmation = true
+                                        } else {
+                                                viewModel.resetGame()
                                         }
-                                } else if (winner == DRAW) {
-                                        // Show draw message
-                                        Text(
-                                                text = stringResource(R.string.draw),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.primary
-                                        )
-                                } else if (winner != null) {
-                                        // Show winner with fireworks emoji
-                                        val winnerText =
-                                                when {
-                                                        isXandO ->
-                                                                stringResource(
-                                                                        R.string.winner_format,
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_x
-                                                                                )
-                                                                        else
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_o
-                                                                                )
-                                                                )
-                                                        isConnect4 ->
-                                                                stringResource(
-                                                                        R.string.winner_format,
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_red
-                                                                                )
-                                                                        else
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_yellow
-                                                                                )
-                                                                )
-                                                        else -> {
-                                                                // Handle computer opponent case
-                                                                if (gameState.againstComputer) {
-                                                                        if (winner ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .you_won
-                                                                                )
-                                                                        else
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .computer_won
-                                                                                )
-                                                                } else {
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .winner_format,
-                                                                                if (winner ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_black
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_white
-                                                                                        )
-                                                                        )
-                                                                }
-                                                        }
-                                                }
-
-                                        val winnerColor =
-                                                when {
-                                                        isConnect4 ->
-                                                                if (winner == GameState.PLAYER_ONE)
-                                                                        Connect4PieceRed
-                                                                else Connect4PieceYellow
-                                                        else ->
-                                                                if (winner == GameState.PLAYER_ONE)
-                                                                        MaterialTheme.colorScheme
-                                                                                .primary
-                                                                else
-                                                                        MaterialTheme.colorScheme
-                                                                                .secondary
-                                                }
-
-                                        Text(
-                                                text = winnerText,
-                                                style =
-                                                        MaterialTheme.typography.titleMedium.copy(
-                                                                fontWeight = FontWeight.Bold
-                                                        ),
-                                                color = winnerColor
-                                        )
-                                } else {
-                                        // Show current player
-                                        val playerText =
-                                                when {
-                                                        isXandO ->
-                                                                stringResource(
-                                                                        R.string.player_turn_format,
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_x
-                                                                                )
-                                                                        else
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_o
-                                                                                )
-                                                                )
-                                                        isConnect4 ->
-                                                                stringResource(
-                                                                        R.string.player_turn_format,
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_red
-                                                                                )
-                                                                        else
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .player_yellow
-                                                                                )
-                                                                )
-                                                        else -> {
-                                                                // Handle computer opponent case
-                                                                if (gameState.againstComputer) {
-                                                                        if (gameState
-                                                                                        .currentPlayer ==
-                                                                                        GameState
-                                                                                                .PLAYER_ONE
-                                                                        )
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .your_turn
-                                                                                )
-                                                                        else
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .computer_thinking
-                                                                                )
-                                                                } else {
-                                                                        stringResource(
-                                                                                R.string
-                                                                                        .player_turn_format,
-                                                                                if (gameState
-                                                                                                .currentPlayer ==
-                                                                                                GameState
-                                                                                                        .PLAYER_ONE
-                                                                                )
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_black
-                                                                                        )
-                                                                                else
-                                                                                        stringResource(
-                                                                                                R.string
-                                                                                                        .player_white
-                                                                                        )
-                                                                        )
-                                                                }
-                                                        }
-                                                }
-
-                                        val playerColor =
-                                                when {
-                                                        isConnect4 ->
-                                                                if (gameState.currentPlayer ==
-                                                                                GameState.PLAYER_ONE
-                                                                )
-                                                                        Connect4PieceRed
-                                                                else Connect4PieceYellow
-                                                        else ->
-                                                                if (gameState.currentPlayer ==
-                                                                                GameState.PLAYER_ONE
-                                                                )
-                                                                        MaterialTheme.colorScheme
-                                                                                .primary
-                                                                else
-                                                                        MaterialTheme.colorScheme
-                                                                                .secondary
-                                                }
-
-                                        Text(
-                                                text = playerText,
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = playerColor
-                                        )
-                                }
-                        }
-
-                        // Game Board - fills remaining space
-                        Box(
-                                modifier = Modifier.fillMaxWidth().weight(1f),
-                                contentAlignment = Alignment.Center
-                        ) {
-                                when {
-                                        isXandO ->
-                                                TicTacToeBoard(
-                                                        gameState = gameState,
-                                                        lastPlacedPosition = lastPlacedPosition,
-                                                        isDarkTheme = isDarkTheme,
-                                                        isGameFrozen = winner != null || isLoading,
-                                                        onTileClick = { row, col ->
-                                                                viewModel.placeTile(row, col)
-                                                        }
-                                                )
-                                        isConnect4 ->
-                                                Connect4Board(
-                                                        gameState = gameState,
-                                                        lastPlacedPosition = lastPlacedPosition,
-                                                        isGameFrozen = winner != null || isLoading,
-                                                        onColumnClick = { col ->
-                                                                viewModel.placeConnect4Tile(col)
-                                                        }
-                                                )
-                                        else ->
-                                                GameBoard(
-                                                        gameState = gameState,
-                                                        lastPlacedPosition = lastPlacedPosition,
-                                                        isDarkTheme = isDarkTheme,
-                                                        isGameFrozen = winner != null || isLoading,
-                                                        onTileClick = { row, col ->
-                                                                viewModel.placeTile(row, col)
-                                                        }
-                                                )
-                                }
-                        }
+                                },
+                                onSettings = onNavigateToSettings,
+                                canUndo = moveHistory.isNotEmpty(),
+                                isLoading = isLoading
+                        )
                 }
+        )
+
+        // Show confirmation dialog if needed
+        if (showResetConfirmation) {
+                ResetConfirmationDialog(
+                        onConfirm = {
+                                viewModel.resetGame()
+                                showResetConfirmation = false
+                        },
+                        onDismiss = { showResetConfirmation = false }
+                )
         }
+}
+
+/** Dialog to confirm game reset when the game is still in progress. */
+@Composable
+fun ResetConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+        AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text(stringResource(R.string.confirm_reset_title)) },
+                text = { Text(stringResource(R.string.confirm_reset_message)) },
+                confirmButton = {
+                        Button(onClick = onConfirm) { Text(stringResource(R.string.yes)) }
+                },
+                dismissButton = {
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                }
+        )
 }
