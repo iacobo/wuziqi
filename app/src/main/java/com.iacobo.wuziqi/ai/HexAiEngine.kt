@@ -1,235 +1,735 @@
 package com.iacobo.wuziqi.ai
 
 import com.iacobo.wuziqi.data.GameState
-import java.util.PriorityQueue
-import java.util.Random
 import kotlin.math.ln
-import kotlin.math.sqrt
+import kotlin.math.max
+import kotlin.math.min
+import java.util.Random
 
 /**
- * A strong AI player for Hex using Monte Carlo Tree Search (MCTS) with virtual connection analysis
- * and strategic patterns.
- *
- * Hex is a complex strategy game with a high branching factor, where the first player has a
- * theoretical winning strategy. This AI combines several techniques to create a strong, challenging
- * opponent:
- *
- * 1. Monte Carlo Tree Search - for balanced exploration/exploitation
- * 2. Virtual connection detection - to identify strong potential connections
- * 3. Strategic pattern recognition - for edge templates and common patterns
- * 4. Bridge and connection analysis - to maintain connectivity
+ * A strong Hex AI player using Alpha-Beta pruning with flow-based heuristics.
+ * 
+ * This implementation is based on classic alpha-beta search with pattern recognition
+ * and flow heuristics specifically designed for Hex strategy.
  */
-class HexAIEngine(private val random: Random = Random()) {
+class HexAlphaBetaEngine(private val random: Random = Random()) {
 
     companion object {
         // Board values for easy reference
         const val EMPTY = GameState.EMPTY
         const val PLAYER_ONE = GameState.PLAYER_ONE // Red, connects top-bottom
         const val PLAYER_TWO = GameState.PLAYER_TWO // Blue, connects left-right
-
-        // Monte Carlo simulation parameters
-        private const val SIMULATION_COUNT = 1000 // Number of simulations per move
-        private const val UCT_CONSTANT = 1.41 // Exploration constant (sqrt(2))
-
-        // For 11x11 boards, assign values to specific positions
-        // 0-10 are normalized coordinates for any board size
-        private val POSITION_VALUES =
-                mapOf(
-                        // Center has high value
-                        Pair(5, 5) to 3.0,
-                        // Adjacent to center
-                        Pair(4, 5) to 2.0,
-                        Pair(6, 5) to 2.0,
-                        Pair(5, 4) to 2.0,
-                        Pair(5, 6) to 2.0,
-                        Pair(4, 4) to 1.8,
-                        Pair(6, 6) to 1.8,
-                        Pair(4, 6) to 1.8,
-                        Pair(6, 4) to 1.8,
-                        // Edge positions are important in Hex
-                        Pair(0, 5) to 1.5,
-                        Pair(10, 5) to 1.5,
-                        Pair(5, 0) to 1.5,
-                        Pair(5, 10) to 1.5
-                )
-
-        // Common Hex patterns (templates) for strong play
-        // These represent common motifs in strong Hex play
-        private val HEX_PATTERNS =
-                listOf(
-                        // Bridge patterns (two stones with one empty space between)
-                        HexPattern(
-                                layout = arrayOf(arrayOf(PLAYER_TWO, EMPTY, PLAYER_TWO)),
-                                centerX = 1,
-                                centerY = 0,
-                                value = 2.0,
-                                name = "Horizontal Bridge"
-                        ),
-                        HexPattern(
-                                layout =
-                                        arrayOf(
-                                                arrayOf(PLAYER_TWO),
-                                                arrayOf(EMPTY),
-                                                arrayOf(PLAYER_TWO)
-                                        ),
-                                centerX = 0,
-                                centerY = 1,
-                                value = 2.0,
-                                name = "Vertical Bridge"
-                        ),
-                        HexPattern(
-                                layout =
-                                        arrayOf(
-                                                arrayOf(PLAYER_TWO, EMPTY),
-                                                arrayOf(EMPTY, PLAYER_TWO)
-                                        ),
-                                centerX = 1,
-                                centerY = 0,
-                                value = 2.0,
-                                name = "Diagonal Bridge"
-                        ),
-                        // Ladder breaker pattern
-                        HexPattern(
-                                layout =
-                                        arrayOf(
-                                                arrayOf(PLAYER_TWO, EMPTY, PLAYER_ONE),
-                                                arrayOf(EMPTY, PLAYER_TWO, EMPTY),
-                                                arrayOf(EMPTY, EMPTY, EMPTY)
-                                        ),
-                                centerX = 1,
-                                centerY = 1,
-                                value = 2.5,
-                                name = "Ladder Breaker"
-                        ),
-                        // Edge template - strong edge play
-                        HexPattern(
-                                layout =
-                                        arrayOf(
-                                                arrayOf(PLAYER_TWO, EMPTY),
-                                                arrayOf(EMPTY, PLAYER_TWO)
-                                        ),
-                                centerX = 0,
-                                centerY = 0,
-                                value = 1.8,
-                                name = "Edge Template"
-                        )
-                )
+        
+        // Depth for alpha-beta search
+        private const val MAX_DEPTH = 3
+        
+        // Pattern search pruning patterns - cells around existing pieces to consider
+        private val PRUNE_PATTERN = arrayOf(
+            Pair(1, -2), Pair(-1, -1), Pair(0, -1), Pair(1, -1), Pair(2, -1),
+            Pair(-1, 0), Pair(0, 0), Pair(1, 0),
+            Pair(-2, 1), Pair(-1, 1), Pair(0, 1), Pair(1, 1), Pair(-1, 2)
+        )
+        
+        // Bridge patterns - important connection patterns in Hex
+        private val BRIDGE_PATTERNS = arrayOf(
+            // Simple bridges (essential connections)
+            HexPattern(
+                size = Pair(2, 2),
+                pattern = intArrayOf(1, 0, EMPTY, 1),
+                interest = Pair(0, 1)
+            ),
+            HexPattern(
+                size = Pair(2, 2),
+                pattern = intArrayOf(1, EMPTY, 0, 1),
+                interest = Pair(1, 0)
+            ),
+            // Extended bridges
+            HexPattern(
+                size = Pair(2, 3),
+                pattern = intArrayOf(2, 1, 0, EMPTY, 1, 2),
+                interest = Pair(1, 1)
+            ),
+            HexPattern(
+                size = Pair(2, 3),
+                pattern = intArrayOf(2, 1, EMPTY, 0, 1, 2),
+                interest = Pair(0, 1)
+            ),
+            HexPattern(
+                size = Pair(3, 2),
+                pattern = intArrayOf(2, EMPTY, 1, 1, 0, 2),
+                interest = Pair(1, 0)
+            ),
+            HexPattern(
+                size = Pair(3, 2),
+                pattern = intArrayOf(2, 0, 1, 1, EMPTY, 2),
+                interest = Pair(1, 1)
+            )
+        )
+        
+        // Dead cell patterns - cells that are not useful to play in
+        private val DEAD_CELL_PATTERNS = arrayOf(
+            HexPattern(
+                size = Pair(3, 2),
+                pattern = intArrayOf(2, 1, 1, 1, EMPTY, 1),
+                interest = Pair(1, 1)
+            ),
+            HexPattern(
+                size = Pair(3, 2),
+                pattern = intArrayOf(1, EMPTY, 1, 2, 1, 1),
+                interest = Pair(1, 0)
+            ),
+            HexPattern(
+                size = Pair(3, 3),
+                pattern = intArrayOf(2, 1, 1, 2, EMPTY, 1, 0, 2, 2),
+                interest = Pair(1, 1)
+            ),
+            HexPattern(
+                size = Pair(3, 3),
+                pattern = intArrayOf(0, 2, 2, 2, EMPTY, 1, 2, 1, 1),
+                interest = Pair(1, 1)
+            ),
+            HexPattern(
+                size = Pair(3, 3),
+                pattern = intArrayOf(2, 2, 1, 0, EMPTY, 1, 0, 2, 2),
+                interest = Pair(1, 1)
+            ),
+            HexPattern(
+                size = Pair(3, 3),
+                pattern = intArrayOf(0, 2, 2, 0, EMPTY, 1, 2, 2, 1),
+                interest = Pair(1, 1)
+            )
+        )
     }
-
-    /** Represents a pattern to match on the Hex board. */
-    data class HexPattern(
-            val layout: Array<Array<Int>>, // 2D array representing the pattern
-            val centerX: Int, // X-coordinate of the focus point
-            val centerY: Int, // Y-coordinate of the focus point
-            val value: Double, // Strategic value of this pattern
-            val name: String // Name for debugging
+    
+    /**
+     * Represents a Hex pattern for pattern matching.
+     */
+    private data class HexPattern(
+        val size: Pair<Int, Int>,     // Size of the pattern (width, height)
+        val pattern: IntArray,       // The pattern itself (1=own stone, 0=opponent, 2=any, EMPTY=empty)
+        val interest: Pair<Int, Int>  // The cell of interest within the pattern
     ) {
-        // Pattern dimensions
-        val width = layout[0].size
-        val height = layout.size
-
-        // Make equals and hashCode explicitly deal with arrays
+        // Make equals and hashCode properly handle IntArray
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
-
+            
             other as HexPattern
-
-            if (!layout.contentDeepEquals(other.layout)) return false
-            if (centerX != other.centerX) return false
-            if (centerY != other.centerY) return false
-            if (value != other.value) return false
-            if (name != other.name) return false
-
+            
+            if (size != other.size) return false
+            if (!pattern.contentEquals(other.pattern)) return false
+            if (interest != other.interest) return false
+            
             return true
         }
-
+        
         override fun hashCode(): Int {
-            var result = layout.contentDeepHashCode()
-            result = 31 * result + centerX
-            result = 31 * result + centerY
-            result = 31 * result + value.hashCode()
-            result = 31 * result + name.hashCode()
+            var result = size.hashCode()
+            result = 31 * result + pattern.contentHashCode()
+            result = 31 * result + interest.hashCode()
             return result
         }
     }
-
-    /** Represents a node in the Monte Carlo search tree. */
-    private class MCTSNode(
-            val parent: MCTSNode?,
-            val move: Pair<Int, Int>?,
-            val playerJustMoved: Int
-    ) {
-        val children = mutableListOf<MCTSNode>()
-        var visits = 0
-        var wins = 0.0
-        val unexploredMoves = mutableListOf<Pair<Int, Int>>()
-
-        fun uct(parentVisits: Int): Double {
-            if (visits == 0) return Double.MAX_VALUE
-
-            val exploitation = wins / visits
-            val exploration = UCT_CONSTANT * sqrt(ln(parentVisits.toDouble()) / visits)
-
-            return exploitation + exploration
+    
+    // Statistics tracking
+    private var nodesEvaluated = 0
+    
+    /**
+     * Find the best move for the AI player.
+     */
+    fun findBestMove(gameState: GameState): Pair<Int, Int>? {
+        nodesEvaluated = 0
+        
+        // Handle special cases first
+        
+        // 1. If the board is empty, play in the center
+        if (isBoardEmpty(gameState)) {
+            val center = gameState.boardSize / 2
+            return Pair(center, center)
         }
-
-        fun addChild(move: Pair<Int, Int>, playerJustMoved: Int): MCTSNode {
-            val child = MCTSNode(this, move, playerJustMoved)
-            children.add(child)
-            unexploredMoves.remove(move)
-            return child
+        
+        // 2. If this is the second move, use a strategic response
+        if (countStones(gameState) == 1) {
+            return findSecondMove(gameState)
         }
-
-        fun bestChild(): MCTSNode? {
-            if (children.isEmpty()) return null
-
-            return children.maxByOrNull { it.visits }
+        
+        // 3. Check for immediate winning move
+        val immediateWin = findImmediateWin(gameState, PLAYER_TWO)
+        if (immediateWin != null) {
+            return immediateWin
         }
-    }
-
-    /** Get all neighbor positions for a given cell. */
-    private fun getNeighbors(row: Int, col: Int, boardSize: Int): List<Pair<Int, Int>> {
-        // In a hexagonal grid, each cell has 6 neighbors
-        val neighbors = mutableListOf<Pair<Int, Int>>()
-
-        // The six possible directions in a hex grid
-        val directions =
-                arrayOf(
-                        Pair(-1, 0), // Top-left
-                        Pair(-1, 1), // Top-right
-                        Pair(0, -1), // Left
-                        Pair(0, 1), // Right
-                        Pair(1, -1), // Bottom-left
-                        Pair(1, 0) // Bottom-right
-                )
-
-        for ((dr, dc) in directions) {
-            val newRow = row + dr
-            val newCol = col + dc
-
-            // Check if the neighbor is within bounds
-            if (newRow in 0 until boardSize && newCol in 0 until boardSize) {
-                neighbors.add(Pair(newRow, newCol))
+        
+        // 4. Check for opponent's immediate winning move to block
+        val opponentWin = findImmediateWin(gameState, PLAYER_ONE)
+        if (opponentWin != null) {
+            return opponentWin
+        }
+        
+        // Run alpha-beta search
+        val result = alphaBeta(gameState, MAX_DEPTH, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, true)
+        
+        // If we couldn't find a good move, fall back to a random valid move
+        if (result.second == null) {
+            val validMoves = findValidMoves(gameState)
+            if (validMoves.isNotEmpty()) {
+                return validMoves[random.nextInt(validMoves.size)]
             }
         }
-
-        return neighbors
+        
+        return result.second
     }
-
+    
     /**
-     * Respond to the first move by the opponent. In Hex, there are strategic responses to the
-     * opening move.
+     * Alpha-Beta search algorithm for Hex.
+     * 
+     * @param gameState Current game state
+     * @param depth Remaining search depth
+     * @param alpha Alpha value for pruning
+     * @param beta Beta value for pruning
+     * @param isMax True if maximizing player's turn, false otherwise
+     * @return Pair of (score, move) - score is the heuristic value, move is the best move found
+     */
+    private fun alphaBeta(
+        gameState: GameState,
+        depth: Int,
+        alpha: Double,
+        beta: Double,
+        isMax: Boolean
+    ): Pair<Double, Pair<Int, Int>?> {
+        nodesEvaluated++
+        
+        // Terminal conditions: depth reached or game over
+        if (depth == 0 || isGameOver(gameState)) {
+            return Pair(evaluate(gameState, depth), null)
+        }
+        
+        // Get interesting moves from pattern search
+        val patterns = getPatternMoves(gameState)
+        
+        // Identify dead cells (not worth playing)
+        val deadCells = findDeadCells(gameState, PLAYER_TWO)
+        
+        // Remove dead cells from consideration
+        val playablePatterns = patterns.filter { pos -> !deadCells.contains(pos) }
+        
+        // If no patterns found, consider all valid moves
+        val moves = if (playablePatterns.isEmpty()) {
+            findValidMoves(gameState)
+        } else {
+            playablePatterns
+        }
+        
+        var bestMove: Pair<Int, Int>? = null
+        
+        if (isMax) {
+            // Maximizing player (AI)
+            var currentAlpha = alpha
+            
+            for (move in moves) {
+                // Skip if cell is already occupied
+                if (gameState.board[move.first][move.second] != EMPTY) {
+                    continue
+                }
+                
+                // Make the move on a copied board
+                val newState = copyGameState(gameState)
+                newState.board[move.first][move.second] = PLAYER_TWO
+                
+                // Recurse
+                val evaluation = alphaBeta(newState, depth - 1, currentAlpha, beta, false)
+                
+                // Update alpha and best move
+                if (evaluation.first > currentAlpha) {
+                    currentAlpha = evaluation.first
+                    bestMove = move
+                }
+                
+                // Alpha-beta pruning
+                if (currentAlpha >= beta) {
+                    break
+                }
+            }
+            
+            return Pair(currentAlpha, bestMove)
+        } else {
+            // Minimizing player (opponent)
+            var currentBeta = beta
+            
+            for (move in moves) {
+                // Skip if cell is already occupied
+                if (gameState.board[move.first][move.second] != EMPTY) {
+                    continue
+                }
+                
+                // Make the move on a copied board
+                val newState = copyGameState(gameState)
+                newState.board[move.first][move.second] = PLAYER_ONE
+                
+                // Recurse
+                val evaluation = alphaBeta(newState, depth - 1, alpha, currentBeta, true)
+                
+                // Update beta and best move
+                if (evaluation.first < currentBeta) {
+                    currentBeta = evaluation.first
+                    bestMove = move
+                }
+                
+                // Alpha-beta pruning
+                if (currentBeta <= alpha) {
+                    break
+                }
+            }
+            
+            return Pair(currentBeta, bestMove)
+        }
+    }
+    
+    /**
+     * Evaluate the current board state using flow-based heuristics.
+     * 
+     * @param gameState The current game state
+     * @param depth The current search depth
+     * @return A score for the current position
+     */
+    private fun evaluate(gameState: GameState, depth: Int): Double {
+        // Check if the game is over
+        if (isGameOver(gameState)) {
+            val winner = getWinner(gameState)
+            return if (winner == PLAYER_TWO) {
+                // AI wins (good)
+                10.0 * (depth + 1) // Higher score for quicker wins
+            } else {
+                // Opponent wins (bad)
+                -10.0 * (depth + 1)
+            }
+        }
+        
+        // If game is not over, use flow-based heuristic
+        val maxFlow = calculateFlow(gameState, PLAYER_TWO)
+        val minFlow = calculateFlow(gameState, PLAYER_ONE)
+        
+        // Avoid division by zero
+        val ratio = if (minFlow > 0) maxFlow / minFlow else maxFlow / 0.01
+        
+        return ln(ratio)
+    }
+    
+    /**
+     * Calculate the flow value for a player (how easily they can connect their sides).
+     * Higher flow values indicate better connectivity.
+     * 
+     * @param gameState The current game state
+     * @param player The player to calculate flow for
+     * @return A flow value indicating connectivity strength
+     */
+    private fun calculateFlow(gameState: GameState, player: Int): Double {
+        // Create a virtual flow graph
+        val graph = createFlowGraph(gameState, player)
+        
+        // Calculate max flow using a simple DFS approach
+        return calculateMaxFlow(graph, player)
+    }
+    
+    /**
+     * Create a flow graph representation for connectivity analysis.
+     * 
+     * @param gameState The current game state
+     * @param player The player to analyze
+     * @return A graph representation for flow calculation
+     */
+    private fun createFlowGraph(gameState: GameState, player: Int): Map<Pair<Int, Int>, Set<Pair<Int, Int>>> {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        val graph = mutableMapOf<Pair<Int, Int>, MutableSet<Pair<Int, Int>>>()
+        
+        // Add all empty cells and player stones to the graph
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] == EMPTY || board[row][col] == player) {
+                    val cell = Pair(row, col)
+                    graph[cell] = mutableSetOf()
+                    
+                    // Connect to adjacent cells
+                    for (neighbor in getNeighbors(row, col, boardSize)) {
+                        if (board[neighbor.first][neighbor.second] == EMPTY || 
+                            board[neighbor.first][neighbor.second] == player) {
+                            graph[cell]?.add(neighbor)
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Add virtual source and sink nodes for the player's edges
+        val source = Pair(-1, -1)
+        val sink = Pair(-2, -2)
+        
+        graph[source] = mutableSetOf()
+        graph[sink] = mutableSetOf()
+        
+        // Connect source and sink to their respective edges
+        if (player == PLAYER_ONE) {
+            // Player One connects top to bottom
+            for (col in 0 until boardSize) {
+                // Connect source to top edge
+                if (board[0][col] == EMPTY || board[0][col] == player) {
+                    graph[source]?.add(Pair(0, col))
+                }
+                
+                // Connect bottom edge to sink
+                if (board[boardSize - 1][col] == EMPTY || board[boardSize - 1][col] == player) {
+                    graph[Pair(boardSize - 1, col)]?.add(sink)
+                }
+            }
+        } else {
+            // Player Two connects left to right
+            for (row in 0 until boardSize) {
+                // Connect source to left edge
+                if (board[row][0] == EMPTY || board[row][0] == player) {
+                    graph[source]?.add(Pair(row, 0))
+                }
+                
+                // Connect right edge to sink
+                if (board[row][boardSize - 1] == EMPTY || board[row][boardSize - 1] == player) {
+                    graph[Pair(row, boardSize - 1)]?.add(sink)
+                }
+            }
+        }
+        
+        return graph
+    }
+    
+    /**
+     * Calculate the maximum flow through the graph.
+     * This is a simplified implementation of a max-flow algorithm.
+     * 
+     * @param graph The flow graph
+     * @param player The player being analyzed
+     * @return A flow value
+     */
+    private fun calculateMaxFlow(graph: Map<Pair<Int, Int>, Set<Pair<Int, Int>>>, player: Int): Double {
+        val source = Pair(-1, -1)
+        val sink = Pair(-2, -2)
+        
+        // Simple breadth-first traversal to estimate connectivity
+        val visited = mutableSetOf<Pair<Int, Int>>()
+        val queue = mutableListOf(source)
+        val distances = mutableMapOf<Pair<Int, Int>, Int>()
+        
+        distances[source] = 0
+        
+        while (queue.isNotEmpty()) {
+            val current = queue.removeAt(0)
+            
+            if (current !in visited) {
+                visited.add(current)
+                
+                for (neighbor in graph[current] ?: emptySet()) {
+                    if (neighbor !in visited) {
+                        queue.add(neighbor)
+                        distances[neighbor] = (distances[current] ?: 0) + 1
+                    }
+                }
+            }
+        }
+        
+        // If sink is reachable, calculate flow based on distance and connectivity
+        if (sink in distances) {
+            // Shorter distance means better connectivity
+            val pathLength = distances[sink] ?: Int.MAX_VALUE
+            
+            // Calculate how many different paths connect to the edges
+            val connectivity = graph[source]?.size ?: 0
+            
+            // Better flow means shorter paths and more connectivity
+            return connectivity.toDouble() / (pathLength.toDouble() + 1.0)
+        }
+        
+        // If sink is not reachable, return minimal flow
+        return 0.01
+    }
+    
+    /**
+     * Get pattern-based moves to consider in search.
+     * This helps focus the search on moves that matter.
+     * 
+     * @param gameState The current game state
+     * @return A list of positions to consider
+     */
+    private fun getPatternMoves(gameState: GameState): List<Pair<Int, Int>> {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        val moves = mutableSetOf<Pair<Int, Int>>()
+        
+        // Look for cells around existing pieces
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] != EMPTY) {
+                    // Add cells around this piece based on the prune pattern
+                    for ((dx, dy) in PRUNE_PATTERN) {
+                        val newRow = row + dx
+                        val newCol = col + dy
+                        if (newRow in 0 until boardSize && newCol in 0 until boardSize &&
+                            board[newRow][newCol] == EMPTY) {
+                            moves.add(Pair(newRow, newCol))
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If no moves found, consider all empty cells
+        if (moves.isEmpty()) {
+            for (row in 0 until boardSize) {
+                for (col in 0 until boardSize) {
+                    if (board[row][col] == EMPTY) {
+                        moves.add(Pair(row, col))
+                    }
+                }
+            }
+        }
+        
+        return moves.toList()
+    }
+    
+    /**
+     * Find bridge patterns on the board.
+     * 
+     * @param gameState The current game state
+     * @param player The player to analyze
+     * @return A list of important bridge positions
+     */
+    private fun findBridges(gameState: GameState, player: Int): List<Pair<Int, Int>> {
+        return searchPatterns(gameState, player, BRIDGE_PATTERNS)
+    }
+    
+    /**
+     * Find cells that are not worth playing in.
+     * 
+     * @param gameState The current game state
+     * @param player The player to analyze
+     * @return A list of positions that are not strategically valuable
+     */
+    private fun findDeadCells(gameState: GameState, player: Int): List<Pair<Int, Int>> {
+        return searchPatterns(gameState, player, DEAD_CELL_PATTERNS)
+    }
+    
+    /**
+     * Search for pattern matches on the board.
+     * 
+     * @param gameState The current game state
+     * @param player The player to analyze
+     * @param patterns The patterns to search for
+     * @return A list of matched positions
+     */
+    private fun searchPatterns(
+        gameState: GameState,
+        player: Int,
+        patterns: Array<HexPattern>
+    ): List<Pair<Int, Int>> {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        val matches = mutableListOf<Pair<Int, Int>>()
+        
+        // Check each pattern across the board
+        for (pattern in patterns) {
+            for (row in 0 until boardSize - pattern.size.first + 1) {
+                for (col in 0 until boardSize - pattern.size.second + 1) {
+                    if (matchesPattern(gameState, row, col, pattern, player)) {
+                        // Add the position of interest
+                        matches.add(Pair(row + pattern.interest.first, col + pattern.interest.second))
+                    }
+                }
+            }
+        }
+        
+        return matches
+    }
+    
+    /**
+     * Check if a specific part of the board matches a pattern.
+     * 
+     * @param gameState The current game state
+     * @param startRow Starting row
+     * @param startCol Starting column
+     * @param pattern The pattern to match
+     * @param player The player to analyze
+     * @return True if the pattern matches, false otherwise
+     */
+    private fun matchesPattern(
+        gameState: GameState,
+        startRow: Int,
+        startCol: Int,
+        pattern: HexPattern,
+        player: Int
+    ): Boolean {
+        val board = gameState.board
+        val opponent = if (player == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
+        
+        var index = 0
+        for (y in 0 until pattern.size.second) {
+            for (x in 0 until pattern.size.first) {
+                val cell = board[startRow + x][startCol + y]
+                
+                when (pattern.pattern[index]) {
+                    2 -> {} // Any cell, matches regardless of content
+                    1 -> {
+                        // Must be player's stone
+                        if (cell != player) return false
+                    }
+                    0 -> {
+                        // Must be opponent's stone
+                        if (cell != opponent) return false
+                    }
+                    EMPTY -> {
+                        // Must be empty
+                        if (cell != EMPTY) return false
+                    }
+                }
+                index++
+            }
+        }
+        
+        return true
+    }
+    
+    /**
+     * Find valid moves on the board (empty cells).
+     * 
+     * @param gameState The current game state
+     * @return A list of empty positions
+     */
+    private fun findValidMoves(gameState: GameState): List<Pair<Int, Int>> {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        val moves = mutableListOf<Pair<Int, Int>>()
+        
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] == EMPTY) {
+                    moves.add(Pair(row, col))
+                }
+            }
+        }
+        
+        return moves
+    }
+    
+    /**
+     * Check if the board is empty.
+     * 
+     * @param gameState The current game state
+     * @return True if the board is empty, false otherwise
+     */
+    private fun isBoardEmpty(gameState: GameState): Boolean {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] != EMPTY) {
+                    return false
+                }
+            }
+        }
+        
+        return true
+    }
+    
+    /**
+     * Count the total number of stones on the board.
+     * 
+     * @param gameState The current game state
+     * @return The number of stones
+     */
+    private fun countStones(gameState: GameState): Int {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        var count = 0
+        
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] != EMPTY) {
+                    count++
+                }
+            }
+        }
+        
+        return count
+    }
+    
+    /**
+     * Check if the game is over.
+     * 
+     * @param gameState The current game state
+     * @return True if the game is over, false otherwise
+     */
+    private fun isGameOver(gameState: GameState): Boolean {
+        // Check if either player has a winning connection
+        return checkHexWin(gameState, PLAYER_ONE) || checkHexWin(gameState, PLAYER_TWO)
+    }
+    
+    /**
+     * Get the winner of the game.
+     * 
+     * @param gameState The current game state
+     * @return The player who won, or EMPTY if no winner
+     */
+    private fun getWinner(gameState: GameState): Int {
+        if (checkHexWin(gameState, PLAYER_ONE)) return PLAYER_ONE
+        if (checkHexWin(gameState, PLAYER_TWO)) return PLAYER_TWO
+        return EMPTY
+    }
+    
+    /**
+     * Find an immediate winning move for a player.
+     * 
+     * @param gameState The current game state
+     * @param player The player to check for
+     * @return A winning move if available, null otherwise
+     */
+    private fun findImmediateWin(gameState: GameState, player: Int): Pair<Int, Int>? {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        
+        // Try each empty cell to see if it creates a win
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] == EMPTY) {
+                    // Place a temporary stone
+                    board[row][col] = player
+                    
+                    // Check if this creates a win
+                    if (checkHexWin(gameState, player)) {
+                        // Remove the stone and return this winning move
+                        board[row][col] = EMPTY
+                        return Pair(row, col)
+                    }
+                    
+                    // Remove the temporary stone
+                    board[row][col] = EMPTY
+                }
+            }
+        }
+        
+        return null
+    }
+    
+    /**
+     * Strategic response to the opponent's first move.
+     * 
+     * @param gameState The current game state
+     * @return A strategic second move
      */
     private fun findSecondMove(gameState: GameState): Pair<Int, Int> {
         val board = gameState.board
         val boardSize = gameState.boardSize
         val center = boardSize / 2
-
+        
         // Find the opponent's first move
         var firstMoveRow = -1
         var firstMoveCol = -1
-
+        
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (board[row][col] == PLAYER_ONE) {
@@ -240,32 +740,31 @@ class HexAIEngine(private val random: Random = Random()) {
             }
             if (firstMoveRow != -1) break
         }
-
+        
         // If opponent played in the center or adjacent to center,
-        // use the "pie rule" concept and play on the other side
+        // use the "pie rule" concept and play on the opposite side
         if ((firstMoveRow == center && firstMoveCol == center) ||
-                        (Math.abs(firstMoveRow - center) <= 1 &&
-                                Math.abs(firstMoveCol - center) <= 1)
-        ) {
-
+            (Math.abs(firstMoveRow - center) <= 1 && 
+             Math.abs(firstMoveCol - center) <= 1)) {
+            
             // Play on the opposite side
             val destRow = boardSize - 1 - firstMoveRow
             val destCol = boardSize - 1 - firstMoveCol
-
+            
             return Pair(destRow, destCol)
         }
-
+        
         // For other opening moves, play in the center
         if (board[center][center] == EMPTY) {
             return Pair(center, center)
         }
-
+        
         // If center is taken, play adjacent to center
         val centerNeighbors = getNeighbors(center, center, boardSize)
         val emptyNeighbors = centerNeighbors.filter { (r, c) -> board[r][c] == EMPTY }
-
+        
         return if (emptyNeighbors.isNotEmpty()) {
-            emptyNeighbors.random()
+            emptyNeighbors[random.nextInt(emptyNeighbors.size)]
         } else {
             // Fallback: find any empty position
             for (row in 0 until boardSize) {
@@ -279,564 +778,19 @@ class HexAIEngine(private val random: Random = Random()) {
             Pair(0, 0)
         }
     }
-
-    /** Check if the board is empty. */
-    private fun isBoardEmpty(gameState: GameState): Boolean {
-        val board = gameState.board
-        val boardSize = gameState.boardSize
-
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (board[row][col] != EMPTY) {
-                    return false
-                }
-            }
-        }
-
-        return true
-    }
-
-    /** Count the total number of stones on the board. */
-    private fun countStones(gameState: GameState): Int {
-        val board = gameState.board
-        val boardSize = gameState.boardSize
-        var count = 0
-
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (board[row][col] != EMPTY) {
-                    count++
-                }
-            }
-        }
-
-        return count
-    }
-
-    /** Create a deep copy of a 2D board array. */
-    private fun copyBoard(board: Array<IntArray>): Array<IntArray> {
-        return Array(board.size) { row -> IntArray(board[row].size) { col -> board[row][col] } }
-    }
-
-    /** Restore a board to match the original. */
-    private fun restoreBoard(board: Array<IntArray>, original: Array<IntArray>) {
-        for (row in board.indices) {
-            for (col in board[row].indices) {
-                board[row][col] = original[row][col]
-            }
-        }
-    }
-
+    
     /**
-     * Find the best move for the AI player (PLAYER_TWO) in the current game state.
-     *
-     * @param gameState Current state of the game
-     * @return Coordinates of the best move
+     * Check if a player has won by connecting their edges.
+     * 
+     * @param gameState The current game state
+     * @param player The player to check for
+     * @return True if the player has won, false otherwise
      */
-    fun findBestMove(gameState: GameState): Pair<Int, Int>? {
-        // Start with basic checks before running expensive MCTS
-
-        // 1. If the board is empty, play in the center
-        if (isBoardEmpty(gameState)) {
-            val center = gameState.boardSize / 2
-            return Pair(center, center)
-        }
-
-        // 2. If this is the second move, use a strong response to the opponent's opening
-        if (countStones(gameState) == 1) {
-            return findSecondMove(gameState)
-        }
-
-        // 3. Check for immediate winning move
-        val immediateWin = findImmediateWin(gameState, PLAYER_TWO)
-        if (immediateWin != null) {
-            return immediateWin
-        }
-
-        // 4. Check for opponent's immediate winning move to block
-        val opponentWin = findImmediateWin(gameState, PLAYER_ONE)
-        if (opponentWin != null) {
-            return opponentWin
-        }
-
-        // 5. Look for virtual connections to complete
-        val virtualConnection = findVirtualConnectionMove(gameState, PLAYER_TWO)
-        if (virtualConnection != null) {
-            return virtualConnection
-        }
-
-        // 6. Run Monte Carlo Tree Search for deep analysis
-        return runMonteCarloTreeSearch(gameState)
-    }
-
-    /** Run Monte Carlo Tree Search to find the best move. */
-    private fun runMonteCarloTreeSearch(gameState: GameState): Pair<Int, Int> {
-        // Clone the game state to avoid modifying the original
-        val board = copyBoard(gameState.board)
-        val boardSize = gameState.boardSize
-
-        // Create the root node
-        val rootNode =
-                MCTSNode(null, null, PLAYER_ONE) // Player ONE just moved, now it's TWO's turn
-
-        // Initialize the unexplored moves
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (board[row][col] == EMPTY) {
-                    rootNode.unexploredMoves.add(Pair(row, col))
-                }
-            }
-        }
-
-        // Shuffle to ensure variety in the beginning
-        rootNode.unexploredMoves.shuffle(random)
-
-        // Run simulations
-        for (i in 0 until SIMULATION_COUNT) {
-            // 1. Selection - navigate through the tree using UCT
-            val selectedNode = selection(rootNode, board, boardSize)
-
-            // 2. Expansion - add a new node to the tree
-            val expandedNode =
-                    if (selectedNode.unexploredMoves.isNotEmpty()) {
-                        expansion(selectedNode, board, boardSize)
-                    } else {
-                        selectedNode
-                    }
-
-            // 3. Simulation - play a random game from the new node
-            val winner = simulation(board, boardSize, expandedNode.playerJustMoved)
-
-            // 4. Backpropagation - update stats up the tree
-            backpropagation(expandedNode, winner)
-
-            // Reset the board to its original state for the next simulation
-            restoreBoard(board, gameState.board)
-        }
-
-        // Choose the best move based on most visited
-        val bestChild = rootNode.bestChild()
-
-        // If we somehow don't have a best move, fall back to the first available
-        if (bestChild == null || bestChild.move == null) {
-            for (row in 0 until boardSize) {
-                for (col in 0 until boardSize) {
-                    if (gameState.board[row][col] == EMPTY) {
-                        return Pair(row, col)
-                    }
-                }
-            }
-            // Should never reach here if the board isn't full
-            throw IllegalStateException("No valid move found on non-full board")
-        }
-
-        return bestChild.move
-    }
-
-    /** Selection phase of MCTS - traverse the tree based on UCT values. */
-    private fun selection(node: MCTSNode, board: Array<IntArray>, boardSize: Int): MCTSNode {
-        var current = node
-
-        // Traverse down the tree until we reach a node that has unexplored moves
-        // or a leaf node (no children)
-        while (current.unexploredMoves.isEmpty() && current.children.isNotEmpty()) {
-            // Select child with highest UCT value
-            val nextPlayer = 3 - current.playerJustMoved // Toggle between 1 and 2
-            val bestChild = current.children.maxByOrNull { it.uct(current.visits) }!!
-
-            // Update the board with the move to this child
-            val move = bestChild.move!!
-            board[move.first][move.second] = nextPlayer
-
-            current = bestChild
-        }
-
-        return current
-    }
-
-    /** Expansion phase of MCTS - add a new node to the tree. */
-    private fun expansion(node: MCTSNode, board: Array<IntArray>, boardSize: Int): MCTSNode {
-        // Choose a random unexplored move
-        val moveIndex = random.nextInt(node.unexploredMoves.size)
-        val move = node.unexploredMoves[moveIndex]
-
-        // Determine the player for this move
-        val nextPlayer = 3 - node.playerJustMoved // Toggle between 1 and 2
-
-        // Update the board
-        board[move.first][move.second] = nextPlayer
-
-        // Add the new child node and return it
-        return node.addChild(move, nextPlayer)
-    }
-
-    /** Simulation phase of MCTS - play a random game from the current state. */
-    private fun simulation(board: Array<IntArray>, boardSize: Int, playerJustMoved: Int): Int {
-        // Clone the board to avoid modifying the original during simulation
-        val simBoard = copyBoard(board)
-        var currentPlayer = 3 - playerJustMoved // Toggle between 1 and 2
-
-        // Get available moves
-        val availableMoves = mutableListOf<Pair<Int, Int>>()
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (simBoard[row][col] == EMPTY) {
-                    availableMoves.add(Pair(row, col))
-                }
-            }
-        }
-
-        // Play random moves until the game is decided
-        while (availableMoves.isNotEmpty()) {
-            // Choose a move randomly, but with some basic strategy by using move scoring
-            val scoredMoves =
-                    availableMoves.map { move ->
-                        val score = scoreMove(simBoard, move, currentPlayer, boardSize)
-                        Pair(move, score)
-                    }
-
-            // Use probability distribution based on scores to choose a move
-            val totalScore = scoredMoves.sumOf { it.second } + 0.001 // Avoid div by 0
-            var moveIndex = 0
-            var randomValue = random.nextDouble() * totalScore
-
-            // Select a move based on weighted probability
-            for (i in scoredMoves.indices) {
-                randomValue -= scoredMoves[i].second
-                if (randomValue <= 0.0) {
-                    moveIndex = i
-                    break
-                }
-            }
-
-            val selectedMove = scoredMoves[moveIndex].first
-
-            // Make the move
-            simBoard[selectedMove.first][selectedMove.second] = currentPlayer
-            availableMoves.remove(selectedMove)
-
-            // Check if this player won
-            if (checkHexWin(simBoard, boardSize, currentPlayer)) {
-                return currentPlayer // This player won
-            }
-
-            // Switch players
-            currentPlayer = 3 - currentPlayer
-        }
-
-        // If we reach here without a winner, the game is a draw (should not happen in Hex)
-        // In Hex, there is always a winner. But for safety, we return EMPTY as a draw
-        return EMPTY
-    }
-
-    /** Backpropagation phase of MCTS - update statistics up the tree. */
-    private fun backpropagation(node: MCTSNode, winner: Int) {
-        var current: MCTSNode? = node
-
-        while (current != null) {
-            current.visits++
-
-            // Update wins based on the result
-            if (winner != EMPTY) {
-                // In Hex, the AI is always PLAYER_TWO (Blue, connecting left-right)
-                if (current.playerJustMoved == winner) {
-                    current.wins += 1.0
-                } else if (current.playerJustMoved == 3 - winner) {
-                    // The opponent of the winner
-                    current.wins += 0.0
-                } else {
-                    // Neutral result (should not happen in Hex)
-                    current.wins += 0.5
-                }
-            } else {
-                // Draw (should not happen in Hex)
-                current.wins += 0.5
-            }
-
-            current = current.parent
-        }
-    }
-
-    /** Score a potential move for the heuristic-guided random simulation. */
-    private fun scoreMove(
-            board: Array<IntArray>,
-            move: Pair<Int, Int>,
-            player: Int,
-            boardSize: Int
-    ): Double {
-        var score = 1.0 // Base score
-
-        val (row, col) = move
-
-        // Factor 1: Position value based on pre-calculated strategic positions
-        val normalizedRow = (row * 10) / (boardSize - 1)
-        val normalizedCol = (col * 10) / (boardSize - 1)
-        val posValue = POSITION_VALUES[Pair(normalizedRow, normalizedCol)] ?: 1.0
-        score *= posValue
-
-        // Factor 2: Check neighbor cells - prefer to play near friendly stones
-        val neighbors = getNeighbors(row, col, boardSize)
-        var friendlyNeighbors = 0
-        var enemyNeighbors = 0
-
-        for ((nRow, nCol) in neighbors) {
-            when (board[nRow][nCol]) {
-                player -> friendlyNeighbors++
-                3 - player -> enemyNeighbors++
-            }
-        }
-
-        // Increase score for moves that connect to friendly stones
-        score *= (1.0 + 0.3 * friendlyNeighbors)
-
-        // Factor 3: Pattern matching
-        val patternScore = evaluatePatterns(board, move, player, boardSize)
-        score += patternScore
-
-        // Factor 4: Edge connectivity - playing on edge is valuable in Hex
-        if (row == 0 || row == boardSize - 1 || col == 0 || col == boardSize - 1) {
-            score *= 1.5
-
-            // For the AI (PLAYER_TWO), left and right edges are most valuable
-            if (player == PLAYER_TWO && (col == 0 || col == boardSize - 1)) {
-                score *= 1.5
-            }
-            // For PLAYER_ONE, top and bottom edges are most valuable
-            else if (player == PLAYER_ONE && (row == 0 || row == boardSize - 1)) {
-                score *= 1.5
-            }
-        }
-
-        return score
-    }
-
-    /** Evaluate pattern-based strategies for a move. */
-    private fun evaluatePatterns(
-            board: Array<IntArray>,
-            move: Pair<Int, Int>,
-            player: Int,
-            boardSize: Int
-    ): Double {
-        var patternScore = 0.0
-        val (row, col) = move
-
-        // Temporarily place the stone
-        board[row][col] = player
-
-        // Rotate patterns for player 1 (vertically oriented) if needed
-        val patterns =
-                HEX_PATTERNS.map { pattern ->
-                    if (player == PLAYER_ONE) {
-                        // Rotate the pattern for PLAYER_ONE by transposing the layout
-                        val rotatedLayout = Array(pattern.width) { Array(pattern.height) { 0 } }
-
-                        for (i in 0 until pattern.height) {
-                            for (j in 0 until pattern.width) {
-                                rotatedLayout[j][i] = pattern.layout[i][j]
-
-                                // Also swap player values (1 and 2) in the pattern
-                                if (rotatedLayout[j][i] == PLAYER_ONE)
-                                        rotatedLayout[j][i] = PLAYER_TWO
-                                else if (rotatedLayout[j][i] == PLAYER_TWO)
-                                        rotatedLayout[j][i] = PLAYER_ONE
-                            }
-                        }
-
-                        HexPattern(
-                                layout = rotatedLayout,
-                                centerX = pattern.centerY, // Swap center coordinates too
-                                centerY = pattern.centerX,
-                                value = pattern.value,
-                                name = pattern.name + " (Rotated)"
-                        )
-                    } else {
-                        pattern
-                    }
-                }
-
-        // Check each pattern
-        for (pattern in patterns) {
-            val patternWidth = pattern.width
-            val patternHeight = pattern.height
-
-            // Calculate the starting position for pattern matching
-            val startRow = row - pattern.centerY
-            val startCol = col - pattern.centerX
-
-            // Skip if the pattern would go out of bounds
-            if (startRow < 0 ||
-                            startRow + patternHeight > boardSize ||
-                            startCol < 0 ||
-                            startCol + patternWidth > boardSize
-            ) {
-                continue
-            }
-
-            // Check if the pattern matches
-            var matches = true
-            for (i in 0 until patternHeight) {
-                for (j in 0 until patternWidth) {
-                    val patternCell = pattern.layout[i][j]
-                    val boardCell = board[startRow + i][startCol + j]
-
-                    // Skip empty cells in the pattern (they can be anything)
-                    if (patternCell != EMPTY && patternCell != boardCell) {
-                        matches = false
-                        break
-                    }
-                }
-                if (!matches) break
-            }
-
-            if (matches) {
-                patternScore += pattern.value
-            }
-        }
-
-        // Remove the temporary stone
-        board[row][col] = EMPTY
-
-        return patternScore
-    }
-
-    /** Find a move that potentially completes a virtual connection. */
-    private fun findVirtualConnectionMove(gameState: GameState, player: Int): Pair<Int, Int>? {
+    private fun checkHexWin(gameState: GameState, player: Int): Boolean {
         val board = gameState.board
         val boardSize = gameState.boardSize
-
-        // We'll use a different approach based on the player
-        return if (player == PLAYER_TWO) { // Blue, left-right
-            // Check for potential left-right connections
-            findHorizontalConnection(board, boardSize, player)
-        } else { // Red, top-bottom
-            // Check for potential top-bottom connections
-            findVerticalConnection(board, boardSize, player)
-        }
-    }
-
-    /** Find a move that could establish a horizontal connection (left-right). */
-    private fun findHorizontalConnection(
-            board: Array<IntArray>,
-            boardSize: Int,
-            player: Int
-    ): Pair<Int, Int>? {
-        // Virtual connection analysis for left-right
-        // Start by finding all stones on the left edge
-        val leftStones = mutableListOf<Pair<Int, Int>>()
-        for (row in 0 until boardSize) {
-            if (board[row][0] == player) {
-                leftStones.add(Pair(row, 0))
-            }
-        }
-
-        if (leftStones.isEmpty()) {
-            // If no stones on left edge, try to place one
-            for (row in 0 until boardSize) {
-                if (board[row][0] == EMPTY) {
-                    return Pair(row, 0)
-                }
-            }
-        }
-
-        // Stones on right edge
-        val rightStones = mutableListOf<Pair<Int, Int>>()
-        for (row in 0 until boardSize) {
-            if (board[row][boardSize - 1] == player) {
-                rightStones.add(Pair(row, boardSize - 1))
-            }
-        }
-
-        if (rightStones.isEmpty()) {
-            // If no stones on right edge, try to place one
-            for (row in 0 until boardSize) {
-                if (board[row][boardSize - 1] == EMPTY) {
-                    return Pair(row, boardSize - 1)
-                }
-            }
-        }
-
-        // Find the shortest path between left and right stones
-        val candidateMoves = mutableListOf<Pair<Int, Int>>()
-
-        // Try to connect each left stone to a right stone
-        for (leftStone in leftStones) {
-            for (rightStone in rightStones) {
-                // Use a pathfinding approach to find good connection moves
-                val path = findConnectionPath(board, boardSize, leftStone, rightStone, player)
-
-                // Choose an empty spot along the path to place a stone
-                for ((r, c) in path) {
-                    if (board[r][c] == EMPTY) {
-                        candidateMoves.add(Pair(r, c))
-                    }
-                }
-            }
-        }
-
-        if (candidateMoves.isNotEmpty()) {
-            return candidateMoves.random()
-        }
-
-        // If we can't find a good connection move, try to place a stone that extends
-        // from existing friendly stones toward the other side
-        for (row in 0 until boardSize) {
-            for (col in 1 until boardSize - 1) { // Skip edges, we checked them already
-                if (board[row][col] == EMPTY) {
-                    // Check if this position is adjacent to a friendly stone
-                    val neighbors = getNeighbors(row, col, boardSize)
-                    if (neighbors.any { (nRow, nCol) -> board[nRow][nCol] == player }) {
-                        // Prioritize moves that are closer to the other side
-                        candidateMoves.add(Pair(row, col))
-                    }
-                }
-            }
-        }
-
-        return if (candidateMoves.isNotEmpty()) {
-            // Sort by progression toward the goal
-            val sortedMoves =
-                    candidateMoves.sortedByDescending { (_, col) ->
-                        col // Higher column value means closer to right side
-                    }
-            sortedMoves.first()
-        } else {
-            null
-        }
-    }
-
-    /** Check if there's a direct win by connecting edges. */
-    private fun findImmediateWin(gameState: GameState, player: Int): Pair<Int, Int>? {
-        val board = gameState.board
-        val boardSize = gameState.boardSize
-
-        // For each empty cell, check if placing a stone creates a win
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (board[row][col] == EMPTY) {
-                    // Place a temporary stone
-                    board[row][col] = player
-
-                    // Check if this creates a win
-                    if (checkHexWin(board, boardSize, player)) {
-                        // Remove the stone and return this winning move
-                        board[row][col] = EMPTY
-                        return Pair(row, col)
-                    }
-
-                    // Remove the temporary stone
-                    board[row][col] = EMPTY
-                }
-            }
-        }
-
-        return null
-    }
-
-    /** Check for a win in Hex (connecting opposite edges). */
-    private fun checkHexWin(board: Array<IntArray>, boardSize: Int, player: Int): Boolean {
-        // Create a visited array to track our search
         val visited = Array(boardSize) { BooleanArray(boardSize) }
-
+        
         if (player == PLAYER_ONE) { // Red connects top to bottom
             // Check all pieces in the top row
             for (col in 0 until boardSize) {
@@ -847,9 +801,9 @@ class HexAIEngine(private val random: Random = Random()) {
                             visited[r][c] = false
                         }
                     }
-
+                    
                     // Check if this top piece connects to the bottom
-                    if (isConnectedToBottom(board, boardSize, 0, col, player, visited)) {
+                    if (isConnectedToBottom(gameState, 0, col, player, visited)) {
                         return true
                     }
                 }
@@ -864,250 +818,168 @@ class HexAIEngine(private val random: Random = Random()) {
                             visited[r][c] = false
                         }
                     }
-
+                    
                     // Check if this left piece connects to the right
-                    if (isConnectedToRight(board, boardSize, row, 0, player, visited)) {
+                    if (isConnectedToRight(gameState, row, 0, player, visited)) {
                         return true
                     }
                 }
             }
         }
-
+        
         return false
     }
-
-    /** DFS to check if there's a path from the current cell to the bottom edge. */
+    
+    /**
+     * Check if there's a connection from the top to the bottom.
+     * 
+     * @param gameState The current game state
+     * @param row Starting row
+     * @param col Starting column
+     * @param player The player to check for
+     * @param visited Visited cells tracker
+     * @return True if connected, false otherwise
+     */
     private fun isConnectedToBottom(
-            board: Array<IntArray>,
-            boardSize: Int,
-            row: Int,
-            col: Int,
-            player: Int,
-            visited: Array<BooleanArray>
+        gameState: GameState,
+        row: Int,
+        col: Int,
+        player: Int,
+        visited: Array<BooleanArray>
     ): Boolean {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        
         // If we reached the bottom row, we found a path
         if (row == boardSize - 1) {
             return true
         }
-
+        
         // Mark current cell as visited
         visited[row][col] = true
-
+        
         // Check all six neighbors
         for ((nRow, nCol) in getNeighbors(row, col, boardSize)) {
             // If the neighbor is valid, not visited, and belongs to the player
-            if (nRow in 0 until boardSize &&
-                            nCol in 0 until boardSize &&
-                            !visited[nRow][nCol] &&
-                            board[nRow][nCol] == player
+            if (nRow in 0 until boardSize && 
+                nCol in 0 until boardSize && 
+                !visited[nRow][nCol] && 
+                board[nRow][nCol] == player
             ) {
                 // Recursively check if this neighbor leads to the bottom
-                if (isConnectedToBottom(board, boardSize, nRow, nCol, player, visited)) {
+                if (isConnectedToBottom(gameState, nRow, nCol, player, visited)) {
                     return true
                 }
             }
         }
-
+        
         return false
     }
-
-    /** DFS to check if there's a path from the current cell to the right edge. */
+    
+    /**
+     * Check if there's a connection from the left to the right.
+     * 
+     * @param gameState The current game state
+     * @param row Starting row
+     * @param col Starting column
+     * @param player The player to check for
+     * @param visited Visited cells tracker
+     * @return True if connected, false otherwise
+     */
     private fun isConnectedToRight(
-            board: Array<IntArray>,
-            boardSize: Int,
-            row: Int,
-            col: Int,
-            player: Int,
-            visited: Array<BooleanArray>
+        gameState: GameState,
+        row: Int,
+        col: Int,
+        player: Int,
+        visited: Array<BooleanArray>
     ): Boolean {
+        val board = gameState.board
+        val boardSize = gameState.boardSize
+        
         // If we reached the rightmost column, we found a path
         if (col == boardSize - 1) {
             return true
         }
-
+        
         // Mark current cell as visited
         visited[row][col] = true
-
+        
         // Check all six neighbors
         for ((nRow, nCol) in getNeighbors(row, col, boardSize)) {
             // If the neighbor is valid, not visited, and belongs to the player
-            if (nRow in 0 until boardSize &&
-                            nCol in 0 until boardSize &&
-                            !visited[nRow][nCol] &&
-                            board[nRow][nCol] == player
+            if (nRow in 0 until boardSize && 
+                nCol in 0 until boardSize && 
+                !visited[nRow][nCol] && 
+                board[nRow][nCol] == player
             ) {
                 // Recursively check if this neighbor leads to the right
-                if (isConnectedToRight(board, boardSize, nRow, nCol, player, visited)) {
+                if (isConnectedToRight(gameState, nRow, nCol, player, visited)) {
                     return true
                 }
             }
         }
-
+        
         return false
     }
-
-    /** Find a move that could establish a vertical connection (top-bottom). */
-    private fun findVerticalConnection(
-            board: Array<IntArray>,
-            boardSize: Int,
-            player: Int
-    ): Pair<Int, Int>? {
-        // Virtual connection analysis for top-bottom
-        // Start by finding all stones on the top edge
-        val topStones = mutableListOf<Pair<Int, Int>>()
-        for (col in 0 until boardSize) {
-            if (board[0][col] == player) {
-                topStones.add(Pair(0, col))
+    
+    /**
+     * Get all neighbor positions for a given cell in a hex grid.
+     * 
+     * @param row The row of the cell
+     * @param col The column of the cell
+     * @param boardSize The size of the board
+     * @return A list of valid neighbor positions
+     */
+    private fun getNeighbors(row: Int, col: Int, boardSize: Int): List<Pair<Int, Int>> {
+        // In a hexagonal grid, each cell has 6 neighbors
+        val neighbors = mutableListOf<Pair<Int, Int>>()
+        
+        // The six possible directions in a hex grid
+        val directions = arrayOf(
+            Pair(-1, 0),  // Top-left
+            Pair(-1, 1),  // Top-right
+            Pair(0, -1),  // Left
+            Pair(0, 1),   // Right
+            Pair(1, -1),  // Bottom-left
+            Pair(1, 0)    // Bottom-right
+        )
+        
+        for ((dr, dc) in directions) {
+            val newRow = row + dr
+            val newCol = col + dc
+            
+            // Check if the neighbor is within bounds
+            if (newRow in 0 until boardSize && newCol in 0 until boardSize) {
+                neighbors.add(Pair(newRow, newCol))
             }
         }
-
-        if (topStones.isEmpty()) {
-            // If no stones on top edge, try to place one
-            for (col in 0 until boardSize) {
-                if (board[0][col] == EMPTY) {
-                    return Pair(0, col)
-                }
-            }
-        }
-
-        // Stones on bottom edge
-        val bottomStones = mutableListOf<Pair<Int, Int>>()
-        for (col in 0 until boardSize) {
-            if (board[boardSize - 1][col] == player) {
-                bottomStones.add(Pair(boardSize - 1, col))
-            }
-        }
-
-        if (bottomStones.isEmpty()) {
-            // If no stones on bottom edge, try to place one
-            for (col in 0 until boardSize) {
-                if (board[boardSize - 1][col] == EMPTY) {
-                    return Pair(boardSize - 1, col)
-                }
-            }
-        }
-
-        // Find the shortest path between top and bottom stones
-        val candidateMoves = mutableListOf<Pair<Int, Int>>()
-
-        // Try to connect each top stone to a bottom stone
-        for (topStone in topStones) {
-            for (bottomStone in bottomStones) {
-                // Use a pathfinding approach to find good connection moves
-                val path = findConnectionPath(board, boardSize, topStone, bottomStone, player)
-
-                // Choose an empty spot along the path to place a stone
-                for ((r, c) in path) {
-                    if (board[r][c] == EMPTY) {
-                        candidateMoves.add(Pair(r, c))
-                    }
-                }
-            }
-        }
-
-        if (candidateMoves.isNotEmpty()) {
-            return candidateMoves.random()
-        }
-
-        // If we can't find a good connection move, try to place a stone that extends
-        // from existing friendly stones toward the other side
-        for (col in 0 until boardSize) {
-            for (row in 1 until boardSize - 1) { // Skip edges, we checked them already
-                if (board[row][col] == EMPTY) {
-                    // Check if this position is adjacent to a friendly stone
-                    val neighbors = getNeighbors(row, col, boardSize)
-                    if (neighbors.any { (nRow, nCol) -> board[nRow][nCol] == player }) {
-                        // Prioritize moves that are closer to the other side
-                        candidateMoves.add(Pair(row, col))
-                    }
-                }
-            }
-        }
-
-        return if (candidateMoves.isNotEmpty()) {
-            // Sort by progression toward the goal
-            val sortedMoves =
-                    candidateMoves.sortedByDescending { (row, _) ->
-                        row // Higher row value means closer to bottom side
-                    }
-            sortedMoves.first()
-        } else {
-            null
-        }
+        
+        return neighbors
     }
-
-    /** Find a potential connection path between two stones. */
-    private fun findConnectionPath(
-            board: Array<IntArray>,
-            boardSize: Int,
-            start: Pair<Int, Int>,
-            end: Pair<Int, Int>,
-            player: Int
-    ): List<Pair<Int, Int>> {
-        // Use Dijkstra's algorithm to find the shortest path
-
-        // Initialize distance map with infinity for all cells
-        val distance = Array(boardSize) { Array(boardSize) { Double.POSITIVE_INFINITY } }
-        val visited = Array(boardSize) { BooleanArray(boardSize) }
-
-        // Start position has distance 0
-        distance[start.first][start.second] = 0.0
-
-        // Compare by distance
-        val pq = PriorityQueue<Triple<Int, Int, Double>>(compareBy { it.third })
-        pq.add(Triple(start.first, start.second, 0.0))
-
-        // Parent map for reconstructing the path
-        val parent = Array(boardSize) { Array<Pair<Int, Int>?>(boardSize) { null } }
-
-        while (pq.isNotEmpty()) {
-            val (row, col, dist) = pq.poll()
-
-            // Skip if already visited
-            if (visited[row][col]) continue
-
-            // Mark as visited
-            visited[row][col] = true
-
-            // Check if we've reached the destination
-            if (row == end.first && col == end.second) {
-                break
-            }
-
-            // Check all neighbors
-            for (neighbor in getNeighbors(row, col, boardSize)) {
-                val (nRow, nCol) = neighbor
-
-                // Calculate the cost to move to this neighbor
-                // Empty cells or cells with our stones have lower cost
-                val cost =
-                        when (board[nRow][nCol]) {
-                            EMPTY -> 1.0
-                            player -> 0.5 // Our stone - very low cost
-                            else -> 10.0 // Opponent stone - very high cost
-                        }
-
-                // Relax the edge
-                val newDist = dist + cost
-                if (newDist < distance[nRow][nCol]) {
-                    distance[nRow][nCol] = newDist
-                    parent[nRow][nCol] = Pair(row, col)
-                    pq.add(Triple(nRow, nCol, newDist))
-                }
+    
+    /**
+     * Create a deep copy of a game state.
+     * 
+     * @param gameState The original game state
+     * @return A new copy of the game state
+     */
+    private fun copyGameState(gameState: GameState): GameState {
+        val newState = GameState(
+            boardSize = gameState.boardSize,
+            winCondition = gameState.winCondition,
+            againstComputer = gameState.againstComputer
+        )
+        
+        // Copy the board state
+        for (row in 0 until gameState.boardSize) {
+            for (col in 0 until gameState.boardSize) {
+                newState.board[row][col] = gameState.board[row][col]
             }
         }
-
-        // Reconstruct the path
-        val path = mutableListOf<Pair<Int, Int>>()
-        var current: Pair<Int, Int>? = end
-
-        while (current != null &&
-                !(current.first == start.first && current.second == start.second)) {
-            path.add(current)
-            current = parent[current.first][current.second]
-        }
-
-        // Reverse the path to get from start to end
-        return path.reversed()
+        
+        // Copy other state properties
+        newState.currentPlayer = gameState.currentPlayer
+        
+        return newState
     }
 }

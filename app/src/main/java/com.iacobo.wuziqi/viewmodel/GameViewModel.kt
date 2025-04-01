@@ -9,8 +9,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.iacobo.wuziqi.R
-import com.iacobo.wuziqi.ai.HexAIEngine
 import com.iacobo.wuziqi.ai.WuziqiAIEngine
+import com.iacobo.wuziqi.ai.HexAlphaBetaEngine
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.UserPreferencesRepository
 import com.iacobo.wuziqi.ui.Opponent
@@ -20,7 +20,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private val aiEngine = WuziqiAIEngine(Random())
-private val hexAiEngine = HexAIEngine(Random())
+// Use our new Alpha-Beta based Hex AI engine
+private val hexAiEngine = HexAlphaBetaEngine(Random())
 
 /** Represents a move in the game with position and player information. */
 data class Move(val row: Int, val col: Int, val player: Int)
@@ -244,8 +245,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Finds the bottom-most empty row in a column for Connect4 Updated to handle a 7x6 board size
-     * (width x height)
+     * Finds the bottom-most empty row in a column for Connect4
      */
     private fun findBottomEmptyRow(col: Int): Int {
         // For Connect4 (7x6 board), we need to only check the 6 rows (0-5)
@@ -265,8 +265,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Places a Connect4 tile in the specified column Updated with bypassLoading parameter for AI
-     * moves
+     * Places a Connect4 tile in the specified column
      */
     fun placeConnect4Tile(col: Int, bypassLoading: Boolean = false) {
         // Skip the isLoading check if bypassLoading is true (AI move)
@@ -354,7 +353,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             // Get best move based on the game type
             val bestMove =
                     when {
-                        // Hex game - use the HexAIEngine
+                        // Hex game - use the HexAlphaBetaEngine
                         gameState.boardSize == 11 && gameState.winCondition == 8 -> {
                             hexAiEngine.findBestMove(gameState)
                         }
@@ -422,7 +421,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             // Only perform a second undo if there's another move AND the player is still the same
             // This prevents recursion from continuing after both moves are undone
             if (moveHistory.isNotEmpty() && moveHistory.last().player != lastMove.player) {
-
                 // Get previous move (computer's move)
                 val previousMove = moveHistory.last()
 
@@ -432,7 +430,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 // Remove it from board
                 gameState.board[previousMove.row][previousMove.col] = GameState.EMPTY
 
-                // Set current player back to the human player
+                // Always set current player back to the human player (PLAYER_ONE)
                 gameState.currentPlayer = GameState.PLAYER_ONE
             } else {
                 // Set current player back to the one who made the last move
