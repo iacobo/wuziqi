@@ -241,7 +241,7 @@ fun GameScreen(
                                                                 .background(
                                                                         MaterialTheme.colorScheme
                                                                                 .background
-                                                                )
+                                                                ),
                                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                                 verticalAlignment = Alignment.CenterVertically
                                         ) {
