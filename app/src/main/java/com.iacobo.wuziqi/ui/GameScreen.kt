@@ -3,6 +3,7 @@ package com.iacobo.wuziqi.ui
 import android.content.res.Configuration
 import android.view.Surface
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -161,39 +162,26 @@ fun ResetConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 /** Dialog that displays the rules for each game type. */
 @Composable
 fun GameRulesDialog(gameType: GameType, onDismiss: () -> Unit) {
+        val rulesText =
+                when (gameType) {
+                        GameType.Standard -> stringResource(R.string.wuziqi_rules)
+                        GameType.TicTacToe -> stringResource(R.string.tictactoe_rules)
+                        GameType.Connect4 -> stringResource(R.string.connect4_rules)
+                        GameType.Hex -> stringResource(R.string.hex_rules)
+                }
+
+        val titleText =
+                stringResource(
+                        R.string.how_to_play_title_format,
+                        stringResource(id = gameType.titleResId)
+                )
+
         AlertDialog(
                 onDismissRequest = onDismiss,
-                title = {
-                        Text(
-                                text =
-                                        stringResource(
-                                                R.string.how_to_play_title_format,
-                                                stringResource(id = gameType.titleResId)
-                                        ),
-                                textAlign = TextAlign.Center
-                        )
-                },
+                title = { Text(text = titleText, textAlign = TextAlign.Center) },
                 text = {
                         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                                Text(
-                                        text =
-                                                when (gameType) {
-                                                        GameType.Standard ->
-                                                                stringResource(
-                                                                        R.string.wuziqi_rules
-                                                                )
-                                                        GameType.TicTacToe ->
-                                                                stringResource(
-                                                                        R.string.tictactoe_rules
-                                                                )
-                                                        GameType.Connect4 ->
-                                                                stringResource(
-                                                                        R.string.connect4_rules
-                                                                )
-                                                        GameType.Hex ->
-                                                                stringResource(R.string.hex_rules)
-                                                }
-                                )
+                                Text(text = rulesText)
                         }
                 },
                 confirmButton = {
