@@ -27,8 +27,8 @@ data class Position(val row: Int, val col: Int)
 data class Move(val row: Int, val col: Int, val player: Int)
 
 /**
- * ViewModel that manages the game state and provides actions and state for the UI.
- * Final refactored version with proper separation of concerns.
+ * ViewModel that manages the game state and provides actions and state for the UI. Final refactored
+ * version with proper separation of concerns.
  */
 class GameViewModel(application: Application) : AndroidViewModel(application) {
     // Game state
@@ -54,11 +54,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     // State data repositories
     private val gameStateRepository = GameStateRepository(application)
     private val userPreferencesRepository = UserPreferencesRepository(application)
-    
+
     // Sound management
     private val soundManager = SoundManager(application)
     private var soundEnabled = false
-    
+
     // Easter eggs tracking
     var discoveredEasterEggs by mutableStateOf(emptySet<String>())
         private set
@@ -75,9 +75,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         discoveredEasterEggs = gameStateRepository.getDiscoveredEasterEggs()
 
         // Try to load saved game state
-        viewModelScope.launch { 
-            gameStateRepository.loadGameState(gameState) 
-        }
+        viewModelScope.launch { gameStateRepository.loadGameState(gameState) }
     }
 
     override fun onCleared() {
@@ -85,14 +83,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         soundManager.release()
     }
 
-    /**
-     * Sets up a new game with the specified parameters
-     */
+    /** Sets up a new game with the specified parameters */
     fun setupGame(
-        boardSize: Int,
-        winLength: Int,
-        opponent: Opponent,
-        skipStartSound: Boolean = false
+            boardSize: Int,
+            winLength: Int,
+            opponent: Opponent,
+            skipStartSound: Boolean = false
     ) {
         // Clear any existing game
         winner = null
@@ -100,11 +96,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         moveHistory = emptyList()
 
         // Create new game state
-        gameState = GameState(
-            boardSize = boardSize,
-            winCondition = winLength,
-            againstComputer = opponent == Opponent.COMPUTER
-        )
+        gameState =
+                GameState(
+                        boardSize = boardSize,
+                        winCondition = winLength,
+                        againstComputer = opponent == Opponent.COMPUTER
+                )
 
         // Check for easter eggs
         when {
@@ -126,14 +123,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Save initial state
-        viewModelScope.launch { 
-            gameStateRepository.saveGameState(gameState) 
-        }
+        viewModelScope.launch { gameStateRepository.saveGameState(gameState) }
     }
 
-    /**
-     * Places a tile at the specified position if valid.
-     */
+    /** Places a tile at the specified position if valid. */
     fun placeTile(row: Int, col: Int, bypassLoading: Boolean = false) {
         // Skip the isLoading check if bypassLoading is true (AI move)
         if (!bypassLoading && (winner != null || !gameState.isTileEmpty(row, col) || isLoading)) {
@@ -189,9 +182,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Save state after move
-        viewModelScope.launch { 
-            gameStateRepository.saveGameState(gameState) 
-        }
+        viewModelScope.launch { gameStateRepository.saveGameState(gameState) }
 
         // Trigger computer move if playing against computer
         if (gameState.againstComputer && winner == null && !bypassLoading) {
@@ -199,16 +190,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Finds the bottom-most empty row in a column for Connect4
-     */
+    /** Finds the bottom-most empty row in a column for Connect4 */
     private fun findBottomEmptyRow(col: Int): Int {
         // For Connect4 (7x6 board), we need to only check the 6 rows (0-5)
-        val maxRow = if (gameState.boardSize == 7 && gameState.winCondition == 4) {
-            5 // 6 rows (0-5) for Connect4
-        } else {
-            gameState.boardSize - 1
-        }
+        val maxRow =
+                if (gameState.boardSize == 7 && gameState.winCondition == 4) {
+                    5 // 6 rows (0-5) for Connect4
+                } else {
+                    gameState.boardSize - 1
+                }
 
         for (row in maxRow downTo 0) {
             if (gameState.board[row][col] == GameState.EMPTY) {
@@ -218,9 +208,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         return -1 // Column is full
     }
 
-    /**
-     * Places a Connect4 tile in the specified column
-     */
+    /** Places a Connect4 tile in the specified column */
     fun placeConnect4Tile(col: Int, bypassLoading: Boolean = false) {
         // Skip the isLoading check if bypassLoading is true (AI move)
         if (!bypassLoading && (winner != null || isLoading)) {
@@ -240,9 +228,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         placeTile(row, col, bypassLoading)
     }
 
-    /**
-     * Makes a computer move based on the current game type.
-     */
+    /** Makes a computer move based on the current game type. */
     private fun makeComputerMove() {
         if (winner != null || isLoading) return
 
@@ -254,10 +240,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             // Get the current game type
             val gameType = GameType.fromGameState(gameState)
-            
+
             // Get the appropriate AI based on game type
             val ai = AIFactory.createAI(gameType)
-            
+
             // Get best move from the AI
             val bestMove = ai.findBestMove(gameState)
 
@@ -276,9 +262,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Handle a win by a player.
-     */
+    /** Handle a win by a player. */
     private fun handleWin(player: Int) {
         winner = player
 
@@ -288,26 +272,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Clear saved state if game is over
-        viewModelScope.launch { 
-            gameStateRepository.clearSavedState() 
-        }
+        viewModelScope.launch { gameStateRepository.clearSavedState() }
     }
 
-    /**
-     * Handle a draw game.
-     */
+    /** Handle a draw game. */
     private fun handleDraw() {
         winner = DRAW
 
         // Clear saved state if game is over
-        viewModelScope.launch { 
-            gameStateRepository.clearSavedState() 
-        }
+        viewModelScope.launch { gameStateRepository.clearSavedState() }
     }
 
-    /**
-     * Undoes the last move if possible.
-     */
+    /** Undoes the last move if possible. */
     fun undoMove() {
         if (moveHistory.isEmpty() || winner != null || isLoading) {
             return
@@ -348,12 +324,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Update last placed position
-        lastPlacedPosition = if (moveHistory.isNotEmpty()) {
-            val previousMove = moveHistory.last()
-            Position(previousMove.row, previousMove.col)
-        } else {
-            null
-        }
+        lastPlacedPosition =
+                if (moveHistory.isNotEmpty()) {
+                    val previousMove = moveHistory.last()
+                    Position(previousMove.row, previousMove.col)
+                } else {
+                    null
+                }
 
         // Play sound effect if enabled
         if (soundEnabled) {
@@ -361,14 +338,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Save state after undo
-        viewModelScope.launch { 
-            gameStateRepository.saveGameState(gameState) 
-        }
+        viewModelScope.launch { gameStateRepository.saveGameState(gameState) }
     }
 
-    /**
-     * Resets the game to initial state.
-     */
+    /** Resets the game to initial state. */
     fun resetGame() {
         gameState.reset()
         winner = null
@@ -381,21 +354,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // Clear saved state
-        viewModelScope.launch { 
-            gameStateRepository.clearSavedState() 
-        }
+        viewModelScope.launch { gameStateRepository.clearSavedState() }
     }
-    
-    /**
-     * Checks if the undo operation is available.
-     */
+
+    /** Checks if the undo operation is available. */
     fun canUndo(): Boolean {
         return moveHistory.isNotEmpty() && winner == null && !isLoading
     }
-    
-    /**
-     * Checks if the reset confirmation should be shown.
-     */
+
+    /** Checks if the reset confirmation should be shown. */
     fun shouldConfirmReset(): Boolean {
         return winner == null && moveHistory.isNotEmpty()
     }

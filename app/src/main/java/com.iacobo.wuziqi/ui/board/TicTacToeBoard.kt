@@ -29,17 +29,15 @@ import com.iacobo.wuziqi.ui.theme.GridDarkColor
 import com.iacobo.wuziqi.ui.theme.GridLightColor
 import com.iacobo.wuziqi.viewmodel.Position
 
-/**
- * Implementation of a Tic-Tac-Toe game board.
- */
+/** Implementation of a Tic-Tac-Toe game board. */
 class TicTacToeBoard : GameBoard {
     @Composable
     override fun Render(
-        gameState: GameState,
-        lastPlacedPosition: Position?,
-        isDarkTheme: Boolean,
-        isGameFrozen: Boolean,
-        onMoveSelected: (Int, Int) -> Unit
+            gameState: GameState,
+            lastPlacedPosition: Position?,
+            isDarkTheme: Boolean,
+            isGameFrozen: Boolean,
+            onMoveSelected: (Int, Int) -> Unit
     ) {
         val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
         val gridLineWidth = 4.dp // Thicker grid lines for tic-tac-toe
@@ -49,36 +47,40 @@ class TicTacToeBoard : GameBoard {
             Box(modifier = Modifier.fillMaxSize()) {
                 // Vertical inner lines (2)
                 Box(
-                    modifier = Modifier.fillMaxHeight()
-                        .width(gridLineWidth)
-                        .align(Alignment.CenterStart)
-                        .offset(x = (LocalDensity.current.density * 33).dp)
-                        .background(gridLineColor)
+                        modifier =
+                                Modifier.fillMaxHeight()
+                                        .width(gridLineWidth)
+                                        .align(Alignment.CenterStart)
+                                        .offset(x = (LocalDensity.current.density * 33).dp)
+                                        .background(gridLineColor)
                 )
 
                 Box(
-                    modifier = Modifier.fillMaxHeight()
-                        .width(gridLineWidth)
-                        .align(Alignment.CenterEnd)
-                        .offset(x = -(LocalDensity.current.density * 33).dp)
-                        .background(gridLineColor)
+                        modifier =
+                                Modifier.fillMaxHeight()
+                                        .width(gridLineWidth)
+                                        .align(Alignment.CenterEnd)
+                                        .offset(x = -(LocalDensity.current.density * 33).dp)
+                                        .background(gridLineColor)
                 )
 
                 // Horizontal inner lines (2)
                 Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .height(gridLineWidth)
-                        .align(Alignment.TopCenter)
-                        .offset(y = (LocalDensity.current.density * 33).dp)
-                        .background(gridLineColor)
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .height(gridLineWidth)
+                                        .align(Alignment.TopCenter)
+                                        .offset(y = (LocalDensity.current.density * 33).dp)
+                                        .background(gridLineColor)
                 )
 
                 Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .height(gridLineWidth)
-                        .align(Alignment.BottomCenter)
-                        .offset(y = -(LocalDensity.current.density * 33).dp)
-                        .background(gridLineColor)
+                        modifier =
+                                Modifier.fillMaxWidth()
+                                        .height(gridLineWidth)
+                                        .align(Alignment.BottomCenter)
+                                        .offset(y = -(LocalDensity.current.density * 33).dp)
+                                        .background(gridLineColor)
                 )
             }
 
@@ -90,13 +92,13 @@ class TicTacToeBoard : GameBoard {
                         // 3 columns
                         for (col in 0 until 3) {
                             TicTacToeTile(
-                                state = gameState.board[row][col],
-                                modifier = Modifier.weight(1f),
-                                onClick = {
-                                    if (!isGameFrozen) {
-                                        onMoveSelected(row, col)
+                                    state = gameState.board[row][col],
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        if (!isGameFrozen) {
+                                            onMoveSelected(row, col)
+                                        }
                                     }
-                                }
                             )
                         }
                     }
@@ -105,22 +107,16 @@ class TicTacToeBoard : GameBoard {
         }
     }
 
-    /**
-     * Renders a single Tic-Tac-Toe tile (X or O).
-     */
+    /** Renders a single Tic-Tac-Toe tile (X or O). */
     @Composable
-    private fun TicTacToeTile(
-        state: Int,
-        modifier: Modifier = Modifier,
-        onClick: () -> Unit
-    ) {
+    private fun TicTacToeTile(state: Int, modifier: Modifier = Modifier, onClick: () -> Unit) {
         // Get color scheme values directly from MaterialTheme
         val primaryColor = MaterialTheme.colorScheme.primary
         val secondaryColor = MaterialTheme.colorScheme.secondary
 
         Box(
-            modifier = modifier.aspectRatio(1f).clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
+                modifier = modifier.aspectRatio(1f).clickable(onClick = onClick),
+                contentAlignment = Alignment.Center
         ) {
             when (state) {
                 GameState.PLAYER_ONE -> {
@@ -132,19 +128,19 @@ class TicTacToeBoard : GameBoard {
 
                         // Use the primary color from MaterialTheme directly
                         drawLine(
-                            color = primaryColor,
-                            start = Offset(0f, 0f),
-                            end = Offset(canvasWidth, canvasHeight),
-                            strokeWidth = strokeWidth,
-                            cap = StrokeCap.Round
+                                color = primaryColor,
+                                start = Offset(0f, 0f),
+                                end = Offset(canvasWidth, canvasHeight),
+                                strokeWidth = strokeWidth,
+                                cap = StrokeCap.Round
                         )
 
                         drawLine(
-                            color = primaryColor,
-                            start = Offset(canvasWidth, 0f),
-                            end = Offset(0f, canvasHeight),
-                            strokeWidth = strokeWidth,
-                            cap = StrokeCap.Round
+                                color = primaryColor,
+                                start = Offset(canvasWidth, 0f),
+                                end = Offset(0f, canvasHeight),
+                                strokeWidth = strokeWidth,
+                                cap = StrokeCap.Round
                         )
                     }
                 }
@@ -156,13 +152,16 @@ class TicTacToeBoard : GameBoard {
 
                         // Use the secondary color from MaterialTheme directly
                         drawCircle(
-                            color = secondaryColor,
-                            radius = (canvasWidth / 2) - (strokeWidth / 2),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                                color = secondaryColor,
+                                radius = (canvasWidth / 2) - (strokeWidth / 2),
+                                style =
+                                        androidx.compose.ui.graphics.drawscope.Stroke(
+                                                width = strokeWidth
+                                        )
                         )
                     }
                 }
-                // GameState.EMPTY is handled by having no content
+            // GameState.EMPTY is handled by having no content
             }
         }
     }

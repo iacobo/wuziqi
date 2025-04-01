@@ -28,17 +28,15 @@ import com.iacobo.wuziqi.ui.theme.GridDarkColor
 import com.iacobo.wuziqi.ui.theme.GridLightColor
 import com.iacobo.wuziqi.viewmodel.Position
 
-/**
- * Implementation of the standard Wuziqi (Gomoku) game board.
- */
+/** Implementation of the standard Wuziqi (Gomoku) game board. */
 class StandardBoard : GameBoard {
     @Composable
     override fun Render(
-        gameState: GameState,
-        lastPlacedPosition: Position?,
-        isDarkTheme: Boolean,
-        isGameFrozen: Boolean,
-        onMoveSelected: (Int, Int) -> Unit
+            gameState: GameState,
+            lastPlacedPosition: Position?,
+            isDarkTheme: Boolean,
+            isGameFrozen: Boolean,
+            onMoveSelected: (Int, Int) -> Unit
     ) {
         // Use theme-appropriate colors for grid lines and board background
         val gridLineColor = if (isDarkTheme) GridDarkColor else GridLightColor
@@ -48,13 +46,13 @@ class StandardBoard : GameBoard {
 
         // Adjust piece size based on board size
         val pieceSize =
-            when {
-                boardSize <= 10 -> 32.dp
-                boardSize <= 13 -> 28.dp
-                boardSize <= 15 -> 24.dp
-                boardSize <= 17 -> 20.dp
-                else -> 18.dp
-            }
+                when {
+                    boardSize <= 10 -> 32.dp
+                    boardSize <= 13 -> 28.dp
+                    boardSize <= 15 -> 24.dp
+                    boardSize <= 17 -> 20.dp
+                    else -> 18.dp
+                }
 
         Box(modifier = Modifier.aspectRatio(1f).padding(8.dp).background(boardColor)) {
             /*
@@ -87,10 +85,10 @@ class StandardBoard : GameBoard {
                 for (i in 0 until boardSize) {
                     val y = startY + (i * cellHeight)
                     drawLine(
-                        color = gridLineColor,
-                        start = Offset(startX, y),
-                        end = Offset(endX, y),
-                        strokeWidth = strokeWidth
+                            color = gridLineColor,
+                            start = Offset(startX, y),
+                            end = Offset(endX, y),
+                            strokeWidth = strokeWidth
                     )
                 }
 
@@ -98,10 +96,10 @@ class StandardBoard : GameBoard {
                 for (i in 0 until boardSize) {
                     val x = startX + (i * cellWidth)
                     drawLine(
-                        color = gridLineColor,
-                        start = Offset(x, startY),
-                        end = Offset(x, endY),
-                        strokeWidth = strokeWidth
+                            color = gridLineColor,
+                            start = Offset(x, startY),
+                            end = Offset(x, endY),
+                            strokeWidth = strokeWidth
                     )
                 }
             }
@@ -112,17 +110,17 @@ class StandardBoard : GameBoard {
                     Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
                         for (col in 0 until boardSize) {
                             Tile(
-                                state = gameState.board[row][col],
-                                isLastPlaced =
-                                    lastPlacedPosition?.row == row &&
-                                    lastPlacedPosition.col == col,
-                                pieceSize = pieceSize,
-                                modifier = Modifier.weight(1f),
-                                onClick = {
-                                    if (!isGameFrozen) {
-                                        onMoveSelected(row, col)
+                                    state = gameState.board[row][col],
+                                    isLastPlaced =
+                                            lastPlacedPosition?.row == row &&
+                                                    lastPlacedPosition.col == col,
+                                    pieceSize = pieceSize,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        if (!isGameFrozen) {
+                                            onMoveSelected(row, col)
+                                        }
                                     }
-                                }
                             )
                         }
                     }
@@ -131,42 +129,45 @@ class StandardBoard : GameBoard {
         }
     }
 
-    /**
-     * Renders a single tile/intersection on the game board.
-     */
+    /** Renders a single tile/intersection on the game board. */
     @Composable
     private fun Tile(
-        state: Int,
-        isLastPlaced: Boolean,
-        pieceSize: androidx.compose.ui.unit.Dp = 24.dp,
-        modifier: Modifier = Modifier,
-        onClick: () -> Unit
+            state: Int,
+            isLastPlaced: Boolean,
+            pieceSize: androidx.compose.ui.unit.Dp = 24.dp,
+            modifier: Modifier = Modifier,
+            onClick: () -> Unit
     ) {
         Box(
-            modifier = modifier
-                .aspectRatio(1f)
-                .padding(1.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
+                modifier =
+                        modifier.aspectRatio(1f)
+                                .padding(1.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = onClick),
+                contentAlignment = Alignment.Center
         ) {
             if (state != GameState.EMPTY) {
                 Box(
-                    modifier = Modifier.size(pieceSize)
-                        .clip(CircleShape)
-                        .background(
-                            when (state) {
-                                GameState.PLAYER_ONE -> androidx.compose.ui.graphics.Color.Black
-                                else -> androidx.compose.ui.graphics.Color.White
-                            }
-                        )
-                        .border(
-                            width = if (isLastPlaced) 2.dp else 0.dp,
-                            color = if (isLastPlaced)
-                                MaterialTheme.colorScheme.tertiary
-                            else androidx.compose.ui.graphics.Color.Transparent,
-                            shape = CircleShape
-                        )
+                        modifier =
+                                Modifier.size(pieceSize)
+                                        .clip(CircleShape)
+                                        .background(
+                                                when (state) {
+                                                    GameState.PLAYER_ONE ->
+                                                            androidx.compose.ui.graphics.Color.Black
+                                                    else -> androidx.compose.ui.graphics.Color.White
+                                                }
+                                        )
+                                        .border(
+                                                width = if (isLastPlaced) 2.dp else 0.dp,
+                                                color =
+                                                        if (isLastPlaced)
+                                                                MaterialTheme.colorScheme.tertiary
+                                                        else
+                                                                androidx.compose.ui.graphics.Color
+                                                                        .Transparent,
+                                                shape = CircleShape
+                                        )
                 )
             }
         }

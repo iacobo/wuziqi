@@ -1,6 +1,7 @@
 package com.iacobo.wuziqi.ui
 
 import android.content.res.Configuration
+import android.view.Surface
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -99,6 +100,7 @@ fun GameScreen(
                 controlsContent = {
                         GameControls(
                                 isLandscape = isLandscape,
+                                isAppBarOnLeft = rotation == Surface.ROTATION_270,
                                 onHome = onNavigateToHome,
                                 onUndo = { viewModel.undoMove() },
                                 onReset = {

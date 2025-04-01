@@ -2,9 +2,7 @@ package com.iacobo.wuziqi.ui.board
 
 import com.iacobo.wuziqi.data.GameType
 
-/**
- * Factory for creating board implementations based on game type.
- */
+/** Factory for creating board implementations based on game type. */
 object BoardFactory {
     /**
      * Creates the appropriate board implementation for the given game type.

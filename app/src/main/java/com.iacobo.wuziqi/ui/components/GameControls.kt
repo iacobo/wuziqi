@@ -20,152 +20,191 @@ import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
 
 /**
- * A reusable component for game controls (home, undo, reset, settings)
- * that can be used in both portrait and landscape orientations.
+ * A reusable component for game controls (home, undo, reset, settings) that can be used in both
+ * portrait and landscape orientations.
  */
 @Composable
 fun GameControls(
-    isLandscape: Boolean,
-    onHome: () -> Unit,
-    onUndo: () -> Unit,
-    onReset: () -> Unit,
-    onSettings: () -> Unit,
-    canUndo: Boolean = true,
-    isLoading: Boolean = false
+        isLandscape: Boolean,
+        isAppBarOnLeft: Boolean,
+        onHome: () -> Unit,
+        onUndo: () -> Unit,
+        onReset: () -> Unit,
+        onSettings: () -> Unit,
+        canUndo: Boolean = true,
+        isLoading: Boolean = false
 ) {
-    if (isLandscape) {
+    if (isLandscape && isAppBarOnLeft) {
         // In landscape mode, render controls vertically
         GameControlsVertical(
-            onHome = onHome,
-            onUndo = onUndo,
-            onReset = onReset,
-            onSettings = onSettings,
-            canUndo = canUndo,
-            isLoading = isLoading
+                onHome = onHome,
+                onUndo = onUndo,
+                onReset = onReset,
+                onSettings = onSettings,
+                canUndo = canUndo,
+                isLoading = isLoading
+        )
+    } else if (isLandscape) {
+        // In landscape mode, render controls vertically
+        GameControlsVerticalInverted(
+                onHome = onHome,
+                onUndo = onUndo,
+                onReset = onReset,
+                onSettings = onSettings,
+                canUndo = canUndo,
+                isLoading = isLoading
         )
     } else {
         // In portrait mode, render controls horizontally
         GameControlsHorizontal(
-            onHome = onHome,
-            onUndo = onUndo,
-            onReset = onReset,
-            onSettings = onSettings,
-            canUndo = canUndo,
-            isLoading = isLoading
+                onHome = onHome,
+                onUndo = onUndo,
+                onReset = onReset,
+                onSettings = onSettings,
+                canUndo = canUndo,
+                isLoading = isLoading
         )
     }
 }
 
-/**
- * Horizontal layout for game controls (used in portrait mode).
- */
+/** Horizontal layout for game controls (used in portrait mode). */
 @Composable
 fun GameControlsHorizontal(
-    onHome: () -> Unit,
-    onUndo: () -> Unit,
-    onReset: () -> Unit,
-    onSettings: () -> Unit,
-    canUndo: Boolean = true,
-    isLoading: Boolean = false
+        onHome: () -> Unit,
+        onUndo: () -> Unit,
+        onReset: () -> Unit,
+        onSettings: () -> Unit,
+        canUndo: Boolean = true,
+        isLoading: Boolean = false
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
     ) {
         // Home button
         IconButton(onClick = onHome) {
             Icon(
-                imageVector = Icons.Default.Home,
-                contentDescription = stringResource(R.string.home)
+                    imageVector = Icons.Default.Home,
+                    contentDescription = stringResource(R.string.home)
             )
         }
 
         // Undo button
-        IconButton(
-            onClick = onUndo,
-            enabled = canUndo && !isLoading
-        ) {
+        IconButton(onClick = onUndo, enabled = canUndo && !isLoading) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.Undo,
-                contentDescription = stringResource(R.string.undo)
+                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = stringResource(R.string.undo)
             )
         }
 
         // Reset button
-        IconButton(
-            onClick = onReset,
-            enabled = !isLoading
-        ) {
+        IconButton(onClick = onReset, enabled = !isLoading) {
             Icon(
-                imageVector = Icons.Default.Replay,
-                contentDescription = stringResource(R.string.reset)
+                    imageVector = Icons.Default.Replay,
+                    contentDescription = stringResource(R.string.reset)
             )
         }
 
         // Settings button
         IconButton(onClick = onSettings) {
             Icon(
-                imageVector = Icons.Default.Menu,
-                contentDescription = stringResource(R.string.settings)
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = stringResource(R.string.settings)
             )
         }
     }
 }
 
-/**
- * Vertical layout for game controls (used in landscape mode).
- */
+/** Vertical layout for game controls (used in landscape mode). */
 @Composable
 fun GameControlsVertical(
-    onHome: () -> Unit,
-    onUndo: () -> Unit,
-    onReset: () -> Unit,
-    onSettings: () -> Unit,
-    canUndo: Boolean = true,
-    isLoading: Boolean = false
+        onHome: () -> Unit,
+        onUndo: () -> Unit,
+        onReset: () -> Unit,
+        onSettings: () -> Unit,
+        canUndo: Boolean = true,
+        isLoading: Boolean = false
 ) {
     // Home button
     IconButton(onClick = onHome) {
-        Icon(
-            imageVector = Icons.Default.Home,
-            contentDescription = stringResource(R.string.home)
-        )
+        Icon(imageVector = Icons.Default.Home, contentDescription = stringResource(R.string.home))
     }
-    
+
     Spacer(modifier = Modifier.width(16.dp))
 
     // Undo button
-    IconButton(
-        onClick = onUndo,
-        enabled = canUndo && !isLoading
-    ) {
+    IconButton(onClick = onUndo, enabled = canUndo && !isLoading) {
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.Undo,
-            contentDescription = stringResource(R.string.undo)
+                imageVector = Icons.AutoMirrored.Filled.Undo,
+                contentDescription = stringResource(R.string.undo)
         )
     }
-    
+
     Spacer(modifier = Modifier.width(16.dp))
 
     // Reset button
-    IconButton(
-        onClick = onReset,
-        enabled = !isLoading
-    ) {
+    IconButton(onClick = onReset, enabled = !isLoading) {
         Icon(
-            imageVector = Icons.Default.Replay,
-            contentDescription = stringResource(R.string.reset)
+                imageVector = Icons.Default.Replay,
+                contentDescription = stringResource(R.string.reset)
         )
     }
-    
+
     Spacer(modifier = Modifier.width(16.dp))
 
     // Settings button
     IconButton(onClick = onSettings) {
         Icon(
-            imageVector = Icons.Default.Menu,
-            contentDescription = stringResource(R.string.settings)
+                imageVector = Icons.Default.Menu,
+                contentDescription = stringResource(R.string.settings)
         )
+    }
+}
+
+/** Vertical layout for game controls (used in landscape mode). */
+@Composable
+fun GameControlsVerticalInverted(
+        onHome: () -> Unit,
+        onUndo: () -> Unit,
+        onReset: () -> Unit,
+        onSettings: () -> Unit,
+        canUndo: Boolean = true,
+        isLoading: Boolean = false
+) {
+
+    // Settings button
+    IconButton(onClick = onSettings) {
+        Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = stringResource(R.string.settings)
+        )
+    }
+
+    Spacer(modifier = Modifier.width(16.dp))
+
+    // Reset button
+    IconButton(onClick = onReset, enabled = !isLoading) {
+        Icon(
+                imageVector = Icons.Default.Replay,
+                contentDescription = stringResource(R.string.reset)
+        )
+    }
+
+    Spacer(modifier = Modifier.width(16.dp))
+
+    // Undo button
+    IconButton(onClick = onUndo, enabled = canUndo && !isLoading) {
+        Icon(
+                imageVector = Icons.AutoMirrored.Filled.Undo,
+                contentDescription = stringResource(R.string.undo)
+        )
+    }
+
+    Spacer(modifier = Modifier.width(16.dp))
+
+    // Home button
+    IconButton(onClick = onHome) {
+        Icon(imageVector = Icons.Default.Home, contentDescription = stringResource(R.string.home))
     }
 }
