@@ -531,61 +531,60 @@ fun GameScreen(
             } else {
                 // Layout with app bar on RIGHT side when rotated counter-clockwise (bottom on right)
                 Row(modifier = Modifier.fillMaxSize()) {
-                    // Content area layout
-                    Row(modifier = Modifier.weight(1f).fillMaxSize().padding(8.dp)) {
-                        // Left side - Game info column
-                        Box(
-                            modifier = Modifier.weight(0.25f)
-                                    .fillMaxHeight()
-                                    .padding(start = 16.dp, end = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                // Title - now here instead of in top bar
-                                Text(
-                                    text = appTitle,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    textAlign = TextAlign.Center
-                                )
-
-                                Spacer(modifier = Modifier.height(32.dp))
-
-                                // Player status
-                                if (isLoading) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            color = MaterialTheme.colorScheme.secondary,
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = stringResource(R.string.computer_thinking),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
-                                    }
-                                } else {
-                                    Text(
-                                        text = playerStatusText,
-                                        style = if (winner != null)
-                                                MaterialTheme.typography.titleMedium.copy(
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            else
-                                                MaterialTheme.typography.titleMedium,
-                                        color = playerColor,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
+                    // VERTICAL SIDE ACTION BAR for landscape mode - left side (when bottom is on right)
+                    Column(
+                        modifier = Modifier.width(64.dp)
+                                .fillMaxHeight()
+                                .background(MaterialTheme.colorScheme.background),
+                        verticalArrangement = Arrangement.SpaceEvenly,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Home button
+                        IconButton(onClick = onNavigateToHome) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = stringResource(R.string.home)
+                            )
                         }
 
+                        // Undo button (disabled if no moves or game frozen)
+                        IconButton(
+                            onClick = { viewModel.undoMove() },
+                            enabled = moveHistory.isNotEmpty() && !isLoading
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Undo,
+                                contentDescription = stringResource(R.string.undo)
+                            )
+                        }
+
+                        // Reset button
+                        IconButton(
+                            onClick = {
+                                if (winner == null && moveHistory.isNotEmpty()) {
+                                    showResetConfirmation = true
+                                } else {
+                                    viewModel.resetGame()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Replay,
+                                contentDescription = stringResource(R.string.reset)
+                            )
+                        }
+
+                        // Settings button
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = stringResource(R.string.settings)
+                            )
+                        }
+                    }
+
+                    // Content area layout
+                    Row(modifier = Modifier.weight(1f).fillMaxSize().padding(8.dp)) {
                         // Center - Game Board
                         Box(
                             modifier = Modifier.weight(0.75f).fillMaxHeight(),
@@ -632,57 +631,58 @@ fun GameScreen(
                                     )
                             }
                         }
-                    }
 
-                    // VERTICAL SIDE ACTION BAR for landscape mode - right side (when bottom is on right)
-                    Column(
-                        modifier = Modifier.width(64.dp)
-                                .fillMaxHeight()
-                                .background(MaterialTheme.colorScheme.background),
-                        verticalArrangement = Arrangement.SpaceEvenly,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Settings button
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = stringResource(R.string.settings)
-                            )
-                        }
+                        // Right side - Game info column
+                        Box(
+                            modifier = Modifier.weight(0.25f)
+                                    .fillMaxHeight()
+                                    .padding(start = 8.dp, end = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                // Title - now here instead of in top bar
+                                Text(
+                                    text = appTitle,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    textAlign = TextAlign.Center
+                                )
 
-                        // Reset button
-                        IconButton(
-                            onClick = {
-                                if (winner == null && moveHistory.isNotEmpty()) {
-                                    showResetConfirmation = true
+                                Spacer(modifier = Modifier.height(32.dp))
+
+                                // Player status
+                                if (isLoading) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = MaterialTheme.colorScheme.secondary,
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = stringResource(R.string.computer_thinking),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
                                 } else {
-                                    viewModel.resetGame()
+                                    Text(
+                                        text = playerStatusText,
+                                        style = if (winner != null)
+                                                MaterialTheme.typography.titleMedium.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            else
+                                                MaterialTheme.typography.titleMedium,
+                                        color = playerColor,
+                                        textAlign = TextAlign.Center
+                                    )
                                 }
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Replay,
-                                contentDescription = stringResource(R.string.reset)
-                            )
-                        }
-
-                        // Undo button (disabled if no moves or game frozen)
-                        IconButton(
-                            onClick = { viewModel.undoMove() },
-                            enabled = moveHistory.isNotEmpty() && !isLoading
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Undo,
-                                contentDescription = stringResource(R.string.undo)
-                            )
-                        }
-
-                        // Home button
-                        IconButton(onClick = onNavigateToHome) {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = stringResource(R.string.home)
-                            )
                         }
                     }
                 }
