@@ -3,6 +3,8 @@ package com.iacobo.wuziqi.ui
 import android.content.res.Configuration
 import android.view.Surface
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -12,9 +14,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import com.iacobo.wuziqi.R
 import com.iacobo.wuziqi.data.GameType
 import com.iacobo.wuziqi.data.ThemeMode
@@ -37,6 +41,9 @@ fun GameScreen(
 ) {
         // Handle reset confirmation dialog
         var showResetConfirmation by remember { mutableStateOf(false) }
+
+        // Handle rules dialog
+        var showRulesDialog by remember { mutableStateOf(false) }
 
         // Get the device orientation
         val configuration = LocalConfiguration.current
@@ -110,6 +117,7 @@ fun GameScreen(
                                                 viewModel.resetGame()
                                         }
                                 },
+                                onHowToPlay = { showRulesDialog = true },
                                 onSettings = onNavigateToSettings,
                                 canUndo = moveHistory.isNotEmpty(),
                                 isLoading = isLoading
@@ -127,6 +135,11 @@ fun GameScreen(
                         onDismiss = { showResetConfirmation = false }
                 )
         }
+
+        // Show game rules dialog if needed
+        if (showRulesDialog) {
+                GameRulesDialog(gameType = gameType, onDismiss = { showRulesDialog = false })
+        }
 }
 
 /** Dialog to confirm game reset when the game is still in progress. */
@@ -141,6 +154,50 @@ fun ResetConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
                 },
                 dismissButton = {
                         TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                }
+        )
+}
+
+/** Dialog that displays the rules for each game type. */
+@Composable
+fun GameRulesDialog(gameType: GameType, onDismiss: () -> Unit) {
+        AlertDialog(
+                onDismissRequest = onDismiss,
+                title = {
+                        Text(
+                                text =
+                                        stringResource(
+                                                R.string.how_to_play_title_format,
+                                                stringResource(id = gameType.titleResId)
+                                        ),
+                                textAlign = TextAlign.Center
+                        )
+                },
+                text = {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                Text(
+                                        text =
+                                                when (gameType) {
+                                                        GameType.Standard ->
+                                                                stringResource(
+                                                                        R.string.wuziqi_rules
+                                                                )
+                                                        GameType.TicTacToe ->
+                                                                stringResource(
+                                                                        R.string.tictactoe_rules
+                                                                )
+                                                        GameType.Connect4 ->
+                                                                stringResource(
+                                                                        R.string.connect4_rules
+                                                                )
+                                                        GameType.Hex ->
+                                                                stringResource(R.string.hex_rules)
+                                                }
+                                )
+                        }
+                },
+                confirmButton = {
+                        TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
                 }
         )
 }
