@@ -104,12 +104,12 @@ fun GameScreen(
     // Detect current orientation and rotation
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    
+
     // Get the device rotation from the window manager
     val context = LocalContext.current
     val windowManager = context.getSystemService(android.view.WindowManager::class.java)
     val rotation = windowManager.defaultDisplay.rotation
-    
+
     // Determine if the app bar should be on the left or right side
     // Surface.ROTATION_90: Bottom on right side
     // Surface.ROTATION_270: Bottom on left side
@@ -124,37 +124,36 @@ fun GameScreen(
             } else if (winner != null) {
                 when {
                     isXandO ->
-                        stringResource(
-                            R.string.winner_format,
-                            if (winner == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_x)
-                            else stringResource(R.string.player_o)
-                        )
+                            stringResource(
+                                    R.string.winner_format,
+                                    if (winner == GameState.PLAYER_ONE)
+                                            stringResource(R.string.player_x)
+                                    else stringResource(R.string.player_o)
+                            )
                     isConnect4 ->
-                        stringResource(
-                            R.string.winner_format,
-                            if (winner == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_red)
-                            else stringResource(R.string.player_yellow)
-                        )
+                            stringResource(
+                                    R.string.winner_format,
+                                    if (winner == GameState.PLAYER_ONE)
+                                            stringResource(R.string.player_red)
+                                    else stringResource(R.string.player_yellow)
+                            )
                     isHex ->
-                        stringResource(
-                            R.string.winner_format,
-                            if (winner == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_red)
-                            else stringResource(R.string.player_blue)
-                        )
+                            stringResource(
+                                    R.string.winner_format,
+                                    if (winner == GameState.PLAYER_ONE)
+                                            stringResource(R.string.player_red)
+                                    else stringResource(R.string.player_blue)
+                            )
                     else -> {
                         if (gameState.againstComputer) {
-                            if (winner == GameState.PLAYER_ONE)
-                                stringResource(R.string.you_won)
+                            if (winner == GameState.PLAYER_ONE) stringResource(R.string.you_won)
                             else stringResource(R.string.computer_won)
                         } else {
                             stringResource(
-                                R.string.winner_format,
-                                if (winner == GameState.PLAYER_ONE)
-                                    stringResource(R.string.player_black)
-                                else stringResource(R.string.player_white)
+                                    R.string.winner_format,
+                                    if (winner == GameState.PLAYER_ONE)
+                                            stringResource(R.string.player_black)
+                                    else stringResource(R.string.player_white)
                             )
                         }
                     }
@@ -162,37 +161,37 @@ fun GameScreen(
             } else {
                 when {
                     isXandO ->
-                        stringResource(
-                            R.string.player_turn_format,
-                            if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_x)
-                            else stringResource(R.string.player_o)
-                        )
+                            stringResource(
+                                    R.string.player_turn_format,
+                                    if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                            stringResource(R.string.player_x)
+                                    else stringResource(R.string.player_o)
+                            )
                     isConnect4 ->
-                        stringResource(
-                            R.string.player_turn_format,
-                            if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_red)
-                            else stringResource(R.string.player_yellow)
-                        )
+                            stringResource(
+                                    R.string.player_turn_format,
+                                    if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                            stringResource(R.string.player_red)
+                                    else stringResource(R.string.player_yellow)
+                            )
                     isHex ->
-                        stringResource(
-                            R.string.player_turn_format,
-                            if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                stringResource(R.string.player_red)
-                            else stringResource(R.string.player_blue)
-                        )
+                            stringResource(
+                                    R.string.player_turn_format,
+                                    if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                            stringResource(R.string.player_red)
+                                    else stringResource(R.string.player_blue)
+                            )
                     else -> {
                         if (gameState.againstComputer) {
                             if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                stringResource(R.string.your_turn)
+                                    stringResource(R.string.your_turn)
                             else stringResource(R.string.computer_thinking)
                         } else {
                             stringResource(
-                                R.string.player_turn_format,
-                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                    stringResource(R.string.player_black)
-                                else stringResource(R.string.player_white)
+                                    R.string.player_turn_format,
+                                    if (gameState.currentPlayer == GameState.PLAYER_ONE)
+                                            stringResource(R.string.player_black)
+                                    else stringResource(R.string.player_white)
                             )
                         }
                     }
@@ -203,177 +202,163 @@ fun GameScreen(
     val playerColor =
             when {
                 isConnect4 ->
-                    if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE)
-                        Connect4PieceRed
-                    else Connect4PieceYellow
+                        if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE)
+                                Connect4PieceRed
+                        else Connect4PieceYellow
                 isHex ->
-                    if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE)
-                        HexPieceRed
-                    else HexPieceBlue
+                        if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE) HexPieceRed
+                        else HexPieceBlue
                 else ->
-                    if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE)
-                        MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.secondary
+                        if ((winner ?: gameState.currentPlayer) == GameState.PLAYER_ONE)
+                                MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.secondary
             }
 
     // Conditional scaffold based on orientation
     if (!isLandscape) {
         // PORTRAIT MODE - Use normal Scaffold with top and bottom bars
         Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = appTitle,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        titleContentColor = MaterialTheme.colorScheme.onBackground
+                topBar = {
+                    CenterAlignedTopAppBar(
+                            title = {
+                                Text(text = appTitle, style = MaterialTheme.typography.titleLarge)
+                            },
+                            colors =
+                                    TopAppBarDefaults.topAppBarColors(
+                                            containerColor = MaterialTheme.colorScheme.background,
+                                            titleContentColor =
+                                                    MaterialTheme.colorScheme.onBackground
+                                    )
                     )
-                )
-            },
-            bottomBar = {
-                BottomAppBar(
-                    containerColor = MaterialTheme.colorScheme.background
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Home button
-                        IconButton(onClick = onNavigateToHome) {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = stringResource(R.string.home)
-                            )
-                        }
-
-                        // Undo button (disabled if no moves or game frozen)
-                        IconButton(
-                            onClick = { viewModel.undoMove() },
-                            enabled = moveHistory.isNotEmpty() && !isLoading
+                },
+                bottomBar = {
+                    BottomAppBar(containerColor = MaterialTheme.colorScheme.background) {
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Undo,
-                                contentDescription = stringResource(R.string.undo)
-                            )
-                        }
-
-                        // Reset button
-                        IconButton(
-                            onClick = {
-                                if (winner == null && moveHistory.isNotEmpty()) {
-                                    showResetConfirmation = true
-                                } else {
-                                    viewModel.resetGame()
-                                }
+                            // Home button
+                            IconButton(onClick = onNavigateToHome) {
+                                Icon(
+                                        imageVector = Icons.Default.Home,
+                                        contentDescription = stringResource(R.string.home)
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Replay,
-                                contentDescription = stringResource(R.string.reset)
-                            )
-                        }
 
-                        // Settings button
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = stringResource(R.string.settings)
-                            )
+                            // Undo button (disabled if no moves or game frozen)
+                            IconButton(
+                                    onClick = { viewModel.undoMove() },
+                                    enabled = moveHistory.isNotEmpty() && !isLoading
+                            ) {
+                                Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Undo,
+                                        contentDescription = stringResource(R.string.undo)
+                                )
+                            }
+
+                            // Reset button
+                            IconButton(
+                                    onClick = {
+                                        if (winner == null && moveHistory.isNotEmpty()) {
+                                            showResetConfirmation = true
+                                        } else {
+                                            viewModel.resetGame()
+                                        }
+                                    }
+                            ) {
+                                Icon(
+                                        imageVector = Icons.Default.Replay,
+                                        contentDescription = stringResource(R.string.reset)
+                                )
+                            }
+
+                            // Settings button
+                            IconButton(onClick = onNavigateToSettings) {
+                                Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = stringResource(R.string.settings)
+                                )
+                            }
                         }
                     }
                 }
-            }
         ) { innerPadding ->
             // Portrait Content
             Column(
-                modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Status display
                 Box(
-                    modifier = Modifier.fillMaxWidth()
-                            .height(56.dp)
-                            .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
+                        modifier =
+                                Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
                 ) {
                     if (isLoading) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.secondary,
-                                strokeWidth = 2.dp
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = stringResource(R.string.computer_thinking),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.secondary
+                                    text = stringResource(R.string.computer_thinking),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.secondary
                             )
                         }
                     } else {
                         Text(
-                            text = playerStatusText,
-                            style = if (winner != null)
-                                MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                )
-                            else MaterialTheme.typography.titleMedium,
-                            color = playerColor
+                                text = playerStatusText,
+                                style =
+                                        if (winner != null)
+                                                MaterialTheme.typography.titleMedium.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                )
+                                        else MaterialTheme.typography.titleMedium,
+                                color = playerColor
                         )
                     }
                 }
 
                 // Game Board - fills remaining space
                 Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentAlignment = Alignment.Center
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        contentAlignment = Alignment.Center
                 ) {
                     when {
                         isXandO ->
-                            TicTacToeBoard(
-                                gameState = gameState,
-                                lastPlacedPosition = lastPlacedPosition,
-                                isDarkTheme = isDarkTheme,
-                                isGameFrozen = winner != null || isLoading,
-                                onTileClick = { row, col ->
-                                    viewModel.placeTile(row, col)
-                                }
-                            )
+                                TicTacToeBoard(
+                                        gameState = gameState,
+                                        lastPlacedPosition = lastPlacedPosition,
+                                        isDarkTheme = isDarkTheme,
+                                        isGameFrozen = winner != null || isLoading,
+                                        onTileClick = { row, col -> viewModel.placeTile(row, col) }
+                                )
                         isConnect4 ->
-                            Connect4Board(
-                                gameState = gameState,
-                                lastPlacedPosition = lastPlacedPosition,
-                                isGameFrozen = winner != null || isLoading,
-                                onColumnClick = { col ->
-                                    viewModel.placeConnect4Tile(col)
-                                }
-                            )
+                                Connect4Board(
+                                        gameState = gameState,
+                                        lastPlacedPosition = lastPlacedPosition,
+                                        isGameFrozen = winner != null || isLoading,
+                                        onColumnClick = { col -> viewModel.placeConnect4Tile(col) }
+                                )
                         isHex ->
-                            HexBoard(
-                                gameState = gameState,
-                                lastPlacedPosition = lastPlacedPosition,
-                                isGameFrozen = winner != null || isLoading,
-                                onTileClick = { row, col ->
-                                    viewModel.placeTile(row, col)
-                                }
-                            )
+                                HexBoard(
+                                        gameState = gameState,
+                                        lastPlacedPosition = lastPlacedPosition,
+                                        isGameFrozen = winner != null || isLoading,
+                                        onTileClick = { row, col -> viewModel.placeTile(row, col) }
+                                )
                         else ->
-                            GameBoard(
-                                gameState = gameState,
-                                lastPlacedPosition = lastPlacedPosition,
-                                isDarkTheme = isDarkTheme,
-                                isGameFrozen = winner != null || isLoading,
-                                onTileClick = { row, col ->
-                                    viewModel.placeTile(row, col)
-                                }
-                            )
+                                GameBoard(
+                                        gameState = gameState,
+                                        lastPlacedPosition = lastPlacedPosition,
+                                        isDarkTheme = isDarkTheme,
+                                        isGameFrozen = winner != null || isLoading,
+                                        onTileClick = { row, col -> viewModel.placeTile(row, col) }
+                                )
                     }
                 }
             }
@@ -381,205 +366,223 @@ fun GameScreen(
     } else {
         // LANDSCAPE MODE - Use Box layout without Scaffold to control exact positioning
         Box(modifier = Modifier.fillMaxSize()) {
-            // Conditional layout based on rotation - modify the design to place sidebar on correct side
+            // Conditional layout based on rotation - modify the design to place sidebar on correct
+            // side
             if (isAppBarOnLeft) {
                 // Layout with app bar on LEFT side when rotated clockwise (bottom on left)
                 Row(modifier = Modifier.fillMaxSize()) {
                     // VERTICAL SIDE ACTION BAR - left side
                     Column(
-                        modifier = Modifier.fillMaxHeight()
-                                .width(64.dp)
-                                .background(MaterialTheme.colorScheme.background),
-                        verticalArrangement = Arrangement.SpaceEvenly,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            modifier =
+                                    Modifier.fillMaxHeight()
+                                            .width(64.dp)
+                                            .background(MaterialTheme.colorScheme.background),
+                            verticalArrangement = Arrangement.SpaceEvenly,
+                            horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         // Home button
                         IconButton(onClick = onNavigateToHome) {
                             Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = stringResource(R.string.home)
+                                    imageVector = Icons.Default.Home,
+                                    contentDescription = stringResource(R.string.home)
                             )
                         }
 
                         // Undo button
                         IconButton(
-                            onClick = { viewModel.undoMove() },
-                            enabled = moveHistory.isNotEmpty() && !isLoading
+                                onClick = { viewModel.undoMove() },
+                                enabled = moveHistory.isNotEmpty() && !isLoading
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Undo,
-                                contentDescription = stringResource(R.string.undo)
+                                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                                    contentDescription = stringResource(R.string.undo)
                             )
                         }
 
                         // Reset button
                         IconButton(
-                            onClick = {
-                                if (winner == null && moveHistory.isNotEmpty()) {
-                                    showResetConfirmation = true
-                                } else {
-                                    viewModel.resetGame()
+                                onClick = {
+                                    if (winner == null && moveHistory.isNotEmpty()) {
+                                        showResetConfirmation = true
+                                    } else {
+                                        viewModel.resetGame()
+                                    }
                                 }
-                            }
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Replay,
-                                contentDescription = stringResource(R.string.reset)
+                                    imageVector = Icons.Default.Replay,
+                                    contentDescription = stringResource(R.string.reset)
                             )
                         }
 
                         // Settings button
                         IconButton(onClick = onNavigateToSettings) {
                             Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = stringResource(R.string.settings)
+                                    imageVector = Icons.Default.Menu,
+                                    contentDescription = stringResource(R.string.settings)
                             )
                         }
                     }
-                
+
                     // Content area layout
                     Row(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                        // Left side - Game info column with status
+
+                        // Center - Game Board
                         Box(
-                            modifier = Modifier.weight(0.25f)
-                                    .fillMaxHeight()
-                                    .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center
+                                modifier = Modifier.weight(0.75f).fillMaxHeight(),
+                                contentAlignment = Alignment.Center
+                        ) {
+                            when {
+                                isXandO ->
+                                        TicTacToeBoard(
+                                                gameState = gameState,
+                                                lastPlacedPosition = lastPlacedPosition,
+                                                isDarkTheme = isDarkTheme,
+                                                isGameFrozen = winner != null || isLoading,
+                                                onTileClick = { row, col ->
+                                                    viewModel.placeTile(row, col)
+                                                }
+                                        )
+                                isConnect4 ->
+                                        Connect4Board(
+                                                gameState = gameState,
+                                                lastPlacedPosition = lastPlacedPosition,
+                                                isGameFrozen = winner != null || isLoading,
+                                                onColumnClick = { col ->
+                                                    viewModel.placeConnect4Tile(col)
+                                                }
+                                        )
+                                isHex ->
+                                        HexBoard(
+                                                gameState = gameState,
+                                                lastPlacedPosition = lastPlacedPosition,
+                                                isGameFrozen = winner != null || isLoading,
+                                                onTileClick = { row, col ->
+                                                    viewModel.placeTile(row, col)
+                                                }
+                                        )
+                                else ->
+                                        GameBoard(
+                                                gameState = gameState,
+                                                lastPlacedPosition = lastPlacedPosition,
+                                                isDarkTheme = isDarkTheme,
+                                                isGameFrozen = winner != null || isLoading,
+                                                onTileClick = { row, col ->
+                                                    viewModel.placeTile(row, col)
+                                                }
+                                        )
+                            }
+                        }
+
+                        // Right side - Game info column with status
+                        Box(
+                                modifier =
+                                        Modifier.weight(0.25f)
+                                                .fillMaxHeight()
+                                                .padding(horizontal = 8.dp),
+                                contentAlignment = Alignment.Center
                         ) {
                             Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
                             ) {
                                 // Title
                                 Text(
-                                    text = appTitle,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    textAlign = TextAlign.Center
+                                        text = appTitle,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        textAlign = TextAlign.Center
                                 )
 
                                 Spacer(modifier = Modifier.height(32.dp))
 
                                 // Player status
                                 if (isLoading) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            color = MaterialTheme.colorScheme.secondary,
-                                            strokeWidth = 2.dp
+                                                modifier = Modifier.size(24.dp),
+                                                color = MaterialTheme.colorScheme.secondary,
+                                                strokeWidth = 2.dp
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
-                                            text = stringResource(R.string.computer_thinking),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.secondary
+                                                text = stringResource(R.string.computer_thinking),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.secondary
                                         )
                                     }
                                 } else {
                                     Text(
-                                        text = playerStatusText,
-                                        style = if (winner != null)
-                                                MaterialTheme.typography.titleMedium.copy(
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            else
-                                                MaterialTheme.typography.titleMedium,
-                                        color = playerColor,
-                                        textAlign = TextAlign.Center
+                                            text = playerStatusText,
+                                            style =
+                                                    if (winner != null)
+                                                            MaterialTheme.typography.titleMedium
+                                                                    .copy(
+                                                                            fontWeight =
+                                                                                    FontWeight.Bold
+                                                                    )
+                                                    else MaterialTheme.typography.titleMedium,
+                                            color = playerColor,
+                                            textAlign = TextAlign.Center
                                     )
                                 }
-                            }
-                        }
-
-                        // Center/Right - Game Board
-                        Box(
-                            modifier = Modifier.weight(0.75f).fillMaxHeight(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            when {
-                                isXandO -> TicTacToeBoard(
-                                    gameState = gameState,
-                                    lastPlacedPosition = lastPlacedPosition,
-                                    isDarkTheme = isDarkTheme,
-                                    isGameFrozen = winner != null || isLoading,
-                                    onTileClick = { row, col -> viewModel.placeTile(row, col) }
-                                )
-                                isConnect4 -> Connect4Board(
-                                    gameState = gameState,
-                                    lastPlacedPosition = lastPlacedPosition,
-                                    isGameFrozen = winner != null || isLoading,
-                                    onColumnClick = { col -> viewModel.placeConnect4Tile(col) }
-                                )
-                                isHex -> HexBoard(
-                                    gameState = gameState,
-                                    lastPlacedPosition = lastPlacedPosition,
-                                    isGameFrozen = winner != null || isLoading,
-                                    onTileClick = { row, col -> viewModel.placeTile(row, col) }
-                                )
-                                else -> GameBoard(
-                                    gameState = gameState,
-                                    lastPlacedPosition = lastPlacedPosition,
-                                    isDarkTheme = isDarkTheme,
-                                    isGameFrozen = winner != null || isLoading,
-                                    onTileClick = { row, col -> viewModel.placeTile(row, col) }
-                                )
                             }
                         }
                     }
                 }
             } else {
-                // Layout with app bar on RIGHT side when rotated counter-clockwise (bottom on right)
+                // Layout with app bar on RIGHT side when rotated counter-clockwise (bottom on
+                // right)
                 Row(modifier = Modifier.fillMaxSize()) {
-                    // VERTICAL SIDE ACTION BAR for landscape mode - left side (when bottom is on right)
-                    Column(
-                        modifier = Modifier.width(64.dp)
-                                .fillMaxHeight()
-                                .background(MaterialTheme.colorScheme.background),
-                        verticalArrangement = Arrangement.SpaceEvenly,
-                        horizontalAlignment = Alignment.CenterHorizontally
+
+                    // Left side - Game info column
+                    Box(
+                            modifier =
+                                    Modifier.weight(0.25f)
+                                            .fillMaxHeight()
+                                            .padding(start = 8.dp, end = 16.dp),
+                            contentAlignment = Alignment.Center
                     ) {
-                        // Home button
-                        IconButton(onClick = onNavigateToHome) {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = stringResource(R.string.home)
-                            )
-                        }
-
-                        // Undo button (disabled if no moves or game frozen)
-                        IconButton(
-                            onClick = { viewModel.undoMove() },
-                            enabled = moveHistory.isNotEmpty() && !isLoading
+                        Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Undo,
-                                contentDescription = stringResource(R.string.undo)
+                            // Title - now here instead of in top bar
+                            Text(
+                                    text = appTitle,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    textAlign = TextAlign.Center
                             )
-                        }
 
-                        // Reset button
-                        IconButton(
-                            onClick = {
-                                if (winner == null && moveHistory.isNotEmpty()) {
-                                    showResetConfirmation = true
-                                } else {
-                                    viewModel.resetGame()
+                            Spacer(modifier = Modifier.height(32.dp))
+
+                            // Player status
+                            if (isLoading) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = MaterialTheme.colorScheme.secondary,
+                                            strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                            text = stringResource(R.string.computer_thinking),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.secondary
+                                    )
                                 }
+                            } else {
+                                Text(
+                                        text = playerStatusText,
+                                        style =
+                                                if (winner != null)
+                                                        MaterialTheme.typography.titleMedium.copy(
+                                                                fontWeight = FontWeight.Bold
+                                                        )
+                                                else MaterialTheme.typography.titleMedium,
+                                        color = playerColor,
+                                        textAlign = TextAlign.Center
+                                )
                             }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Replay,
-                                contentDescription = stringResource(R.string.reset)
-                            )
-                        }
-
-                        // Settings button
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = stringResource(R.string.settings)
-                            )
                         }
                     }
 
@@ -587,101 +590,103 @@ fun GameScreen(
                     Row(modifier = Modifier.weight(1f).fillMaxSize().padding(8.dp)) {
                         // Center - Game Board
                         Box(
-                            modifier = Modifier.weight(0.75f).fillMaxHeight(),
-                            contentAlignment = Alignment.Center
+                                modifier = Modifier.weight(0.75f).fillMaxHeight(),
+                                contentAlignment = Alignment.Center
                         ) {
                             when {
                                 isXandO ->
-                                    TicTacToeBoard(
-                                        gameState = gameState,
-                                        lastPlacedPosition = lastPlacedPosition,
-                                        isDarkTheme = isDarkTheme,
-                                        isGameFrozen = winner != null || isLoading,
-                                        onTileClick = { row, col ->
-                                            viewModel.placeTile(row, col)
-                                        }
-                                    )
+                                        TicTacToeBoard(
+                                                gameState = gameState,
+                                                lastPlacedPosition = lastPlacedPosition,
+                                                isDarkTheme = isDarkTheme,
+                                                isGameFrozen = winner != null || isLoading,
+                                                onTileClick = { row, col ->
+                                                    viewModel.placeTile(row, col)
+                                                }
+                                        )
                                 isConnect4 ->
-                                    Connect4Board(
-                                        gameState = gameState,
-                                        lastPlacedPosition = lastPlacedPosition,
-                                        isGameFrozen = winner != null || isLoading,
-                                        onColumnClick = { col ->
-                                            viewModel.placeConnect4Tile(col)
-                                        }
-                                    )
+                                        Connect4Board(
+                                                gameState = gameState,
+                                                lastPlacedPosition = lastPlacedPosition,
+                                                isGameFrozen = winner != null || isLoading,
+                                                onColumnClick = { col ->
+                                                    viewModel.placeConnect4Tile(col)
+                                                }
+                                        )
                                 isHex ->
-                                    HexBoard(
-                                        gameState = gameState,
-                                        lastPlacedPosition = lastPlacedPosition,
-                                        isGameFrozen = winner != null || isLoading,
-                                        onTileClick = { row, col ->
-                                            viewModel.placeTile(row, col)
-                                        }
-                                    )
+                                        HexBoard(
+                                                gameState = gameState,
+                                                lastPlacedPosition = lastPlacedPosition,
+                                                isGameFrozen = winner != null || isLoading,
+                                                onTileClick = { row, col ->
+                                                    viewModel.placeTile(row, col)
+                                                }
+                                        )
                                 else ->
-                                    GameBoard(
-                                        gameState = gameState,
-                                        lastPlacedPosition = lastPlacedPosition,
-                                        isDarkTheme = isDarkTheme,
-                                        isGameFrozen = winner != null || isLoading,
-                                        onTileClick = { row, col ->
-                                            viewModel.placeTile(row, col)
-                                        }
-                                    )
+                                        GameBoard(
+                                                gameState = gameState,
+                                                lastPlacedPosition = lastPlacedPosition,
+                                                isDarkTheme = isDarkTheme,
+                                                isGameFrozen = winner != null || isLoading,
+                                                onTileClick = { row, col ->
+                                                    viewModel.placeTile(row, col)
+                                                }
+                                        )
                             }
                         }
 
-                        // Right side - Game info column
-                        Box(
-                            modifier = Modifier.weight(0.25f)
-                                    .fillMaxHeight()
-                                    .padding(start = 8.dp, end = 16.dp),
-                            contentAlignment = Alignment.Center
+                        // VERTICAL SIDE ACTION BAR for landscape mode - right side (when bottom is
+                        // on
+                        // right)
+                        Column(
+                                modifier =
+                                        Modifier.width(64.dp)
+                                                .fillMaxHeight()
+                                                .background(MaterialTheme.colorScheme.background),
+                                verticalArrangement = Arrangement.SpaceEvenly,
+                                horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                // Title - now here instead of in top bar
-                                Text(
-                                    text = appTitle,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    textAlign = TextAlign.Center
+                            // Home button
+                            IconButton(onClick = onNavigateToHome) {
+                                Icon(
+                                        imageVector = Icons.Default.Home,
+                                        contentDescription = stringResource(R.string.home)
                                 )
+                            }
 
-                                Spacer(modifier = Modifier.height(32.dp))
+                            // Undo button (disabled if no moves or game frozen)
+                            IconButton(
+                                    onClick = { viewModel.undoMove() },
+                                    enabled = moveHistory.isNotEmpty() && !isLoading
+                            ) {
+                                Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Undo,
+                                        contentDescription = stringResource(R.string.undo)
+                                )
+                            }
 
-                                // Player status
-                                if (isLoading) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(24.dp),
-                                            color = MaterialTheme.colorScheme.secondary,
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            text = stringResource(R.string.computer_thinking),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
+                            // Reset button
+                            IconButton(
+                                    onClick = {
+                                        if (winner == null && moveHistory.isNotEmpty()) {
+                                            showResetConfirmation = true
+                                        } else {
+                                            viewModel.resetGame()
+                                        }
                                     }
-                                } else {
-                                    Text(
-                                        text = playerStatusText,
-                                        style = if (winner != null)
-                                                MaterialTheme.typography.titleMedium.copy(
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            else
-                                                MaterialTheme.typography.titleMedium,
-                                        color = playerColor,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
+                            ) {
+                                Icon(
+                                        imageVector = Icons.Default.Replay,
+                                        contentDescription = stringResource(R.string.reset)
+                                )
+                            }
+
+                            // Settings button
+                            IconButton(onClick = onNavigateToSettings) {
+                                Icon(
+                                        imageVector = Icons.Default.Menu,
+                                        contentDescription = stringResource(R.string.settings)
+                                )
                             }
                         }
                     }
@@ -692,11 +697,11 @@ fun GameScreen(
 
     if (showResetConfirmation) {
         ResetConfirmationDialog(
-            onConfirm = {
-                viewModel.resetGame()
-                showResetConfirmation = false
-            },
-            onDismiss = { showResetConfirmation = false }
+                onConfirm = {
+                    viewModel.resetGame()
+                    showResetConfirmation = false
+                },
+                onDismiss = { showResetConfirmation = false }
         )
     }
 }
@@ -705,14 +710,12 @@ fun GameScreen(
 @Composable
 fun ResetConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.confirm_reset_title)) },
-        text = { Text(stringResource(R.string.confirm_reset_message)) },
-        confirmButton = {
-            Button(onClick = onConfirm) { Text(stringResource(R.string.yes)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        }
+            onDismissRequest = onDismiss,
+            title = { Text(stringResource(R.string.confirm_reset_title)) },
+            text = { Text(stringResource(R.string.confirm_reset_message)) },
+            confirmButton = { Button(onClick = onConfirm) { Text(stringResource(R.string.yes)) } },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            }
     )
 }
