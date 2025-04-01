@@ -265,7 +265,7 @@ class HexAIEngine(private val random: Random = Random()) {
         val emptyNeighbors = centerNeighbors.filter { (r, c) -> board[r][c] == EMPTY }
 
         return if (emptyNeighbors.isNotEmpty()) {
-            emptyNeighbors.random(random)
+            emptyNeighbors.random()
         } else {
             // Fallback: find any empty position
             for (row in 0 until boardSize) {
@@ -774,7 +774,7 @@ class HexAIEngine(private val random: Random = Random()) {
         }
 
         if (candidateMoves.isNotEmpty()) {
-            return candidateMoves.random(random)
+            return candidateMoves.random()
         }
 
         // If we can't find a good connection move, try to place a stone that extends
@@ -1006,7 +1006,7 @@ class HexAIEngine(private val random: Random = Random()) {
         }
 
         if (candidateMoves.isNotEmpty()) {
-            return candidateMoves.random(random)
+            return candidateMoves.random()
         }
 
         // If we can't find a good connection move, try to place a stone that extends
