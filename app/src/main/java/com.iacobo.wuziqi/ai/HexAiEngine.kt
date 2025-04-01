@@ -231,8 +231,8 @@ class HexAIEngine(private val random: Random = Random) {
         // If opponent played in the center or adjacent to center,
         // use the "pie rule" concept and play on the other side
         if ((firstMoveRow == center && firstMoveCol == center) ||
-            ((firstMoveRow - center).absoluteValue <= 1 && 
-             (firstMoveCol - center).absoluteValue <= 1)) {
+            (Math.abs(firstMoveRow - center) <= 1 && 
+             Math.abs(firstMoveCol - center) <= 1)) {
             
             // Play on the opposite side
             val destRow = boardSize - 1 - firstMoveRow
@@ -327,7 +327,46 @@ class HexAIEngine(private val random: Random = Random) {
     
     /**
      * Find the best move for the AI player (PLAYER_TWO) in the current game state.
-     * 
+     *
+     * @param gameState Current state of the game
+     * @return Coordinates of the best move
+     */
+    fun findBestMove(gameState: GameState): Pair<Int, Int>? {
+        // Start with basic checks before running expensive MCTS
+        
+        // 1. If the board is empty, play in the center
+        if (isBoardEmpty(gameState)) {
+            val center = gameState.boardSize / 2
+            return Pair(center, center)
+        }
+        
+        // 2. If this is the second move, use a strong response to the opponent's opening
+        if (countStones(gameState) == 1) {
+            return findSecondMove(gameState)
+        }
+        
+        // 3. Check for immediate winning move
+        val immediateWin = findImmediateWin(gameState, PLAYER_TWO)
+        if (immediateWin != null) {
+            return immediateWin
+        }
+        
+        // 4. Check for opponent's immediate winning move to block
+        val opponentWin = findImmediateWin(gameState, PLAYER_ONE)
+        if (opponentWin != null) {
+            return opponentWin
+        }
+        
+        // 5. Look for virtual connections to complete
+        val virtualConnection = findVirtualConnectionMove(gameState, PLAYER_TWO)
+        if (virtualConnection != null) {
+            return virtualConnection
+        }
+        
+        // 6. Run Monte Carlo Tree Search for deep analysis
+        return runMonteCarloTreeSearch(gameState)
+    }
+} 
      * @param gameState Current state of the game
      * @return Coordinates of the best move
      */
@@ -499,7 +538,7 @@ class HexAIEngine(private val random: Random = Random) {
             }
             
             // Use probability distribution based on scores to choose a move
-            val totalScore = scoredMoves.sumByDouble { it.second } + 0.001 // Avoid div by 0
+            val totalScore = scoredMoves.sumOf { it.second } + 0.001 // Avoid div by 0
             var moveIndex = 0
             var randomValue = random.nextDouble() * totalScore
             

@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.iacobo.wuziqi.R
+import com.iacobo.wuziqi.ai.HexAIEngine
 import com.iacobo.wuziqi.ai.WuziqiAIEngine
 import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.data.UserPreferencesRepository
