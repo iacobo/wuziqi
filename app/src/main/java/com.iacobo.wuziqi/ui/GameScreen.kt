@@ -234,14 +234,11 @@ fun GameScreen(
                                 )
                         },
                         bottomBar = {
-                                BottomAppBar {
+                                BottomAppBar(
+                                        containerColor = MaterialTheme.colorScheme.background,
+                                ) {
                                         Row(
-                                                modifier =
-                                                        Modifier.fillMaxWidth()
-                                                                .background(
-                                                                        MaterialTheme.colorScheme
-                                                                                .background
-                                                                ),
+                                                modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                                 verticalAlignment = Alignment.CenterVertically
                                         ) {
