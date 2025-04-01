@@ -242,11 +242,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onNavigateBack: () -> Unit) {
 
 /** Function to get the appropriate theme icon based on the current theme mode */
 @Composable
-fun getThemeIcon(themeMode: ThemeMode) = when (themeMode) {
-    ThemeMode.LIGHT -> Icons.Default.LightMode
-    ThemeMode.DARK -> Icons.Default.DarkMode
-    ThemeMode.SYSTEM -> Icons.Default.Routine
-}
+fun getThemeIcon(themeMode: ThemeMode) =
+        when (themeMode) {
+                ThemeMode.LIGHT -> Icons.Default.LightMode
+                ThemeMode.DARK -> Icons.Default.DarkMode
+                ThemeMode.SYSTEM -> Icons.Default.Routine
+        }
 
 /** Switch preference item with icon. */
 @Composable
@@ -357,7 +358,7 @@ fun LinkPreference(
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f)
                 )
-                
+
                 if (isExternalLink) {
                         Icon(
                                 imageVector = Icons.AutoMirrored.Filled.OpenInNew,

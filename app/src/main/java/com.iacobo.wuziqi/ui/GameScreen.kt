@@ -1,6 +1,7 @@
 package com.iacobo.wuziqi.ui
 
 import android.content.res.Configuration
+import android.view.Surface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -57,7 +59,7 @@ import com.iacobo.wuziqi.viewmodel.GameViewModel
 
 /**
  * Main game screen composable. Displays the game board, status, and controls. Supports standard
- * game and easter eggs.
+ * game and easter eggs. Now with orientation-aware side bars in landscape mode.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,9 +101,19 @@ fun GameScreen(
                         ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 }
 
-        // Detect current orientation
+        // Detect current orientation and rotation
         val configuration = LocalConfiguration.current
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        
+        // Get the device rotation from the window manager
+        val context = LocalContext.current
+        val windowManager = context.getSystemService(android.view.WindowManager::class.java)
+        val rotation = windowManager.defaultDisplay.rotation
+        
+        // Determine if the app bar should be on the left or right side
+        // Surface.ROTATION_90: Bottom on right side
+        // Surface.ROTATION_270: Bottom on left side
+        val isAppBarOnLeft = rotation == Surface.ROTATION_270
 
         // Calculate the player status text for display
         val playerStatusText =
@@ -235,10 +247,11 @@ fun GameScreen(
                         },
                         bottomBar = {
                                 BottomAppBar(
-                                        containerColor = MaterialTheme.colorScheme.background,
+                                        containerColor = MaterialTheme.colorScheme.background
                                 ) {
                                         Row(
-                                                modifier = Modifier.fillMaxWidth(),
+                                                modifier =
+                                                        Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceEvenly,
                                                 verticalAlignment = Alignment.CenterVertically
                                         ) {
@@ -432,211 +445,373 @@ fun GameScreen(
                                         }
                                 }
                         }
-                }
-        } else {
+                                }
+        }
+
+        if (showResetConfirmation) {
+                ResetConfirmationDialog(
+                        onConfirm = {
+                                viewModel.resetGame()
+                                showResetConfirmation = false
+                        },
+                        onDismiss = { showResetConfirmation = false }
+                )
+        }
+} else {
                 // LANDSCAPE MODE - Use Box layout without Scaffold to control exact positioning
                 Box(modifier = Modifier.fillMaxSize()) {
-                        // Content area layout
-                        Row(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                                // Left side - Game info column (title and player status)
-                                Box(
-                                        modifier =
-                                                Modifier.weight(0.25f)
-                                                        .fillMaxHeight()
-                                                        .padding(start = 16.dp, end = 8.dp),
-                                        contentAlignment = Alignment.Center
-                                ) {
+                        // Conditional layout based on rotation - modify the design to place sidebar on correct side
+                        if (isAppBarOnLeft) {
+                                // Layout with app bar on LEFT side when rotated clockwise (bottom on left)
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                        // VERTICAL SIDE ACTION BAR - left side
                                         Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.Center
+                                                modifier =
+                                                        Modifier.fillMaxHeight()
+                                                                .width(64.dp)
+                                                                .background(MaterialTheme.colorScheme.background),
+                                                verticalArrangement = Arrangement.SpaceEvenly,
+                                                horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                                // Title - now here instead of in top bar
-                                                Text(
-                                                        text = appTitle,
-                                                        style = MaterialTheme.typography.titleLarge,
-                                                        textAlign = TextAlign.Center
-                                                )
+                                                // Home button
+                                                IconButton(onClick = onNavigateToHome) {
+                                                        Icon(
+                                                                imageVector = Icons.Default.Home,
+                                                                contentDescription = stringResource(R.string.home)
+                                                        )
+                                                }
 
-                                                Spacer(modifier = Modifier.height(32.dp))
+                                                // Undo button
+                                                IconButton(
+                                                        onClick = { viewModel.undoMove() },
+                                                        enabled = moveHistory.isNotEmpty() && !isLoading
+                                                ) {
+                                                        Icon(
+                                                                imageVector = Icons.AutoMirrored.Filled.Undo,
+                                                                contentDescription = stringResource(R.string.undo)
+                                                        )
+                                                }
 
-                                                // Player status
-                                                if (isLoading) {
-                                                        Row(
-                                                                verticalAlignment =
-                                                                        Alignment.CenterVertically
+                                                // Reset button
+                                                IconButton(
+                                                        onClick = {
+                                                                if (winner == null && moveHistory.isNotEmpty()) {
+                                                                        showResetConfirmation = true
+                                                                } else {
+                                                                        viewModel.resetGame()
+                                                                }
+                                                        }
+                                                ) {
+                                                        Icon(
+                                                                imageVector = Icons.Default.Replay,
+                                                                contentDescription = stringResource(R.string.reset)
+                                                        )
+                                                }
+
+                                                // Settings button
+                                                IconButton(onClick = onNavigateToSettings) {
+                                                        Icon(
+                                                                imageVector = Icons.Default.Menu,
+                                                                contentDescription = stringResource(R.string.settings)
+                                                        )
+                                                }
+                                        }
+                                    
+                                        // Content area layout
+                                        Row(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                                                // Left side - Game info column with status
+                                                Box(
+                                                        modifier =
+                                                                Modifier.weight(0.25f)
+                                                                        .fillMaxHeight()
+                                                                        .padding(horizontal = 8.dp),
+                                                        contentAlignment = Alignment.Center
+                                                ) {
+                                                        Column(
+                                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                                verticalArrangement = Arrangement.Center
                                                         ) {
-                                                                CircularProgressIndicator(
-                                                                        modifier =
-                                                                                Modifier.size(
-                                                                                        24.dp
-                                                                                ),
-                                                                        color =
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .secondary,
-                                                                        strokeWidth = 2.dp
-                                                                )
-                                                                Spacer(
-                                                                        modifier =
-                                                                                Modifier.width(8.dp)
-                                                                )
+                                                                // Title
                                                                 Text(
-                                                                        text =
-                                                                                stringResource(
-                                                                                        R.string
-                                                                                                .computer_thinking
-                                                                                ),
-                                                                        style =
-                                                                                MaterialTheme
-                                                                                        .typography
-                                                                                        .titleMedium,
-                                                                        color =
-                                                                                MaterialTheme
-                                                                                        .colorScheme
-                                                                                        .secondary
+                                                                        text = appTitle,
+                                                                        style = MaterialTheme.typography.titleLarge,
+                                                                        textAlign = TextAlign.Center
+                                                                )
+
+                                                                Spacer(modifier = Modifier.height(32.dp))
+
+                                                                // Player status
+                                                                if (isLoading) {
+                                                                        Row(
+                                                                                verticalAlignment = Alignment.CenterVertically
+                                                                        ) {
+                                                                                CircularProgressIndicator(
+                                                                                        modifier = Modifier.size(24.dp),
+                                                                                        color = MaterialTheme.colorScheme.secondary,
+                                                                                        strokeWidth = 2.dp
+                                                                                )
+                                                                                Spacer(modifier = Modifier.width(8.dp))
+                                                                                Text(
+                                                                                        text = stringResource(R.string.computer_thinking),
+                                                                                        style = MaterialTheme.typography.titleMedium,
+                                                                                        color = MaterialTheme.colorScheme.secondary
+                                                                                )
+                                                                        }
+                                                                } else {
+                                                                        Text(
+                                                                                text = playerStatusText,
+                                                                                style = if (winner != null)
+                                                                                        MaterialTheme.typography.titleMedium.copy(
+                                                                                                fontWeight = FontWeight.Bold
+                                                                                        )
+                                                                                else
+                                                                                        MaterialTheme.typography.titleMedium,
+                                                                                color = playerColor,
+                                                                                textAlign = TextAlign.Center
+                                                                        )
+                                                                }
+                                                        }
+                                                }
+
+                                                // Center/Right - Game Board
+                                                Box(
+                                                        modifier = Modifier.weight(0.75f).fillMaxHeight(),
+                                                        contentAlignment = Alignment.Center
+                                                ) {
+                                                        when {
+                                                                isXandO -> TicTacToeBoard(
+                                                                        gameState = gameState,
+                                                                        lastPlacedPosition = lastPlacedPosition,
+                                                                        isDarkTheme = isDarkTheme,
+                                                                        isGameFrozen = winner != null || isLoading,
+                                                                        onTileClick = { row, col -> viewModel.placeTile(row, col) }
+                                                                )
+                                                                isConnect4 -> Connect4Board(
+                                                                        gameState = gameState,
+                                                                        lastPlacedPosition = lastPlacedPosition,
+                                                                        isGameFrozen = winner != null || isLoading,
+                                                                        onColumnClick = { col -> viewModel.placeConnect4Tile(col) }
+                                                                )
+                                                                isHex -> HexBoard(
+                                                                        gameState = gameState,
+                                                                        lastPlacedPosition = lastPlacedPosition,
+                                                                        isGameFrozen = winner != null || isLoading,
+                                                                        onTileClick = { row, col -> viewModel.placeTile(row, col) }
+                                                                )
+                                                                else -> GameBoard(
+                                                                        gameState = gameState,
+                                                                        lastPlacedPosition = lastPlacedPosition,
+                                                                        isDarkTheme = isDarkTheme,
+                                                                        isGameFrozen = winner != null || isLoading,
+                                                                        onTileClick = { row, col -> viewModel.placeTile(row, col) }
                                                                 )
                                                         }
-                                                } else {
+                                                }
+                                        }
+                                }
+                        } else {
+                                // Layout with app bar on RIGHT side when rotated counter-clockwise (bottom on right)
+                                // Content area layout
+                                Row(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                                        // Left side - Game info column
+                                        Box(
+                                                modifier =
+                                                        Modifier.weight(0.25f)
+                                                                .fillMaxHeight()
+                                                                .padding(start = 16.dp, end = 8.dp),
+                                                contentAlignment = Alignment.Center
+                                        ) {
+                                                Column(
+                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                        verticalArrangement = Arrangement.Center
+                                                ) {
+                                                        // Title - now here instead of in top bar
                                                         Text(
-                                                                text = playerStatusText,
-                                                                style =
-                                                                        if (winner != null)
-                                                                                MaterialTheme
-                                                                                        .typography
-                                                                                        .titleMedium
-                                                                                        .copy(
-                                                                                                fontWeight =
-                                                                                                        FontWeight
-                                                                                                                .Bold
-                                                                                        )
-                                                                        else
-                                                                                MaterialTheme
-                                                                                        .typography
-                                                                                        .titleMedium,
-                                                                color = playerColor,
+                                                                text = appTitle,
+                                                                style = MaterialTheme.typography.titleLarge,
                                                                 textAlign = TextAlign.Center
                                                         )
+
+                                                        Spacer(modifier = Modifier.height(32.dp))
+
+                                                        // Player status
+                                                        if (isLoading) {
+                                                                Row(
+                                                                        verticalAlignment =
+                                                                                Alignment.CenterVertically
+                                                                ) {
+                                                                        CircularProgressIndicator(
+                                                                                modifier =
+                                                                                        Modifier.size(
+                                                                                                24.dp
+                                                                                        ),
+                                                                                color =
+                                                                                        MaterialTheme
+                                                                                                .colorScheme
+                                                                                                .secondary,
+                                                                                strokeWidth = 2.dp
+                                                                        )
+                                                                        Spacer(
+                                                                                modifier =
+                                                                                        Modifier.width(8.dp)
+                                                                        )
+                                                                        Text(
+                                                                                text =
+                                                                                        stringResource(
+                                                                                                R.string
+                                                                                                        .computer_thinking
+                                                                                        ),
+                                                                                style =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .titleMedium,
+                                                                                color =
+                                                                                        MaterialTheme
+                                                                                                .colorScheme
+                                                                                                .secondary
+                                                                        )
+                                                                }
+                                                        } else {
+                                                                Text(
+                                                                        text = playerStatusText,
+                                                                        style =
+                                                                                if (winner != null)
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .titleMedium
+                                                                                                .copy(
+                                                                                                        fontWeight =
+                                                                                                                FontWeight
+                                                                                                                        .Bold
+                                                                                                )
+                                                                                else
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .titleMedium,
+                                                                        color = playerColor,
+                                                                        textAlign = TextAlign.Center
+                                                                )
+                                                        }
+                                                }
+                                        }
+
+                                        // Center - Game Board
+                                        Box(
+                                                modifier = Modifier.weight(0.75f).fillMaxHeight(),
+                                                contentAlignment = Alignment.Center
+                                        ) {
+                                                when {
+                                                        isXandO ->
+                                                                TicTacToeBoard(
+                                                                        gameState = gameState,
+                                                                        lastPlacedPosition =
+                                                                                lastPlacedPosition,
+                                                                        isDarkTheme = isDarkTheme,
+                                                                        isGameFrozen =
+                                                                                winner != null || isLoading,
+                                                                        onTileClick = { row, col ->
+                                                                                viewModel.placeTile(
+                                                                                        row,
+                                                                                        col
+                                                                                )
+                                                                        }
+                                                                )
+                                                        isConnect4 ->
+                                                                Connect4Board(
+                                                                        gameState = gameState,
+                                                                        lastPlacedPosition =
+                                                                                lastPlacedPosition,
+                                                                        isGameFrozen =
+                                                                                winner != null || isLoading,
+                                                                        onColumnClick = { col ->
+                                                                                viewModel.placeConnect4Tile(
+                                                                                        col
+                                                                                )
+                                                                        }
+                                                                )
+                                                        isHex ->
+                                                                HexBoard(
+                                                                        gameState = gameState,
+                                                                        lastPlacedPosition =
+                                                                                lastPlacedPosition,
+                                                                        isGameFrozen =
+                                                                                winner != null || isLoading,
+                                                                        onTileClick = { row, col ->
+                                                                                viewModel.placeTile(
+                                                                                        row,
+                                                                                        col
+                                                                                )
+                                                                        }
+                                                                )
+                                                        else ->
+                                                                GameBoard(
+                                                                        gameState = gameState,
+                                                                        lastPlacedPosition =
+                                                                                lastPlacedPosition,
+                                                                        isDarkTheme = isDarkTheme,
+                                                                        isGameFrozen =
+                                                                                winner != null || isLoading,
+                                                                        onTileClick = { row, col ->
+                                                                                viewModel.placeTile(
+                                                                                        row,
+                                                                                        col
+                                                                                )
+                                                                        }
+                                                                )
                                                 }
                                         }
                                 }
 
-                                // Center - Game Board
-                                Box(
-                                        modifier = Modifier.weight(0.75f).fillMaxHeight(),
-                                        contentAlignment = Alignment.Center
+                                // VERTICAL SIDE ACTION BAR for landscape mode - right side (when bottom is on right)
+                                Column(
+                                        modifier =
+                                                Modifier.align(Alignment.CenterEnd)
+                                                        .fillMaxHeight()
+                                                        .width(64.dp)
+                                                        .background(MaterialTheme.colorScheme.background),
+                                        verticalArrangement = Arrangement.SpaceEvenly,
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                        when {
-                                                isXandO ->
-                                                        TicTacToeBoard(
-                                                                gameState = gameState,
-                                                                lastPlacedPosition =
-                                                                        lastPlacedPosition,
-                                                                isDarkTheme = isDarkTheme,
-                                                                isGameFrozen =
-                                                                        winner != null || isLoading,
-                                                                onTileClick = { row, col ->
-                                                                        viewModel.placeTile(
-                                                                                row,
-                                                                                col
-                                                                        )
-                                                                }
-                                                        )
-                                                isConnect4 ->
-                                                        Connect4Board(
-                                                                gameState = gameState,
-                                                                lastPlacedPosition =
-                                                                        lastPlacedPosition,
-                                                                isGameFrozen =
-                                                                        winner != null || isLoading,
-                                                                onColumnClick = { col ->
-                                                                        viewModel.placeConnect4Tile(
-                                                                                col
-                                                                        )
-                                                                }
-                                                        )
-                                                isHex ->
-                                                        HexBoard(
-                                                                gameState = gameState,
-                                                                lastPlacedPosition =
-                                                                        lastPlacedPosition,
-                                                                isGameFrozen =
-                                                                        winner != null || isLoading,
-                                                                onTileClick = { row, col ->
-                                                                        viewModel.placeTile(
-                                                                                row,
-                                                                                col
-                                                                        )
-                                                                }
-                                                        )
-                                                else ->
-                                                        GameBoard(
-                                                                gameState = gameState,
-                                                                lastPlacedPosition =
-                                                                        lastPlacedPosition,
-                                                                isDarkTheme = isDarkTheme,
-                                                                isGameFrozen =
-                                                                        winner != null || isLoading,
-                                                                onTileClick = { row, col ->
-                                                                        viewModel.placeTile(
-                                                                                row,
-                                                                                col
-                                                                        )
-                                                                }
-                                                        )
-                                        }
-                                }
-                        }
-
-                        // VERTICAL SIDE ACTION BAR for landscape mode - right side
-                        Column(
-                                modifier =
-                                        Modifier.align(Alignment.CenterEnd)
-                                                .fillMaxHeight()
-                                                .width(64.dp)
-                                                .background(MaterialTheme.colorScheme.background),
-                                verticalArrangement = Arrangement.SpaceEvenly,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
 
                                 // Settings button
                                 IconButton(onClick = onNavigateToSettings) {
-                                        Icon(
+                                                Icon(
                                                 imageVector = Icons.Default.Menu,
-                                                contentDescription =
+                                                        contentDescription =
                                                         stringResource(R.string.settings)
-                                        )
-                                }
-
-                                // Reset button
-                                IconButton(
-                                        onClick = {
-                                                if (winner == null && moveHistory.isNotEmpty()) {
-                                                        showResetConfirmation = true
-                                                } else {
-                                                        viewModel.resetGame()
-                                                }
+                                                )
                                         }
-                                ) {
-                                        Icon(
-                                                imageVector = Icons.Default.Replay,
-                                                contentDescription = stringResource(R.string.reset)
-                                        )
-                                }
 
-                                // Undo button (disabled if no moves or game frozen)
-                                IconButton(
-                                        onClick = { viewModel.undoMove() },
-                                        enabled = moveHistory.isNotEmpty() && !isLoading
-                                ) {
-                                        Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.Undo,
-                                                contentDescription = stringResource(R.string.undo)
-                                        )
-                                }
+                                        // Reset button
+                                        IconButton(
+                                                onClick = {
+                                                        if (winner == null && moveHistory.isNotEmpty()) {
+                                                                showResetConfirmation = true
+                                                        } else {
+                                                                viewModel.resetGame()
+                                                        }
+                                                }
+                                        ) {
+                                                Icon(
+                                                        imageVector = Icons.Default.Replay,
+                                                        contentDescription = stringResource(R.string.reset)
+                                                )
+                                        }
+
+                                        // Undo button (disabled if no moves or game frozen)
+                                        IconButton(
+                                                onClick = { viewModel.undoMove() },
+                                                enabled = moveHistory.isNotEmpty() && !isLoading
+                                        ) {
+                                                Icon(
+                                                        imageVector = Icons.AutoMirrored.Filled.Undo,
+                                                        contentDescription = stringResource(R.string.undo)
+                                                )
+                                        }
 
                                 // Home button
                                 IconButton(onClick = onNavigateToHome) {
-                                        Icon(
+                                                Icon(
                                                 imageVector = Icons.Default.Home,
                                                 contentDescription = stringResource(R.string.home)
                                         )
@@ -652,9 +827,9 @@ fun GameScreen(
                                 showResetConfirmation = false
                         },
                         onDismiss = { showResetConfirmation = false }
-                )
-        }
-}
+                                                )
+                                        }
+                                }
 
 /** Dialog to confirm game reset when the game is still in progress. */
 @Composable
@@ -670,4 +845,5 @@ fun ResetConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
                         TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                 }
         )
-}
+                        }
+                
