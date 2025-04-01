@@ -66,7 +66,7 @@ fun StartScreen(
     var winLength by remember { mutableIntStateOf(5) }
 
     // Determine AI support for different game modes
-    val aiSupportedModes = remember { setOf("standard", "tictactoe", "connect4") }
+    val aiSupportedModes = remember { setOf("standard", "tictactoe", "connect4", "hex") }
 
     Scaffold(
             bottomBar = {

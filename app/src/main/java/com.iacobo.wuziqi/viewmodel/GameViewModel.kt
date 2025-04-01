@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private val aiEngine = WuziqiAIEngine(Random())
+private val hexAiEngine = HexAIEngine(Random.Default)
 
 /** Represents a move in the game with position and player information. */
 data class Move(val row: Int, val col: Int, val player: Int)
@@ -349,8 +350,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             // Short delay to simulate thinking (and avoid UI flicker)
             delay(700)
 
-            // Get best move from AI engine
-            val bestMove = aiEngine.findBestMove(gameState)
+            // Get best move based on the game type
+            val bestMove =
+                    when {
+                        // Hex game - use the HexAIEngine
+                        gameState.boardSize == 11 && gameState.winCondition == 8 -> {
+                            hexAiEngine.findBestMove(gameState)
+                        }
+                        // Other games - use the WuziqiAIEngine
+                        else -> {
+                            aiEngine.findBestMove(gameState)
+                        }
+                    }
 
             if (bestMove != null) {
                 val (row, col) = bestMove
