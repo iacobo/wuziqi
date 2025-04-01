@@ -155,6 +155,12 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             gameState.board[row][col] = EMPTY
         }
 
+        // 3.5 New: Check for and block open three threats with our improved detection
+        val openThreatBlock = prioritizeBlockingOpenThreats(gameState, candidatePositions)
+        if (openThreatBlock != null) {
+            return openThreatBlock
+        }
+
         // 4. Evaluate each move by pattern matching
         val moveEvaluations = mutableListOf<MoveEvaluation>()
 
@@ -262,14 +268,95 @@ class WuziqiAIEngine(private val random: Random = Random()) {
             // Convert line to pattern string (x for player, o for opponent, . for empty)
             val patternString = lineToPatternString(line, player, opponent)
 
-            // Match patterns
+            // Match patterns in forward direction
             patterns.addAll(matchPatterns(patternString))
+
+            // CRITICAL FIX: For vertical patterns (0,1), we need to also check the reversed pattern
+            // to handle asymmetric detection when stones are placed at the top vs. bottom
+            if (deltaRow == 0 && deltaCol == 1) {
+                // Reverse the pattern string to check the opposite direction
+                val reversedPatternString = patternString.reversed()
+                patterns.addAll(matchPatterns(reversedPatternString))
+            }
         }
 
         // Restore the board
         gameState.board[row][col] = originalValue
 
         return patterns
+    }
+
+    // Additionally, we should improve how findCandidateMoves identifies threats
+    // by modifying the pattern detection when identifying opponent threats
+
+    private fun findOpenThreats(gameState: GameState, player: Int): List<Pair<Int, Int>> {
+        val threats = mutableListOf<Pair<Int, Int>>()
+        val boardSize = gameState.boardSize
+
+        // Check all empty positions on the board
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (gameState.isTileEmpty(row, col)) {
+                    // Temporarily place the player's stone
+                    gameState.board[row][col] = player
+
+                    // Check if this creates a tactical threat (open three)
+                    for ((deltaRow, deltaCol) in DIRECTIONS) {
+                        val line = extractLine(gameState, row, col, deltaRow, deltaCol)
+                        val patternString =
+                                lineToPatternString(
+                                        line,
+                                        player,
+                                        if (player == PLAYER_ONE) PLAYER_TWO else PLAYER_ONE
+                                )
+
+                        // Check both the original pattern and its reverse for vertical direction
+                        val patternsToCheck =
+                                if (deltaRow == 0 && deltaCol == 1) {
+                                    listOf(patternString, patternString.reversed())
+                                } else {
+                                    listOf(patternString)
+                                }
+
+                        // Check each pattern
+                        for (pattern in patternsToCheck) {
+                            for (openThreePattern in OPEN_THREE) {
+                                if (pattern.contains(openThreePattern.pattern)) {
+                                    threats.add(Pair(row, col))
+                                    break // Found a threat in this position
+                                }
+                            }
+                        }
+                    }
+
+                    // Restore the board
+                    gameState.board[row][col] = EMPTY
+                }
+            }
+        }
+
+        return threats
+    }
+
+    // Add this method to help the AI prioritize blocking open threes
+    // This should be called in findPatternBasedMove after the win checks
+    private fun prioritizeBlockingOpenThreats(
+            gameState: GameState,
+            candidatePositions: List<Pair<Int, Int>>
+    ): Pair<Int, Int>? {
+        val humanPlayer = PLAYER_ONE
+
+        // Find all positions where the human player could create an open three
+        val threatPositions = findOpenThreats(gameState, humanPlayer)
+
+        // If there are threat positions that match our candidate moves, prioritize those
+        for (pos in threatPositions) {
+            if (candidatePositions.contains(pos)) {
+                return pos
+            }
+        }
+
+        return null
     }
 
     /** Calculates a score for a potential move. */
