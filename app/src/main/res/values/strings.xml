@@ -60,15 +60,17 @@
     <string name="welcome_wuziqi">Welcome to Wuziqi</string>
     <string name="choose_game_mode">Choose a game mode</string>
     <string name="standard_wuziqi">Wuziqi</string>
-    <string name="standard_wuziqi_desc">15×15 board with 5-in-a-row to win</string>
+    <string name="standard_wuziqi_desc">5-in-a-row to win</string>
     <string name="custom_game">Custom</string>
-    <string name="custom_game_desc">Choose your own board size and win condition</string>
+    <string name="custom_game_desc">Design your own game</string>
     <string name="connect4_title">Connect 4</string>
-    <string name="connect4_description">Classic Connect 4 game with vertical drops</string>
+    <string name="connect4_description">4-in-a-row with gravity</string>
     <string name="tictactoe_title">X\'s &amp; O\'s</string>
-    <string name="tictactoe_description">Classic 3×3 tic-tac-toe game</string>
+    <string name="tictactoe_description">Classic 3×3 tic-tac-toe</string>
     <string name="hex_title">Hex</string>
-    <string name="hex_description">Strategic edge-connection on a hexagonal grid</string>
+    <string name="hex_description">Connect your edges</string>
+    <string name="havannah_title">Havannah</string>
+    <string name="havannah_description">Ring, bridge, fork</string>
 
     <string name="choose_opponent">Choose your opponent</string>
     <string name="play_against_human">Over the board</string>
@@ -92,10 +94,6 @@
     <string name="tictactoe_rules">Tic-Tac-Toe (X\'s and O\'s) is a simple game played on a 3×3 grid.\n\nRules:\n\n• Players take turns placing their mark (X or O) in empty squares.\n\n• X plays first, followed by O.\n\n• The goal is to form a row of three of your marks horizontally, vertically, or diagonally.\n\n• The first player to get three in a row wins.\n\n• If all squares are filled and no player has three in a row, the game is a draw.</string>
     <string name="connect4_rules">Connect 4 is a vertical game where pieces drop to the bottom of the board.\n\nRules:\n\n• Players take turns dropping colored discs into a 7×6 grid.\n\n• The discs fall straight down to the lowest available position in the column.\n\n• Red plays first, followed by Yellow.\n\n• The goal is to connect four of your discs horizontally, vertically, or diagonally.\n\n• The first player to connect four discs wins.\n\n• If the grid fills up completely with no winner, the game is a draw.</string>
     <string name="hex_rules">Hex is a strategic connection game played on a hexagonal grid.\n\nRules:\n\n• Players take turns placing stones of their color on the board.\n\n• Red connects the top and bottom edges, while Blue connects the left and right edges.\n\n• The goal is to create a continuous path connecting your two edges.\n\n• Red plays first, followed by Blue.\n\n• The first player to complete a path between their edges wins.\n\n• There are no draws in Hex - someone always wins!</string>
-
-    <!-- Havannah game -->
-    <string name="havannah_title">Havannah</string>
-    <string name="havannah_description">Hexagonal connection game with three ways to win</string>
     <string name="havannah_rules">Havannah is a sophisticated connection game played on a hexagonal board. Players take turns placing stones on the hexagonal grid.\n\nRules:\n\n• The game is played on a hexagonal board with 10 cells per side.\n\n• Red plays first, followed by Blue.\n\n• Once placed, pieces are never moved or removed.\n\n• The goal is to create one of three winning structures:\n\n1. A Ring: A loop that surrounds at least one cell (empty or not).\n\n2. A Bridge: A connection between any two corner cells of the board.\n\n3. A Fork: A connection between any three board edges (corners don\'t count as edges).\n\n• The first player to create any of these structures wins.</string>
 
 </resources>

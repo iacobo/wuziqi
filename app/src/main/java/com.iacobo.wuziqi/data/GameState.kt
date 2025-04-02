@@ -429,31 +429,31 @@ class GameState // Constructor with custom board size and win condition
         // Reset winning path before checking
         winningPath.clear()
 
-        // Variable to store the win type (1=ring, 2=bridge, 3=fork)
-        var winType = 0
+        // Reset the win type
+        havannahWinType = 0
 
         // Check for rings
         if (checkHavannahRing(playerValue)) {
-            winType = 1
+            havannahWinType = 1
             return true
         }
 
         // Check for bridges (connections between corners)
         if (checkHavannahBridge(playerValue)) {
-            winType = 2
+            havannahWinType = 2
             return true
         }
 
         // Check for forks (connections between three sides)
         if (checkHavannahFork(playerValue)) {
-            winType = 3
+            havannahWinType = 3
             return true
         }
 
         return false
     }
 
-    /** Store the win type for Havannah (1=ring, 2=bridge, 3=fork) */
+    /** Variable to store the win type for Havannah (1=ring, 2=bridge, 3=fork) */
     private var havannahWinType: Int = 0
 
     /** Gets the Havannah win type (1=ring, 2=bridge, 3=fork) */
@@ -464,30 +464,48 @@ class GameState // Constructor with custom board size and win condition
      * one cell.
      */
     private fun checkHavannahRing(playerValue: Int): Boolean {
-        // Create a visited array to track visited cells in our search
-        val visited = Array(boardSize) { BooleanArray(boardSize) }
-
         // Reset the winning path
         winningPath.clear()
 
-        // Look for rings starting from each player's stone
+        // Create a visited array
+        val visited = Array(boardSize) { BooleanArray(boardSize) { false } }
+
+        // For each player's stone, try to find a ring starting from it
         for (row in 0 until boardSize) {
             for (col in 0 until boardSize) {
                 if (board[row][col] == playerValue) {
-                    // Reset visited for each starting point
+                    // Reset visited array for each starting position
                     for (r in 0 until boardSize) {
                         for (c in 0 until boardSize) {
                             visited[r][c] = false
                         }
                     }
 
-                    // Try to find a ring starting from this cell
-                    val ringPath = mutableSetOf<Pair<Int, Int>>()
-                    if (findRing(row, col, row, col, playerValue, visited, ringPath, 0)) {
-                        // Copy the ring path to the winning path
-                        winningPath.addAll(ringPath)
-                        havannahWinType = 1 // Ring win
-                        return true
+                    // Track the path being built
+                    val currentPath = mutableSetOf<Pair<Int, Int>>()
+
+                    // Try to find a ring starting from this stone
+                    if (findRingDFS(
+                                    row,
+                                    col,
+                                    row,
+                                    col,
+                                    playerValue,
+                                    visited,
+                                    currentPath,
+                                    mutableSetOf(),
+                                    0
+                            )
+                    ) {
+                        // Check if this is a true ring (must enclose at least one cell)
+                        if (currentPath.size >= 6
+                        ) { // Minimum size for a ring that can enclose a cell
+                            // Verify that the ring actually encloses at least one cell
+                            if (verifyRingEnclosesCell(currentPath, playerValue)) {
+                                winningPath.addAll(currentPath)
+                                return true
+                            }
+                        }
                     }
                 }
             }
@@ -496,29 +514,28 @@ class GameState // Constructor with custom board size and win condition
         return false
     }
 
-    /** Recursively searches for a ring starting from the given cell. */
-    private fun findRing(
+    /** DFS to find a ring (cycle) in the player's connected stones. */
+    private fun findRingDFS(
             startRow: Int,
-            startCol: Int,
-            row: Int,
-            col: Int,
-            playerValue: Int,
-            visited: Array<BooleanArray>,
-            path: MutableSet<Pair<Int, Int>>,
-            depth: Int
+            startCol: Int, // Starting position
+            currentRow: Int,
+            currentCol: Int, // Current position
+            playerValue: Int, // Player we're checking for
+            visited: Array<BooleanArray>, // Visited positions
+            currentPath: MutableSet<Pair<Int, Int>>, // Current path being built
+            exploredEdges:
+                    MutableSet<
+                            Pair<Pair<Int, Int>, Pair<Int, Int>>>, // Edges we've already explored
+            depth: Int // Current depth of search
     ): Boolean {
-        // Base case: if we've returned to the start after visiting at least 3 cells, we've found a
-        // ring
-        if (depth > 2 && row == startRow && col == startCol) {
-            return true
-        }
+        // Add current position to path
+        currentPath.add(Pair(currentRow, currentCol))
 
-        // Mark current cell as visited
-        visited[row][col] = true
-        path.add(Pair(row, col))
+        // Mark current position as visited
+        visited[currentRow][currentCol] = true
 
-        // Define all six neighbor directions for a hexagonal grid
-        val neighbors =
+        // Check all six neighboring positions
+        val directions =
                 arrayOf(
                         Pair(-1, 0), // Top-left
                         Pair(-1, 1), // Top-right
@@ -528,46 +545,175 @@ class GameState // Constructor with custom board size and win condition
                         Pair(1, 0) // Bottom-right
                 )
 
-        // Check all neighbors
-        for ((dr, dc) in neighbors) {
-            val newRow = row + dr
-            val newCol = col + dc
+        for ((dr, dc) in directions) {
+            val newRow = currentRow + dr
+            val newCol = currentCol + dc
 
-            // Check if the neighbor is valid, belongs to the player
-            if (newRow in 0 until boardSize &&
-                            newCol in 0 until boardSize &&
-                            board[newRow][newCol] == playerValue
-            ) {
+            // Skip invalid positions
+            if (newRow < 0 || newRow >= boardSize || newCol < 0 || newCol >= boardSize) {
+                continue
+            }
 
-                // If it's the starting cell and we've visited at least 3 cells, we've found a ring
-                if (newRow == startRow && newCol == startCol && depth >= 2) {
-                    return true
-                }
+            // Skip positions that don't have the player's stone
+            if (board[newRow][newCol] != playerValue) {
+                continue
+            }
 
-                // Only visit unvisited cells except for the starting cell
-                if (!visited[newRow][newCol] ||
-                                (newRow == startRow && newCol == startCol && depth >= 2)
-                ) {
-                    if (findRing(
-                                    startRow,
-                                    startCol,
-                                    newRow,
-                                    newCol,
-                                    playerValue,
-                                    visited,
-                                    path,
-                                    depth + 1
-                            )
-                    ) {
-                        return true
+            // Check if this completes a ring
+            if ((newRow == startRow && newCol == startCol) && depth >= 5) {
+                // We found a ring (cycle) with at least 6 stones
+                return true
+            }
+
+            // Create an edge representation (sorted pair of positions)
+            val edge =
+                    if (Pair(currentRow, currentCol) < Pair(newRow, newCol)) {
+                        Pair(Pair(currentRow, currentCol), Pair(newRow, newCol))
+                    } else {
+                        Pair(Pair(newRow, newCol), Pair(currentRow, currentCol))
                     }
+
+            // Skip if we've already explored this edge
+            if (edge in exploredEdges) {
+                continue
+            }
+
+            // Mark this edge as explored
+            exploredEdges.add(edge)
+
+            // If the neighbor is unvisited, recursively search from it
+            if (!visited[newRow][newCol]) {
+                if (findRingDFS(
+                                startRow,
+                                startCol,
+                                newRow,
+                                newCol,
+                                playerValue,
+                                visited.map { it.clone() }.toTypedArray(),
+                                currentPath,
+                                exploredEdges,
+                                depth + 1
+                        )
+                ) {
+                    return true
                 }
             }
         }
 
-        // Backtrack
-        path.remove(Pair(row, col))
+        // Remove current position from path (backtrack)
+        currentPath.remove(Pair(currentRow, currentCol))
+
         return false
+    }
+
+    /** Verifies that a ring actually encloses at least one cell. */
+    private fun verifyRingEnclosesCell(ring: Set<Pair<Int, Int>>, playerValue: Int): Boolean {
+        // Find a cell that's inside the ring
+        val boardCenter = boardSize / 2
+        val potentialInnerCells = mutableListOf<Pair<Int, Int>>()
+
+        // Find the bounding box of the ring
+        val minRow = ring.minOf { it.first }
+        val maxRow = ring.maxOf { it.first }
+        val minCol = ring.minOf { it.second }
+        val maxCol = ring.maxOf { it.second }
+
+        // Check all cells within the bounding box
+        for (row in minRow..maxRow) {
+            for (col in minCol..maxCol) {
+                // Skip cells that are part of the ring
+                if (Pair(row, col) in ring) {
+                    continue
+                }
+
+                // Skip cells that are outside the board bounds
+                if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) {
+                    continue
+                }
+
+                // This is a potential inner cell
+                potentialInnerCells.add(Pair(row, col))
+            }
+        }
+
+        // If there are no potential inner cells, this can't be a valid ring
+        if (potentialInnerCells.isEmpty()) {
+            return false
+        }
+
+        // Check if any of the potential inner cells is truly inside the ring
+        // For Havannah, a cell is inside the ring if it can't reach the edge of the board
+        // without crossing the ring
+
+        // Pick a test cell (preferably near the center of the bounding box)
+        val testCell =
+                potentialInnerCells.minByOrNull {
+                    (it.first - ((minRow + maxRow) / 2)).let { it * it } +
+                            (it.second - ((minCol + maxCol) / 2)).let { it * it }
+                }
+                        ?: return false
+
+        // Check if the test cell is enclosed (cannot reach the edge without crossing the ring)
+        val visited = Array(boardSize) { BooleanArray(boardSize) { false } }
+        val enclosedCells = floodFillFromCell(testCell.first, testCell.second, visited, ring)
+
+        // If any enclosed cell contains a board edge, the ring doesn't enclose anything
+        for (cell in enclosedCells) {
+            val (row, col) = cell
+            if (row == 0 || row == boardSize - 1 || col == 0 || col == boardSize - 1) {
+                return false
+            }
+        }
+
+        // The ring encloses at least one cell
+        return enclosedCells.isNotEmpty()
+    }
+
+    /** Performs a flood fill from a starting cell, avoiding ring cells. */
+    private fun floodFillFromCell(
+            startRow: Int,
+            startCol: Int,
+            visited: Array<BooleanArray>,
+            ringCells: Set<Pair<Int, Int>>
+    ): Set<Pair<Int, Int>> {
+        // The cells found by the flood fill
+        val result = mutableSetOf<Pair<Int, Int>>()
+
+        // Skip if invalid cell
+        if (startRow < 0 || startRow >= boardSize || startCol < 0 || startCol >= boardSize) {
+            return result
+        }
+
+        // Skip if already visited or part of the ring
+        if (visited[startRow][startCol] || Pair(startRow, startCol) in ringCells) {
+            return result
+        }
+
+        // Mark as visited and add to result
+        visited[startRow][startCol] = true
+        result.add(Pair(startRow, startCol))
+
+        // Check all six neighbors
+        val directions =
+                arrayOf(
+                        Pair(-1, 0), // Top-left
+                        Pair(-1, 1), // Top-right
+                        Pair(0, -1), // Left
+                        Pair(0, 1), // Right
+                        Pair(1, -1), // Bottom-left
+                        Pair(1, 0) // Bottom-right
+                )
+
+        // Recursively flood fill from each neighbor
+        for ((dr, dc) in directions) {
+            val newRow = startRow + dr
+            val newCol = startCol + dc
+
+            val newCells = floodFillFromCell(newRow, newCol, visited, ringCells)
+            result.addAll(newCells)
+        }
+
+        return result
     }
 
     /**
