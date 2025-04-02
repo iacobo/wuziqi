@@ -53,7 +53,7 @@ fun GameScreen(
         // Get device rotation from the window manager
         val context = LocalContext.current
         val windowManager = context.getSystemService(android.view.WindowManager::class.java)
-        val rotation = windowManager.defaultDisplay.rotation
+        val rotation = context.resources.configuration.orientation
 
         // Extract game state
         val gameState = viewModel.gameState

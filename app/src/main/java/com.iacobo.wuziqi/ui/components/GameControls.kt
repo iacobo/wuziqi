@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Replay
@@ -115,7 +115,7 @@ fun GameControlsHorizontal(
         // How to Play button
         IconButton(onClick = onHowToPlay) {
             Icon(
-                    imageVector = Icons.Default.Help,
+                    imageVector = Icons.AutoMirrored.Filled.Help,
                     contentDescription = stringResource(R.string.how_to_play)
             )
         }
@@ -171,7 +171,7 @@ fun GameControlsVertical(
     // How to Play button
     IconButton(onClick = onHowToPlay) {
         Icon(
-                imageVector = Icons.Default.Help,
+                imageVector = Icons.AutoMirrored.Filled.Help,
                 contentDescription = stringResource(R.string.how_to_play)
         )
     }
@@ -211,7 +211,7 @@ fun GameControlsVerticalInverted(
     // How to Play button
     IconButton(onClick = onHowToPlay) {
         Icon(
-                imageVector = Icons.Default.Help,
+                imageVector = Icons.AutoMirrored.Filled.Help,
                 contentDescription = stringResource(R.string.how_to_play)
         )
     }
