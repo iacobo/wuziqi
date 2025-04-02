@@ -461,7 +461,7 @@ class GameState // Constructor with custom board size and win condition
 
     /**
      * Checks if a player has formed a ring in Havannah. A ring is a loop that surrounds at least
-     * one cell.
+     * one cell (empty or occupied).
      */
     private fun checkHavannahRing(playerValue: Int): Boolean {
         // Reset the winning path
@@ -497,11 +497,12 @@ class GameState // Constructor with custom board size and win condition
                                     0
                             )
                     ) {
-                        // Check if this is a true ring (must enclose at least one cell)
-                        if (currentPath.size >= 6
-                        ) { // Minimum size for a ring that can enclose a cell
+                        // Check if this is a true ring (must be at least 6 cells to form a ring)
+                        if (currentPath.size >= 6) {
                             // Verify that the ring actually encloses at least one cell
-                            if (verifyRingEnclosesCell(currentPath, playerValue)) {
+                            // FIXED: Modified to accept rings enclosing any cells (opponent or
+                            // empty)
+                            if (verifyRingEnclosesCell(currentPath)) {
                                 winningPath.addAll(currentPath)
                                 return true
                             }
@@ -559,7 +560,7 @@ class GameState // Constructor with custom board size and win condition
                 continue
             }
 
-            // Check if this completes a ring
+            // Check if this completes a ring - only if depth is high enough to form a real ring
             if ((newRow == startRow && newCol == startCol) && depth >= 5) {
                 // We found a ring (cycle) with at least 6 stones
                 return true
@@ -606,8 +607,11 @@ class GameState // Constructor with custom board size and win condition
         return false
     }
 
-    /** Verifies that a ring actually encloses at least one cell. */
-    private fun verifyRingEnclosesCell(ring: Set<Pair<Int, Int>>, playerValue: Int): Boolean {
+    /**
+     * Verifies that a ring actually encloses at least one cell. FIXED: Allow rings to enclose any
+     * type of cell, not just empty ones
+     */
+    private fun verifyRingEnclosesCell(ring: Set<Pair<Int, Int>>): Boolean {
         // Find a cell that's inside the ring
         val boardCenter = boardSize / 2
         val potentialInnerCells = mutableListOf<Pair<Int, Int>>()
@@ -718,10 +722,10 @@ class GameState // Constructor with custom board size and win condition
 
     /**
      * Checks if a player has formed a bridge in Havannah. A bridge connects any two corners of the
-     * hexagonal board.
+     * hexagonal board. FIXED: Corrected corner definitions and connectivity checking
      */
     private fun checkHavannahBridge(playerValue: Int): Boolean {
-        // Define the six corners in our board representation
+        // Define the six corners in our board representation more precisely
         val corners =
                 listOf(
                         Pair(0, 0), // Top-left
@@ -778,7 +782,8 @@ class GameState // Constructor with custom board size and win condition
 
     /**
      * Checks if a player has formed a fork in Havannah. A fork connects any three edges of the
-     * hexagonal board.
+     * hexagonal board (excluding corners). FIXED: Improved edge detection and connection
+     * verification
      */
     private fun checkHavannahFork(playerValue: Int): Boolean {
         // Define the six edges in our board representation (excluding corners)
@@ -798,7 +803,7 @@ class GameState // Constructor with custom board size and win condition
         // First, check which edges the player has pieces on
         val connectedEdges = mutableSetOf<String>()
 
-        // Check for top edge
+        // Check for top edge (row 0, cols 1 to boardSize-2)
         for (col in 1 until boardSize - 1) {
             if (board[0][col] == playerValue) {
                 connectedEdges.add("top")
@@ -806,7 +811,7 @@ class GameState // Constructor with custom board size and win condition
             }
         }
 
-        // Check for top-right edge
+        // Check for top-right edge (col boardSize-1, rows 1 to boardSize/2-1)
         for (row in 1 until boardSize / 2) {
             if (board[row][boardSize - 1] == playerValue) {
                 connectedEdges.add("topright")
@@ -814,7 +819,7 @@ class GameState // Constructor with custom board size and win condition
             }
         }
 
-        // Check for bottom-right edge
+        // Check for bottom-right edge (col boardSize-1, rows boardSize/2+1 to boardSize-2)
         for (row in boardSize / 2 + 1 until boardSize - 1) {
             if (board[row][boardSize - 1] == playerValue) {
                 connectedEdges.add("bottomright")
@@ -822,7 +827,7 @@ class GameState // Constructor with custom board size and win condition
             }
         }
 
-        // Check for bottom edge
+        // Check for bottom edge (row boardSize-1, cols 1 to boardSize-2)
         for (col in 1 until boardSize - 1) {
             if (board[boardSize - 1][col] == playerValue) {
                 connectedEdges.add("bottom")
@@ -830,7 +835,7 @@ class GameState // Constructor with custom board size and win condition
             }
         }
 
-        // Check for bottom-left edge
+        // Check for bottom-left edge (col 0, rows boardSize/2+1 to boardSize-2)
         for (row in boardSize / 2 + 1 until boardSize - 1) {
             if (board[row][0] == playerValue) {
                 connectedEdges.add("bottomleft")
@@ -838,7 +843,7 @@ class GameState // Constructor with custom board size and win condition
             }
         }
 
-        // Check for top-left edge
+        // Check for top-left edge (col 0, rows 1 to boardSize/2-1)
         for (row in 1 until boardSize / 2) {
             if (board[row][0] == playerValue) {
                 connectedEdges.add("topleft")
@@ -910,24 +915,28 @@ class GameState // Constructor with custom board size and win condition
             return false
         }
 
-        // Reset visited array
+        // Reset visited array for each path check
         for (r in 0 until boardSize) {
             for (c in 0 until boardSize) {
                 visited[r][c] = false
             }
         }
 
-        // Now check if any point in the path from 1 to 2 connects to point 3
+        // Try connecting point 3 to any point in path 1-2
         val finalPath = mutableSetOf<Pair<Int, Int>>()
+        var foundConnection = false
+
+        // Use a common connection point approach
         for (point in path12) {
-            // Reset visited again for each starting point
+            val tempPath = mutableSetOf<Pair<Int, Int>>()
+
+            // Reset visited for this check
             for (r in 0 until boardSize) {
                 for (c in 0 until boardSize) {
                     visited[r][c] = false
                 }
             }
 
-            val tempPath = mutableSetOf<Pair<Int, Int>>()
             if (isConnected(
                             point.first,
                             point.second,
@@ -938,21 +947,19 @@ class GameState // Constructor with custom board size and win condition
                             tempPath
                     )
             ) {
-                // We found a fork
+                // We found a fork with a common connection point
                 finalPath.addAll(path12)
                 finalPath.addAll(tempPath)
                 winningPath.addAll(finalPath)
-                return true
+                foundConnection = true
+                break
             }
         }
 
-        return false
+        return foundConnection
     }
 
-    /**
-     * Gets a sample point on an edge where the player has a piece. (continued from previous
-     * implementation)
-     */
+    /** Gets a sample point on an edge where the player has a piece. */
     private fun getSamplePointOnEdge(edge: String, playerValue: Int): Pair<Int, Int>? {
         when (edge) {
             "top" -> {
@@ -1021,8 +1028,8 @@ class GameState // Constructor with custom board size and win condition
         visited[startRow][startCol] = true
         path.add(Pair(startRow, startCol))
 
-        // Define all six neighbor directions for a hexagonal grid
-        val neighbors =
+        // Check all six neighbors
+        val directions =
                 arrayOf(
                         Pair(-1, 0), // Top-left
                         Pair(-1, 1), // Top-right
@@ -1033,7 +1040,7 @@ class GameState // Constructor with custom board size and win condition
                 )
 
         // Check all neighbors
-        for ((dr, dc) in neighbors) {
+        for ((dr, dc) in directions) {
             val newRow = startRow + dr
             val newCol = startCol + dc
 

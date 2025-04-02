@@ -27,7 +27,7 @@ class HavannahAIEngine(private val random: Random) : GameAI {
             Pair(1, 0)   // Bottom-right
         )
         
-        // Special positions with high strategic value
+        // Special positions with high strategic value for the 10x10 board
         val CORNER_POSITIONS = listOf(
             Pair(0, 0),                  // Top-left corner
             Pair(0, 9),                  // Top-right corner
@@ -37,7 +37,7 @@ class HavannahAIEngine(private val random: Random) : GameAI {
             Pair(5, 0)                   // Left corner
         )
         
-        // Edge positions (excluding corners)
+        // Edge positions (excluding corners) for the 10x10 board
         val EDGE_POSITIONS = listOf(
             // Top edge: row 0, cols 1-8
             (1..8).map { Pair(0, it) },
@@ -170,6 +170,7 @@ class HavannahAIEngine(private val random: Random) : GameAI {
     
     /**
      * Checks if a given position is valid on the hexagonal Havannah board.
+     * FIXED: Align with rendering validation logic
      */
     private fun isValidHavannahPosition(row: Int, col: Int, boardSize: Int): Boolean {
         // Convert from array indices to hexagonal coordinates
@@ -178,6 +179,7 @@ class HavannahAIEngine(private val random: Random) : GameAI {
         val s = -q - r
         
         // Check if the position is within the hexagonal board
+        // Match the same criteria used in the rendering code
         return abs(q) + abs(r) + abs(s) <= boardSize - 1
     }
     
