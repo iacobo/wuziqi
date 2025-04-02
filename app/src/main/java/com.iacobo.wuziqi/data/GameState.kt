@@ -567,7 +567,7 @@ class GameState // Constructor with custom board size and win condition
 
             // Create an edge representation (sorted pair of positions)
             val edge =
-                    if (Pair(currentRow, currentCol) < Pair(newRow, newCol)) {
+                    if (currentRow < newRow || (currentRow == newRow && currentCol < newCol)) {
                         Pair(Pair(currentRow, currentCol), Pair(newRow, newCol))
                     } else {
                         Pair(Pair(newRow, newCol), Pair(currentRow, currentCol))
