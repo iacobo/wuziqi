@@ -69,8 +69,8 @@ class HavannahBoard : GameBoard {
         val winningPath = if (isGameFrozen) gameState.getWinningPath() else emptySet()
 
         // Track board dimensions for hexagons
-        var boardWidthPx by remember { mutableStateOf(0) }
-        var boardHeightPx by remember { mutableStateOf(0) }
+        var boardWidthPx by remember { mutableStateOf(0f) }
+        var boardHeightPx by remember { mutableStateOf(0f) }
 
         Box(modifier = Modifier.aspectRatio(1f).padding(16.dp).background(backgroundColor)) {
             Canvas(
