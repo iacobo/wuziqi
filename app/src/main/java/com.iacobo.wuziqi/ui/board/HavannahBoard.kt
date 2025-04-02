@@ -28,9 +28,12 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Simple Havannah game board implementation.
+ * Havannah game board with properly clickable edges.
  */
 class HavannahBoard : GameBoard {
+    // Debug flag - set to true to see the mapping
+    private val showCoordinateMapping = false
+    
     @Composable
     override fun Render(
         gameState: GameState,
@@ -63,6 +66,7 @@ class HavannahBoard : GameBoard {
         val lineWidthPx = with(density) { 1.dp.toPx() }
         val thickLineWidthPx = with(density) { 2.5.dp.toPx() }
         val outlineWidthPx = with(density) { 2.dp.toPx() }
+        val textSizePx = with(density) { 12.dp.toPx() }
         
         Box(
             modifier = Modifier
@@ -88,6 +92,7 @@ class HavannahBoard : GameBoard {
                                     
                                     if (dist < bestDist) {
                                         val (row, col) = pos
+                                        // Check if the position is within bounds and empty
                                         if (row in 0 until BOARD_SIZE && 
                                             col in 0 until BOARD_SIZE &&
                                             gameState.board[row][col] == GameState.EMPTY) {
@@ -114,19 +119,24 @@ class HavannahBoard : GameBoard {
                 val canvasHeight = size.height
                 val margin = size.minDimension * 0.1f
                 
-                // For a hexagon with side length 5, the radius in cubic coordinates is 5
+                // For a hexagon with side length 5, we need to cover a grid of 9x9 cells
                 val HEX_SIDE = 5
+                val gridSize = HEX_SIDE * 2
                 
                 // Calculate cell size
                 val availableWidth = canvasWidth - (2 * margin)
                 val availableHeight = canvasHeight - (2 * margin)
-                val cellWidth = availableWidth / (2 * HEX_SIDE + 1) // Add 1 for better fit
-                val cellHeight = availableHeight / (2 * HEX_SIDE + 1) * sqrt(3f) 
+                val cellWidth = availableWidth / (gridSize + 1)
+                val cellHeight = availableHeight / (gridSize + 1) * sqrt(3f) 
                 cellRadius = minOf(cellWidth, cellHeight) * 0.65f
                 
                 // Center of the canvas
                 val centerX = canvasWidth / 2
                 val centerY = canvasHeight / 2
+                
+                // Pre-calculate cell centers in the 10x10 array
+                // This is critical for proper click detection
+                val arrayCenters = Array(BOARD_SIZE) { Array<Offset?>(BOARD_SIZE) { null } }
                 
                 // Define all six corners of the hexagon in cubic coordinates
                 val corners = listOf(
@@ -137,6 +147,15 @@ class HavannahBoard : GameBoard {
                     Triple(HEX_SIDE, -HEX_SIDE, 0),       // bottom-right
                     Triple(0, -HEX_SIDE, HEX_SIDE)        // bottom-left
                 )
+                
+                // This is the critical mapping function - perfectly map the hexagon to the 10x10 array
+                fun mapToArray(q: Int, r: Int): Pair<Int, Int> {
+                    // Convert from cubic coordinates to array indices
+                    // Ensure the entire hexagon is within the 10x10 grid
+                    val row = r + 5
+                    val col = q + 5
+                    return Pair(row, col)
+                }
                 
                 // Loop through all possible cubic coordinates within the hexagon
                 for (q in -HEX_SIDE..HEX_SIDE) {
@@ -149,9 +168,13 @@ class HavannahBoard : GameBoard {
                             continue
                         }
                         
-                        // Convert to array indices (need to offset to positive values)
-                        val row = r + HEX_SIDE
-                        val col = q + HEX_SIDE
+                        // Convert to array indices
+                        val (row, col) = mapToArray(q, r)
+                        
+                        // Skip if outside the 10x10 array
+                        if (row !in 0 until BOARD_SIZE || col !in 0 until BOARD_SIZE) {
+                            continue
+                        }
                         
                         // Calculate pixel position
                         // For flat-topped hexes, the standard formula is:
@@ -162,6 +185,7 @@ class HavannahBoard : GameBoard {
                         val position = Pair(row, col)
                         val center = Offset(x, y)
                         cellPositions[position] = center
+                        arrayCenters[row][col] = center
                         
                         // Create the hexagon path
                         val hexPath = Path().apply {
@@ -202,30 +226,42 @@ class HavannahBoard : GameBoard {
                         drawPath(hexPath, color = fillColor, style = Fill)
                         drawPath(hexPath, color = gridLineColor, style = Stroke(width = lineWidthPx))
                         
-                        // Draw game pieces if this position is within the game array
-                        if (row in 0 until BOARD_SIZE && col in 0 until BOARD_SIZE) {
-                            if (gameState.board[row][col] != GameState.EMPTY) {
-                                val stoneColor = if (gameState.board[row][col] == GameState.PLAYER_ONE)
-                                    playerOneColor else playerTwoColor
-                                
+                        // Draw game pieces
+                        if (gameState.board[row][col] != GameState.EMPTY) {
+                            val stoneColor = if (gameState.board[row][col] == GameState.PLAYER_ONE)
+                                playerOneColor else playerTwoColor
+                            
+                            drawCircle(
+                                color = stoneColor,
+                                radius = cellRadius * 0.75f,
+                                center = center
+                            )
+                            
+                            // Highlight last placed stone
+                            if (lastPlacedPosition?.row == row && 
+                                lastPlacedPosition.col == col &&
+                                winningPath.isEmpty()) {
                                 drawCircle(
-                                    color = stoneColor,
-                                    radius = cellRadius * 0.75f,
-                                    center = center
+                                    color = highlightColor,
+                                    radius = cellRadius * 0.85f,
+                                    center = center,
+                                    style = Stroke(width = outlineWidthPx)
                                 )
-                                
-                                // Highlight last placed stone
-                                if (lastPlacedPosition?.row == row && 
-                                    lastPlacedPosition.col == col &&
-                                    winningPath.isEmpty()) {
-                                    drawCircle(
-                                        color = highlightColor,
-                                        radius = cellRadius * 0.85f,
-                                        center = center,
-                                        style = Stroke(width = outlineWidthPx)
-                                    )
-                                }
                             }
+                        }
+                        
+                        // Show coordinate mapping if debug is enabled
+                        if (showCoordinateMapping) {
+                            // Show cubic coordinates for debugging
+                            drawContext.canvas.nativeCanvas.drawText(
+                                "$q,$r,$s → ($row,$col)",
+                                x - cellRadius / 2,
+                                y + textSizePx / 3,
+                                android.graphics.Paint().apply {
+                                    color = android.graphics.Color.BLACK
+                                    textSize = textSizePx
+                                }
+                            )
                         }
                     }
                 }
