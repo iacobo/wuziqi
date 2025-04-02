@@ -31,9 +31,6 @@ import kotlin.math.sqrt
  * Havannah game board with properly clickable edges.
  */
 class HavannahBoard : GameBoard {
-    // Debug flag - set to true to see the mapping
-    private val showCoordinateMapping = false
-    
     @Composable
     override fun Render(
         gameState: GameState,
@@ -66,7 +63,6 @@ class HavannahBoard : GameBoard {
         val lineWidthPx = with(density) { 1.dp.toPx() }
         val thickLineWidthPx = with(density) { 2.5.dp.toPx() }
         val outlineWidthPx = with(density) { 2.dp.toPx() }
-        val textSizePx = with(density) { 12.dp.toPx() }
         
         Box(
             modifier = Modifier
@@ -248,20 +244,6 @@ class HavannahBoard : GameBoard {
                                     style = Stroke(width = outlineWidthPx)
                                 )
                             }
-                        }
-                        
-                        // Show coordinate mapping if debug is enabled
-                        if (showCoordinateMapping) {
-                            // Show cubic coordinates for debugging
-                            drawContext.canvas.nativeCanvas.drawText(
-                                "$q,$r,$s → ($row,$col)",
-                                x - cellRadius / 2,
-                                y + textSizePx / 3,
-                                android.graphics.Paint().apply {
-                                    color = android.graphics.Color.BLACK
-                                    textSize = textSizePx
-                                }
-                            )
                         }
                     }
                 }
