@@ -78,9 +78,6 @@ class HavannahBoard : GameBoard {
                             Modifier.fillMaxSize().pointerInput(isGameFrozen) {
                                 if (!isGameFrozen) {
                                     detectTapGestures { tapOffset ->
-                                        // Update board dimensions
-                                        boardWidthPx = size.width
-                                        boardHeightPx = size.height
 
                                         // Havannah uses a hexagonal board layout
                                         // Calculate the grid dimensions and spacing
