@@ -45,7 +45,8 @@ class HavannahBoard : GameBoard {
     private data class HexCoord(val q: Int, val r: Int, val s: Int) {
         // Convert to array indices used for board storage
         fun toArrayCoords(boardSize: Int): Pair<Int, Int> {
-            return Pair(r + boardSize - 1, q + boardSize - 1)
+            // Center the hexagon in the array consistently
+            return Pair(r + (boardSize - 1) / 2, q + (boardSize - 1) / 2)
         }
         
         companion object {
@@ -68,7 +69,7 @@ class HavannahBoard : GameBoard {
     ) {
         // Board configuration
         val boardSize = gameState.boardSize
-        val boardRadius = boardSize - 1
+        val boardRadius = (boardSize - 1) / 2
         
         // Colors
         val playerOneColor = HexPieceRed
@@ -118,7 +119,7 @@ class HavannahBoard : GameBoard {
                                 
                                 // Check all valid hex positions
                                 hexCenters.forEach { (position, center) ->
-                                    val distance = (tapOffset - center).getDistance()
+                                    val distance = sqrt((tapOffset.x - center.x).pow(2) + (tapOffset.y - center.y).pow(2))
                                     
                                     // Check if this is a valid and empty position
                                     val (row, col) = position
@@ -134,8 +135,10 @@ class HavannahBoard : GameBoard {
                                 
                                 // If we found a valid position within range, select it
                                 bestPosition?.let { (row, col) ->
-                                    val hexSize = minOf(boardWidthPx, boardHeightPx) / ((boardRadius * 2) + 3)
-                                    if (bestDistance < hexSize * 0.8f) {
+                                    val hexSize = minOf(boardWidthPx, boardHeightPx) / ((boardSize + 1) * 1.2f)
+                                    // Use a more generous tap radius
+                                    val tapRadius = hexSize * 1.2f  // Increased for easier selection
+                                    if (bestDistance < tapRadius) {
                                         onMoveSelected(row, col)
                                     }
                                 }
@@ -152,20 +155,21 @@ class HavannahBoard : GameBoard {
                 validHexCoords.clear()
                 
                 // Calculate hex size to fit the board within the canvas
-                // Add margin by dividing by slightly more than the actual board diameter
-                val hexSize = minOf(boardWidthPx, boardHeightPx) / ((boardRadius * 2) + 3)
+                // Increased margin for better fit
+                val hexSize = minOf(boardWidthPx, boardHeightPx) / ((boardSize + 1) * 1.2f)
                 
                 // Center of the canvas
                 val centerX = boardWidthPx / 2
                 val centerY = boardHeightPx / 2
                 
                 // Generate all valid hex coordinates for a hexagonal board
-                for (q in -boardRadius..boardRadius) {
-                    for (r in -boardRadius..boardRadius) {
+                for (q in -boardSize..boardSize) {
+                    for (r in -boardSize..boardSize) {
                         val s = -q - r
                         
                         // Check if this coordinate is within the hexagonal board
-                        if (kotlin.math.abs(q) + kotlin.math.abs(r) + kotlin.math.abs(s) <= 2 * boardRadius) {
+                        // Consistent with isValidHavannahPosition in AI
+                        if (kotlin.math.abs(q) + kotlin.math.abs(r) + kotlin.math.abs(s) <= boardSize - 1) {
                             // Add to valid coordinates
                             validHexCoords.add(HexCoord(q, r, s))
                             
