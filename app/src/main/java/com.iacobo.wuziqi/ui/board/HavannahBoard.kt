@@ -176,8 +176,7 @@ class HavannahBoard : GameBoard {
                         // Convert axial coordinates to array indices for storage
                         // For a hexagonal board stored in a rectangular array:
                         // row = r + maxDistance
-                        // col = q + maxDistance + (r / 2)
-                        // This mapping ensures proper storage and overlap
+                        // col = q + maxDistance
                         val row = r + maxDistance
                         val col = q + maxDistance
                         
@@ -207,14 +206,10 @@ class HavannahBoard : GameBoard {
                         }
                         
                         // Determine cell type (corner, edge, or center)
-                        val isCorner = false
-                        for (corner in corners) {
-                            if (q == corner.first && r == corner.second) {
-                                isCorner = true
-                                break
-                            }
-                        }
+                        // Check if this is a corner cell
+                        val isCorner = corners.contains(Pair(q, r))
                         
+                        // Check if this is an edge cell (but not a corner)
                         val isEdge = (abs(q) == maxDistance || abs(r) == maxDistance || abs(s) == maxDistance) && !isCorner
                         
                         // Fill color based on cell type
