@@ -415,18 +415,16 @@ class GameState // Constructor with custom board size and win condition
     }
 
     /**
-     * Completely rewritten win logic for Havannah. Checks all three win conditions:
+     * Completely rewritten win logic for Havannah to properly detect all three win conditions:
      * 1. Ring: A closed loop of pieces that surrounds at least one cell
      * 2. Bridge: A connection between any two corners
-     * 3. Fork: A connection between any three sides
+     * 3. Fork: A connection between any three sides (not including corners)
      */
-    // Variables to store win information
-    private var havannahWinType = 0
-
-    /** Main check function that tests all win conditions */
     fun checkHavannahWin(playerValue: Int): Boolean {
-        // Only for Havannah game
-        if (boardSize != 10 || winCondition != 9) {
+        // Only run for Havannah game
+        // boardSize in this case represents the edge length of the hexagon
+        val edgeLength = boardSize
+        if (edgeLength <= 0 || winCondition != 9) {
             return false
         }
 
@@ -436,17 +434,19 @@ class GameState // Constructor with custom board size and win condition
         // Reset win type
         havannahWinType = 0
 
-        // Check each win condition
+        // Check for a ring first
         if (checkForRing(playerValue)) {
             havannahWinType = 1
             return true
         }
 
+        // Check for a bridge
         if (checkForBridge(playerValue)) {
             havannahWinType = 2
             return true
         }
 
+        // Check for a fork
         if (checkForFork(playerValue)) {
             havannahWinType = 3
             return true
@@ -455,124 +455,179 @@ class GameState // Constructor with custom board size and win condition
         return false
     }
 
+    // Store the win type for UI feedback
+    private var havannahWinType = 0
     fun getWinningType(): Int = havannahWinType
 
-    /** Checks for a ring (closed loop that contains at least one cell) */
+    /**
+     * Detects a ring pattern - a closed loop that surrounds at least one cell. The surrounded cells
+     * can be empty or contain any player's pieces.
+     */
     private fun checkForRing(playerValue: Int): Boolean {
-        val visited = Array(boardSize) { BooleanArray(boardSize) { false } }
-        val tempPath = mutableSetOf<Pair<Int, Int>>()
+        // Build a graph representation of the player's pieces
+        val graph = buildPlayerGraph(playerValue)
+        if (graph.isEmpty()) return false
 
-        // Loop through all cells
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (board[row][col] == playerValue) {
-                    // Reset variables for each starting point
-                    for (r in 0 until boardSize) {
-                        for (c in 0 until boardSize) {
-                            visited[r][c] = false
-                        }
-                    }
+        // For each piece, try to find a cycle
+        for (startPos in graph.keys) {
+            val visited = mutableSetOf<Pair<Int, Int>>()
+            val path = mutableListOf<Pair<Int, Int>>()
 
-                    tempPath.clear()
-
-                    // Try to find a ring from this cell
-                    if (findRing(row, col, row, col, playerValue, visited, tempPath, 0)) {
-                        // We found a ring! Now check if it encloses any cells
-                        if (tempPath.size >= 6 && ringEnclosesAnything(tempPath)) {
-                            winningPath.addAll(tempPath)
-                            return true
-                        }
-                    }
-                }
-            }
-        }
-
-        return false
-    }
-
-    /** Recursive DFS to find a ring */
-    private fun findRing(
-            startRow: Int,
-            startCol: Int,
-            currRow: Int,
-            currCol: Int,
-            playerValue: Int,
-            visited: Array<BooleanArray>,
-            path: MutableSet<Pair<Int, Int>>,
-            depth: Int
-    ): Boolean {
-        // Add to path
-        path.add(Pair(currRow, currCol))
-
-        // Mark as visited
-        visited[currRow][currCol] = true
-
-        // Check all 6 neighbors
-        val directions =
-                arrayOf(
-                        Pair(-1, 0), // Top-left
-                        Pair(-1, 1), // Top-right
-                        Pair(0, -1), // Left
-                        Pair(0, 1), // Right
-                        Pair(1, -1), // Bottom-left
-                        Pair(1, 0) // Bottom-right
-                )
-
-        for ((dr, dc) in directions) {
-            val newRow = currRow + dr
-            val newCol = currCol + dc
-
-            // Skip invalid positions
-            if (newRow < 0 || newRow >= boardSize || newCol < 0 || newCol >= boardSize) {
-                continue
-            }
-
-            // If we found the starting point and we've moved at least 5 steps, we have a ring
-            if (newRow == startRow && newCol == startCol && depth >= 5) {
-                return true
-            }
-
-            // Only follow player's stones that haven't been visited
-            if (board[newRow][newCol] == playerValue && !visited[newRow][newCol]) {
-                if (findRing(
-                                startRow,
-                                startCol,
-                                newRow,
-                                newCol,
-                                playerValue,
-                                visited,
-                                path,
-                                depth + 1
-                        )
-                ) {
+            if (findCycle(startPos, startPos, graph, visited, path, 0)) {
+                // We found a cycle, now check if it surrounds any cells
+                if (path.size >= 6 && cycleEnclosesCell(path)) {
+                    winningPath.clear()
+                    winningPath.addAll(path)
                     return true
                 }
             }
         }
 
-        // Backtrack
-        path.remove(Pair(currRow, currCol))
         return false
     }
 
-    /** Checks if a ring encloses any cells */
-    private fun ringEnclosesAnything(ring: Set<Pair<Int, Int>>): Boolean {
-        // Find a cell inside the ring
-        val minRow = ring.minOf { it.first }
-        val maxRow = ring.maxOf { it.first }
-        val minCol = ring.minOf { it.second }
-        val maxCol = ring.maxOf { it.second }
+    /**
+     * Builds a graph representation of all the player's pieces, where each piece is connected to
+     * adjacent pieces of the same player.
+     */
+    private fun buildPlayerGraph(playerValue: Int): Map<Pair<Int, Int>, List<Pair<Int, Int>>> {
+        val graph = mutableMapOf<Pair<Int, Int>, MutableList<Pair<Int, Int>>>()
 
-        // Find the center of the ring
-        val centerRow = (minRow + maxRow) / 2
-        val centerCol = (minCol + maxCol) / 2
+        // Add all player's pieces to the graph
+        for (row in 0 until boardSize) {
+            for (col in 0 until boardSize) {
+                if (board[row][col] == playerValue) {
+                    val pos = Pair(row, col)
+                    graph[pos] = mutableListOf()
 
-        // Find a cell near the center that's not part of the ring
-        var testRow = centerRow
-        var testCol = centerCol
+                    // Check all 6 neighbors
+                    val directions =
+                            arrayOf(
+                                    Pair(-1, 0), // Top-left
+                                    Pair(-1, 1), // Top-right
+                                    Pair(0, -1), // Left
+                                    Pair(0, 1), // Right
+                                    Pair(1, -1), // Bottom-left
+                                    Pair(1, 0) // Bottom-right
+                            )
 
-        // If the center is part of the ring, look for an adjacent cell
-        if (Pair(testRow, testCol) in ring) {
+                    for ((dr, dc) in directions) {
+                        val newRow = row + dr
+                        val newCol = col + dc
+
+                        if (newRow in 0 until boardSize &&
+                                        newCol in 0 until boardSize &&
+                                        board[newRow][newCol] == playerValue
+                        ) {
+                            graph[pos]!!.add(Pair(newRow, newCol))
+                        }
+                    }
+                }
+            }
+        }
+
+        return graph
+    }
+
+    /**
+     * Find a cycle in the graph using depth-first search. A cycle is a path that starts and ends at
+     * the same position.
+     */
+    private fun findCycle(
+            startPos: Pair<Int, Int>,
+            currentPos: Pair<Int, Int>,
+            graph: Map<Pair<Int, Int>, List<Pair<Int, Int>>>,
+            visited: MutableSet<Pair<Int, Int>>,
+            path: MutableList<Pair<Int, Int>>,
+            depth: Int
+    ): Boolean {
+        // Add current position to path
+        path.add(currentPos)
+        visited.add(currentPos)
+
+        // Get neighbors
+        val neighbors = graph[currentPos] ?: emptyList()
+
+        for (neighbor in neighbors) {
+            // If we found the starting position and moved at least 3 steps, we have a cycle
+            // (Minimum cycle in a hex grid is 6 hexagons, but we've already included
+            // the start position so we need depth >= 5)
+            if (neighbor == startPos && depth >= 5) {
+                return true
+            }
+
+            // Skip visited neighbors
+            if (neighbor in visited) continue
+
+            // Recursively search from this neighbor
+            if (findCycle(startPos, neighbor, graph, visited, path, depth + 1)) {
+                return true
+            }
+        }
+
+        // Backtrack if no cycle found
+        path.removeAt(path.size - 1)
+        return false
+    }
+
+    /**
+     * Checks if a cycle encloses at least one cell. Uses a flood fill algorithm to check if any
+     * cell inside the cycle cannot reach the edge of the board.
+     */
+    private fun cycleEnclosesCell(cycle: List<Pair<Int, Int>>): Boolean {
+        if (cycle.size < 6) return false
+
+        // Find bounds of the cycle
+        val minRow = cycle.minOf { it.first }
+        val maxRow = cycle.maxOf { it.first }
+        val minCol = cycle.minOf { it.second }
+        val maxCol = cycle.maxOf { it.second }
+
+        // Create a set of cycle positions for quick lookup
+        val cycleSet = cycle.toSet()
+
+        // Try to find an interior point
+        for (row in minRow..maxRow) {
+            for (col in minCol..maxCol) {
+                val pos = Pair(row, col)
+
+                // Skip points on the cycle
+                if (pos in cycleSet) continue
+
+                // Skip points outside the board
+                if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) continue
+
+                // Check if this point is enclosed by the cycle
+                if (isEnclosedByLoop(pos, cycleSet)) {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * Checks if a position is enclosed by a loop of stones. Uses flood fill to check if it can
+     * reach the edge of the board.
+     */
+    private fun isEnclosedByLoop(pos: Pair<Int, Int>, loop: Set<Pair<Int, Int>>): Boolean {
+        val visited = mutableSetOf<Pair<Int, Int>>()
+        val queue = ArrayDeque<Pair<Int, Int>>()
+
+        queue.add(pos)
+        visited.add(pos)
+
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            val (row, col) = current
+
+            // If we reached the edge, this cell is not enclosed
+            if (row == 0 || row == boardSize - 1 || col == 0 || col == boardSize - 1) {
+                return false
+            }
+
+            // Check all 6 neighbors
             val directions =
                     arrayOf(
                             Pair(-1, 0),
@@ -583,114 +638,60 @@ class GameState // Constructor with custom board size and win condition
                             Pair(1, 0)
                     )
 
-            var found = false
             for ((dr, dc) in directions) {
-                val newRow = testRow + dr
-                val newCol = testCol + dc
+                val newRow = row + dr
+                val newCol = col + dc
+                val newPos = Pair(newRow, newCol)
 
-                if (newRow in minRow..maxRow &&
-                                newCol in minCol..maxCol &&
-                                Pair(newRow, newCol) !in ring
-                ) {
-                    testRow = newRow
-                    testCol = newCol
-                    found = true
-                    break
+                // Skip invalid positions
+                if (newRow < 0 || newRow >= boardSize || newCol < 0 || newCol >= boardSize) {
+                    continue
                 }
-            }
 
-            // If we couldn't find a non-ring cell, the ring doesn't enclose anything
-            if (!found) {
-                return false
+                // Skip positions on the loop and already visited positions
+                if (newPos in loop || newPos in visited) {
+                    continue
+                }
+
+                queue.add(newPos)
+                visited.add(newPos)
             }
         }
 
-        // Use flood fill to check if the test cell is enclosed
-        val visited = Array(boardSize) { BooleanArray(boardSize) { false } }
-
-        // If the flood fill can reach the edge, the cell is not enclosed
-        return !canReachEdge(testRow, testCol, visited, ring)
+        // If we exhausted all reachable cells and didn't find the edge,
+        // this cell is enclosed
+        return true
     }
 
-    /** Flood fill to check if a position can reach the edge of the board */
-    private fun canReachEdge(
-            row: Int,
-            col: Int,
-            visited: Array<BooleanArray>,
-            blockedCells: Set<Pair<Int, Int>>
-    ): Boolean {
-        // Check if out of bounds or blocked
-        if (row < 0 ||
-                        row >= boardSize ||
-                        col < 0 ||
-                        col >= boardSize ||
-                        visited[row][col] ||
-                        Pair(row, col) in blockedCells
-        ) {
-            return false
-        }
-
-        // Check if we reached the edge
-        if (row == 0 || row == boardSize - 1 || col == 0 || col == boardSize - 1) {
-            return true
-        }
-
-        // Mark as visited
-        visited[row][col] = true
-
-        // Check all six directions
-        val directions =
-                arrayOf(Pair(-1, 0), Pair(-1, 1), Pair(0, -1), Pair(0, 1), Pair(1, -1), Pair(1, 0))
-
-        for ((dr, dc) in directions) {
-            if (canReachEdge(row + dr, col + dc, visited, blockedCells)) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    /** Checks for a bridge (connection between any two corners) */
+    /** Detects a bridge pattern - a path connecting any two corners. */
     private fun checkForBridge(playerValue: Int): Boolean {
-        // Define the 6 corners of the hexagon
-        val corners =
-                listOf(
-                        Pair(0, 0), // top-left
-                        Pair(0, boardSize - 1), // top-right
-                        Pair(boardSize / 2, boardSize - 1), // right
-                        Pair(boardSize - 1, boardSize / 2), // bottom-right
-                        Pair(boardSize - 1, 0), // bottom-left
-                        Pair(boardSize / 2, 0) // left
-                )
+        // Define the 6 corners of the hexagonal board
+        val corners = getCornerPositions()
 
-        // Find which corners have the player's stones
-        val occupiedCorners = corners.filter { (row, col) -> board[row][col] == playerValue }
+        // Get all corners occupied by the player
+        val playerCorners =
+                corners.filter { (row, col) ->
+                    row in 0 until boardSize &&
+                            col in 0 until boardSize &&
+                            board[row][col] == playerValue
+                }
 
-        // Need at least 2 corners for a bridge
-        if (occupiedCorners.size < 2) {
-            return false
-        }
+        // We need at least 2 corners for a bridge
+        if (playerCorners.size < 2) return false
 
-        // Try all pairs of corners
-        for (i in 0 until occupiedCorners.size - 1) {
-            for (j in i + 1 until occupiedCorners.size) {
-                val corner1 = occupiedCorners[i]
-                val corner2 = occupiedCorners[j]
+        // Build a graph of the player's pieces
+        val graph = buildPlayerGraph(playerValue)
 
-                val visited = Array(boardSize) { BooleanArray(boardSize) { false } }
-                val path = mutableSetOf<Pair<Int, Int>>()
+        // Check all pairs of corners
+        for (i in 0 until playerCorners.size - 1) {
+            for (j in i + 1 until playerCorners.size) {
+                val corner1 = playerCorners[i]
+                val corner2 = playerCorners[j]
 
-                if (isConnected(
-                                corner1.first,
-                                corner1.second,
-                                corner2.first,
-                                corner2.second,
-                                playerValue,
-                                visited,
-                                path
-                        )
-                ) {
+                // Find a path between the corners
+                val path = findPath(corner1, corner2, graph)
+                if (path.isNotEmpty()) {
+                    winningPath.clear()
                     winningPath.addAll(path)
                     return true
                 }
@@ -700,66 +701,111 @@ class GameState // Constructor with custom board size and win condition
         return false
     }
 
-    /** Checks for a fork (connection between any three edges) */
-    private fun checkForFork(playerValue: Int): Boolean {
-        // Store pieces on each of the 6 edges (excluding corners)
-        val edges = Array(6) { mutableListOf<Pair<Int, Int>>() }
+    /** Gets the 6 corner positions of the hexagonal board. */
+    private fun getCornerPositions(): List<Pair<Int, Int>> {
+        val range = boardSize - 1
 
-        // Loop through the board to find edge pieces
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                if (board[row][col] != playerValue) {
-                    continue
+        // Convert from cube to array coordinates
+        return listOf(
+                Pair(0, 0), // top-left
+                Pair(0, boardSize - 1), // top-right
+                Pair(boardSize / 2, boardSize - 1), // right
+                Pair(boardSize - 1, boardSize / 2), // bottom-right
+                Pair(boardSize - 1, 0), // bottom-left
+                Pair(boardSize / 2, 0) // left
+        )
+    }
+
+    /** Find a path between two positions in the graph using breadth-first search. */
+    private fun findPath(
+            start: Pair<Int, Int>,
+            end: Pair<Int, Int>,
+            graph: Map<Pair<Int, Int>, List<Pair<Int, Int>>>
+    ): List<Pair<Int, Int>> {
+        // Handle trivial case
+        if (start == end) return listOf(start)
+
+        // Keep track of visited nodes and paths
+        val visited = mutableSetOf<Pair<Int, Int>>()
+        val queue = ArrayDeque<Pair<Pair<Int, Int>, List<Pair<Int, Int>>>>()
+
+        // Start BFS
+        visited.add(start)
+        queue.add(Pair(start, listOf(start)))
+
+        while (queue.isNotEmpty()) {
+            val (current, path) = queue.removeFirst()
+
+            // Get neighbors
+            val neighbors = graph[current] ?: emptyList()
+
+            for (neighbor in neighbors) {
+                if (neighbor == end) {
+                    // Found the end, return the path
+                    return path + neighbor
                 }
 
-                // Skip corners
-                if ((row == 0 && col == 0) ||
-                                (row == 0 && col == boardSize - 1) ||
-                                (row == boardSize / 2 && col == boardSize - 1) ||
-                                (row == boardSize - 1 && col == boardSize / 2) ||
-                                (row == boardSize - 1 && col == 0) ||
-                                (row == boardSize / 2 && col == 0)
-                ) {
-                    continue
-                }
-
-                // Check which edge this is on
-                if (row == 0) {
-                    edges[0].add(Pair(row, col)) // top edge
-                } else if (col == boardSize - 1 && row < boardSize / 2) {
-                    edges[1].add(Pair(row, col)) // top-right edge
-                } else if (col == boardSize - 1 && row > boardSize / 2) {
-                    edges[2].add(Pair(row, col)) // bottom-right edge
-                } else if (row == boardSize - 1) {
-                    edges[3].add(Pair(row, col)) // bottom edge
-                } else if (col == 0 && row > boardSize / 2) {
-                    edges[4].add(Pair(row, col)) // bottom-left edge
-                } else if (col == 0 && row < boardSize / 2) {
-                    edges[5].add(Pair(row, col)) // top-left edge
+                if (neighbor !in visited) {
+                    visited.add(neighbor)
+                    queue.add(Pair(neighbor, path + neighbor))
                 }
             }
         }
 
-        // Count edges with player's pieces
+        // No path found
+        return emptyList()
+    }
+
+    /** Detects a fork pattern - a path connecting any three edges (not including corners). */
+    private fun checkForFork(playerValue: Int): Boolean {
+        // Get all edges of the hexagonal board (excluding corners)
+        val edgeCells = getEdgeCells()
+
+        // Group edge cells by which edge they belong to
+        val edges = Array(6) { mutableListOf<Pair<Int, Int>>() }
+
+        // Populate edge groups
+        for ((row, col) in edgeCells) {
+            if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) continue
+
+            if (board[row][col] != playerValue) continue
+
+            // Determine which edge this cell belongs to
+            val edgeIndex =
+                    when {
+                        row == 0 -> 0 // Top edge
+                        col == boardSize - 1 && row < boardSize / 2 -> 1 // Top-right edge
+                        col == boardSize - 1 && row > boardSize / 2 -> 2 // Bottom-right edge
+                        row == boardSize - 1 -> 3 // Bottom edge
+                        col == 0 && row > boardSize / 2 -> 4 // Bottom-left edge
+                        col == 0 && row < boardSize / 2 -> 5 // Top-left edge
+                        else -> -1 // Not an edge
+                    }
+
+            if (edgeIndex >= 0) {
+                edges[edgeIndex].add(Pair(row, col))
+            }
+        }
+
+        // Get edges with player's pieces
         val occupiedEdges = edges.filter { it.isNotEmpty() }
 
         // Need at least 3 edges for a fork
-        if (occupiedEdges.size < 3) {
-            return false
-        }
+        if (occupiedEdges.size < 3) return false
 
-        // Try all combinations of 3 edges
+        // Build player graph
+        val graph = buildPlayerGraph(playerValue)
+
+        // Check all combinations of 3 edges
         for (i in 0 until occupiedEdges.size - 2) {
             for (j in i + 1 until occupiedEdges.size - 1) {
                 for (k in j + 1 until occupiedEdges.size) {
-                    // Find if these three edges are connected
-                    if (checkEdgesConnected(
-                                    occupiedEdges[i],
-                                    occupiedEdges[j],
-                                    occupiedEdges[k],
-                                    playerValue
-                            )
-                    ) {
+                    val edge1 = occupiedEdges[i]
+                    val edge2 = occupiedEdges[j]
+                    val edge3 = occupiedEdges[k]
+
+                    // Check if these three edges are connected
+                    if (areEdgesConnected(edge1, edge2, edge3, graph)) {
                         return true
                     }
                 }
@@ -769,103 +815,141 @@ class GameState // Constructor with custom board size and win condition
         return false
     }
 
-    /** Checks if three edges are connected by player's stones */
-    private fun checkEdgesConnected(
+    /** Gets all edge cells of the hexagonal board (excluding corners). */
+    private fun getEdgeCells(): List<Pair<Int, Int>> {
+        val edgeCells = mutableListOf<Pair<Int, Int>>()
+        val corners = getCornerPositions().toSet()
+
+        // Top edge: row 0, excluding corners
+        for (col in 1 until boardSize - 1) {
+            val pos = Pair(0, col)
+            if (pos !in corners) edgeCells.add(pos)
+        }
+
+        // Right edge: col = boardSize - 1, excluding corners
+        for (row in 1 until boardSize - 1) {
+            val pos = Pair(row, boardSize - 1)
+            if (pos !in corners) edgeCells.add(pos)
+        }
+
+        // Bottom edge: row = boardSize - 1, excluding corners
+        for (col in 1 until boardSize - 1) {
+            val pos = Pair(boardSize - 1, col)
+            if (pos !in corners) edgeCells.add(pos)
+        }
+
+        // Left edge: col = 0, excluding corners
+        for (row in 1 until boardSize - 1) {
+            val pos = Pair(row, 0)
+            if (pos !in corners) edgeCells.add(pos)
+        }
+
+        return edgeCells
+    }
+
+    /** Checks if three edges have a common junction point that connects them all. */
+    private fun areEdgesConnected(
             edge1: List<Pair<Int, Int>>,
             edge2: List<Pair<Int, Int>>,
             edge3: List<Pair<Int, Int>>,
-            playerValue: Int
+            graph: Map<Pair<Int, Int>, List<Pair<Int, Int>>>
     ): Boolean {
-        // First find a path from edge1 to edge2
+        // For each piece on edge1, find paths to edges 2 and 3
         for (start in edge1) {
-            for (end in edge2) {
-                val visited = Array(boardSize) { BooleanArray(boardSize) { false } }
-                val path12 = mutableSetOf<Pair<Int, Int>>()
+            // Find all connected pieces from this starting point
+            val connectedPieces = findAllConnectedPieces(start, graph)
 
-                if (isConnected(
-                                start.first,
-                                start.second,
-                                end.first,
-                                end.second,
-                                playerValue,
-                                visited,
-                                path12
-                        )
-                ) {
+            // Check if connected pieces include at least one piece from each of the other edges
+            val reachesEdge2 = edge2.any { it in connectedPieces }
+            val reachesEdge3 = edge3.any { it in connectedPieces }
 
-                    // Now check if this path connects to edge3
-                    for (pos3 in edge3) {
-                        for (pos12 in path12) {
-                            val visited3 = Array(boardSize) { BooleanArray(boardSize) { false } }
-                            val path23 = mutableSetOf<Pair<Int, Int>>()
-
-                            if (isConnected(
-                                            pos12.first,
-                                            pos12.second,
-                                            pos3.first,
-                                            pos3.second,
-                                            playerValue,
-                                            visited3,
-                                            path23
-                                    )
-                            ) {
-                                // Found a fork!
-                                winningPath.clear()
-                                winningPath.addAll(path12)
-                                winningPath.addAll(path23)
-                                return true
-                            }
-                        }
-                    }
-                }
+            if (reachesEdge2 && reachesEdge3) {
+                // Find the complete path for visualization
+                val path = findForkPath(start, edge2, edge3, graph)
+                winningPath.clear()
+                winningPath.addAll(path)
+                return true
             }
         }
 
         return false
     }
 
-    /** Checks if two points are connected by player's stones */
-    private fun isConnected(
-            startRow: Int,
-            startCol: Int,
-            endRow: Int,
-            endCol: Int,
-            playerValue: Int,
-            visited: Array<BooleanArray>,
-            path: MutableSet<Pair<Int, Int>>
-    ): Boolean {
-        // We found the destination
-        if (startRow == endRow && startCol == endCol) {
-            path.add(Pair(startRow, startCol))
-            return true
-        }
+    /** Finds all pieces connected to a starting piece. */
+    private fun findAllConnectedPieces(
+            start: Pair<Int, Int>,
+            graph: Map<Pair<Int, Int>, List<Pair<Int, Int>>>
+    ): Set<Pair<Int, Int>> {
+        val visited = mutableSetOf<Pair<Int, Int>>()
+        val queue = ArrayDeque<Pair<Int, Int>>()
 
-        // Mark as visited
-        visited[startRow][startCol] = true
-        path.add(Pair(startRow, startCol))
+        visited.add(start)
+        queue.add(start)
 
-        // Check all 6 neighbors
-        val directions =
-                arrayOf(Pair(-1, 0), Pair(-1, 1), Pair(0, -1), Pair(0, 1), Pair(1, -1), Pair(1, 0))
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            val neighbors = graph[current] ?: emptyList()
 
-        for ((dr, dc) in directions) {
-            val newRow = startRow + dr
-            val newCol = startCol + dc
-
-            if (newRow in 0 until boardSize &&
-                            newCol in 0 until boardSize &&
-                            !visited[newRow][newCol] &&
-                            board[newRow][newCol] == playerValue
-            ) {
-
-                if (isConnected(newRow, newCol, endRow, endCol, playerValue, visited, path)) {
-                    return true
+            for (neighbor in neighbors) {
+                if (neighbor !in visited) {
+                    visited.add(neighbor)
+                    queue.add(neighbor)
                 }
             }
         }
 
-        // Backtrack
-        path.remove(Pair(startRow, startCol))
-        return false
+        return visited
+    }
+
+    /** Finds a fork path connecting three edges for visualization. */
+    private fun findForkPath(
+            start: Pair<Int, Int>,
+            edge2: List<Pair<Int, Int>>,
+            edge3: List<Pair<Int, Int>>,
+            graph: Map<Pair<Int, Int>, List<Pair<Int, Int>>>
+    ): Set<Pair<Int, Int>> {
+        // Find a path to edge2
+        val path2 = findPathToAny(start, edge2, graph)
+
+        // Find a path to edge3
+        val path3 = findPathToAny(start, edge3, graph)
+
+        // Combine paths
+        val completePath = mutableSetOf<Pair<Int, Int>>()
+        completePath.addAll(path2)
+        completePath.addAll(path3)
+
+        return completePath
+    }
+
+    /** Finds a path from a start position to any position in a target list. */
+    private fun findPathToAny(
+            start: Pair<Int, Int>,
+            targets: List<Pair<Int, Int>>,
+            graph: Map<Pair<Int, Int>, List<Pair<Int, Int>>>
+    ): List<Pair<Int, Int>> {
+        val visited = mutableSetOf<Pair<Int, Int>>()
+        val queue = ArrayDeque<Pair<Pair<Int, Int>, List<Pair<Int, Int>>>>()
+
+        visited.add(start)
+        queue.add(Pair(start, listOf(start)))
+
+        while (queue.isNotEmpty()) {
+            val (current, path) = queue.removeFirst()
+
+            if (current in targets) {
+                return path
+            }
+
+            val neighbors = graph[current] ?: emptyList()
+            for (neighbor in neighbors) {
+                if (neighbor !in visited) {
+                    visited.add(neighbor)
+                    queue.add(Pair(neighbor, path + neighbor))
+                }
+            }
+        }
+
+        return emptyList()
     }
 }

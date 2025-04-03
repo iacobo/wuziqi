@@ -118,7 +118,7 @@ fun StartScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Row 1: Wuziqi and Connect4
+                        // Row 1: Wuziqi and Custom
                         Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -135,6 +135,23 @@ fun StartScreen(
                                         modifier = Modifier.weight(1f).padding(end = 8.dp)
                                 )
 
+                                // Custom Game
+                                GameModeButtonSmall(
+                                        title = stringResource(R.string.custom_game),
+                                        description = stringResource(R.string.custom_game_desc),
+                                        icon = Icons.Default.AppRegistration,
+                                        onClick = { showCustomDialog = true },
+                                        modifier = Modifier.weight(1f).padding(start = 8.dp)
+                                )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Row 2: Connect4 and TicTacToe
+                        Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                                 // Connect4
                                 GameModeButtonSmall(
                                         title = stringResource(R.string.connect4_title),
@@ -146,15 +163,7 @@ fun StartScreen(
                                         },
                                         modifier = Modifier.weight(1f).padding(start = 8.dp)
                                 )
-                        }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Row 2: TicTacToe and Custom
-                        Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
                                 // TicTacToe
                                 GameModeButtonSmall(
                                         title = stringResource(R.string.tictactoe_title),
@@ -166,15 +175,6 @@ fun StartScreen(
                                                 showOpponentDialog = true
                                         },
                                         modifier = Modifier.weight(1f).padding(end = 8.dp)
-                                )
-
-                                // Custom Game
-                                GameModeButtonSmall(
-                                        title = stringResource(R.string.custom_game),
-                                        description = stringResource(R.string.custom_game_desc),
-                                        icon = Icons.Default.AppRegistration,
-                                        onClick = { showCustomDialog = true },
-                                        modifier = Modifier.weight(1f).padding(start = 8.dp)
                                 )
                         }
 
