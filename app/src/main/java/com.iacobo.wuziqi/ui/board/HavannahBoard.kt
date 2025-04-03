@@ -1,5 +1,6 @@
 package com.iacobo.wuziqi.ui.board
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -20,21 +22,17 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
-import com.iacobo.wuziqi.ui.theme.BridgeColor
-import com.iacobo.wuziqi.ui.theme.ForkColor
 import com.iacobo.wuziqi.ui.theme.HexPieceBlue
 import com.iacobo.wuziqi.ui.theme.HexPieceRed
-import com.iacobo.wuziqi.ui.theme.RingColor
 import com.iacobo.wuziqi.viewmodel.Position
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/** Implementation of the Havannah game board with proper hexagonal grid display and interaction. */
 class HavannahBoard : GameBoard {
-
     @Composable
     override fun Render(
             gameState: GameState,
@@ -43,89 +41,80 @@ class HavannahBoard : GameBoard {
             isGameFrozen: Boolean,
             onMoveSelected: (Int, Int) -> Unit
     ) {
+        // Extract boardSize to make it accessible to lambdas
         val boardSize = gameState.boardSize
 
-        // Detect orientation
-        val configuration = LocalConfiguration.current
-        val isLandscape =
-                configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-
-        // Adjust aspect ratio based on orientation
-        val hexAspectRatio =
-                if (isLandscape) {
-                    0.866f // sqrt(3)/2
-                } else {
-                    1.155f // 2/sqrt(3)
-                }
-
-        // Colors
-        val backgroundColor = MaterialTheme.colorScheme.surface
-        val gridLineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-        val cornerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-        val edgeColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-        val centerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        // Define custom colors for better visibility
         val playerOneColor = HexPieceRed
         val playerTwoColor = HexPieceBlue
-        val highlightColor = MaterialTheme.colorScheme.tertiary
+
+        // Extract all MaterialTheme colors here in the composable context
+        val hexColor1 = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        val hexColor2 = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        val gridLineColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+        val tertiaryColor = MaterialTheme.colorScheme.tertiary
+        val backgroundColor = MaterialTheme.colorScheme.surface
+
+        // New color for highlighting the winning path
+        val winningPathColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
 
         val density = LocalDensity.current
         val strokeWidth = with(density) { 1.5.dp.toPx() }
 
+        // Get the winning path if the game is over (there's a winner)
         val winningPath = if (isGameFrozen) gameState.getWinningPath() else emptySet()
 
-        // Store hexagon centers for click detection
+        // Detect current orientation
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        // Use different aspect ratio for landscape mode
+        val aspectRatio = if (isLandscape) 0.866f else 1.155f
+
+        // Store hexagon centers for hit testing
         val hexCenters = remember { mutableMapOf<Pair<Int, Int>, Offset>() }
 
         Box(
                 modifier =
-                        Modifier.aspectRatio(hexAspectRatio)
-                                .padding(12.dp)
-                                .background(backgroundColor)
+                        Modifier.aspectRatio(aspectRatio).padding(16.dp).background(backgroundColor)
         ) {
             Canvas(
                     modifier =
                             Modifier.fillMaxSize().pointerInput(isGameFrozen) {
                                 if (!isGameFrozen) {
-                                    detectTapGestures { tap ->
-                                        // Find the closest hexagon to the tap point
-                                        var bestMatch: Pair<Int, Int>? = null
+                                    detectTapGestures { tapOffset ->
+                                        // Find the closest hexagon to the tap
+                                        var bestRow = -1
+                                        var bestCol = -1
                                         var bestDistance = Float.MAX_VALUE
 
+                                        // Check all stored hexes for the closest match
                                         for ((pos, center) in hexCenters) {
                                             val (row, col) = pos
-
-                                            // Calculate distance from tap to center
-                                            val dist =
-                                                    sqrt(
-                                                            (tap.x - center.x) *
-                                                                    (tap.x - center.x) +
-                                                                    (tap.y - center.y) *
-                                                                            (tap.y - center.y)
-                                                    )
-
-                                            // Check if this cell is valid and empty
-                                            if (row in 0 until boardSize &&
-                                                            col in 0 until boardSize &&
-                                                            gameState.board[row][col] ==
-                                                                    GameState.EMPTY
-                                            ) {
-
-                                                if (dist < bestDistance) {
-                                                    bestDistance = dist
-                                                    bestMatch = pos
-                                                }
+                                            
+                                            // Calculate distance to center
+                                            val distance = sqrt(
+                                                (tapOffset.x - center.x).pow(2) +
+                                                (tapOffset.y - center.y).pow(2)
+                                            )
+                                            
+                                            // Check if this is closer than the previous best
+                                            // and if the position is empty
+                                            if (distance < bestDistance && 
+                                                row < boardSize && col < boardSize && 
+                                                gameState.board[row][col] == GameState.EMPTY) {
+                                                bestDistance = distance
+                                                bestRow = row
+                                                bestCol = col
                                             }
                                         }
-
-                                        // More generous click threshold - 15% of the smaller
-                                        // dimension
-                                        val clickThreshold = min(size.width, size.height) * 0.15f
-
-                                        // If we found a valid match within reasonable distance
-                                        bestMatch?.let { (row, col) ->
-                                            if (bestDistance < clickThreshold) {
-                                                onMoveSelected(row, col)
-                                            }
+                                        
+                                        // Use a generous threshold - 15% of the smaller dimension
+                                        val threshold = min(size.width, size.height) * 0.15f
+                                        
+                                        // If we found a valid position and it's close enough
+                                        if (bestRow >= 0 && bestDistance < threshold) {
+                                            onMoveSelected(bestRow, bestCol)
                                         }
                                     }
                                 }
@@ -133,187 +122,163 @@ class HavannahBoard : GameBoard {
             ) {
                 // Clear the centers map at the start of each drawing
                 hexCenters.clear()
+                
+                val canvasWidth = size.width
+                val canvasHeight = size.height
 
-                // Calculate board dimensions
-                val padding = size.width * 0.05f // 5% padding
-                val availableWidth = size.width - 2 * padding
-                val availableHeight = size.height - 2 * padding
+                // Calculate the maximum row offset for the board
+                val maxRowOffset = (boardSize - 1) * 0.5f
 
-                // Calculate hex size to fit within available space
-                val hexSize =
-                        min(availableWidth / (boardSize * 2f), availableHeight / (boardSize * 2f))
+                // Size the hexagons to fit the total width (including offset)
+                val hexRadius =
+                        minOf(
+                                canvasWidth / ((boardSize + maxRowOffset) * sqrt(3f)),
+                                canvasHeight / ((boardSize + 0.5f) * 1.5f)
+                        ) * 0.95f
 
-                // Center position
-                val centerX = size.width / 2
-                val centerY = size.height / 2
+                val hexHeight = hexRadius * 2
+                val hexWidth = hexRadius * sqrt(3f)
 
-                // Maximum distance from center to corner (= boardSize - 1)
+                // Calculate the total width and height of the board
+                val totalWidth = (boardSize + maxRowOffset) * hexWidth
+                val totalHeight = hexHeight * boardSize * 0.75f + hexHeight / 4
+
+                // Calculate offset to center the board
+                val xOffset = (canvasWidth - totalWidth) / 2
+                val yOffset = (canvasHeight - totalHeight) / 2
+
+                // Use the original working approach for drawing the hexagonal grid
                 val range = boardSize - 1
-
-                // Define corners
-                val corners =
-                        setOf(
-                                Pair(-range, 0), // west
-                                Pair(-range / 2, -range), // northwest
-                                Pair(range / 2, -range), // northeast
-                                Pair(range, 0), // east
-                                Pair(range / 2, range), // southeast
-                                Pair(-range / 2, range) // southwest
-                        )
-
-                // THIS IS THE KEY: Use the EXACT same hexagon constraint as the original working
-                // code
-                // Iterate through q and compute valid r range for each q
+                
                 for (q in -range..range) {
-                    // For each q, compute the valid range of r values that creates a perfect
-                    // hexagon
                     val rMin = max(-range, -q - range)
                     val rMax = min(range, -q + range)
-
+                    
                     for (r in rMin..rMax) {
                         val s = -q - r
-
-                        // Convert to array indices for game state access
+                        
+                        // Convert to array indices
                         val row = r + range
                         val col = q + range
-
+                        
                         // Skip positions outside array bounds
-                        if (row !in 0 until boardSize || col !in 0 until boardSize) continue
+                        if (row >= boardSize || col >= boardSize) continue
+                        
+                        // Calculate hexagon center position
+                        val rowShift = row * (hexWidth / 2)
+                        val centerX = xOffset + col * hexWidth + rowShift
+                        val centerY = yOffset + row * hexHeight * 0.75f + hexHeight / 2
+                        
+                        // Store the center for later use in hit testing and path highlighting
+                        hexCenters[Pair(row, col)] = Offset(centerX, centerY)
 
-                        // Calculate pixel position for this hexagon
-                        val x = centerX + hexSize * 1.5f * q
-                        val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
+                        // Store vertices for border edge coloring
+                        val hexVertices =
+                                List(6) { idx ->
+                                    val angle = Math.toRadians((60 * idx + 30).toDouble()).toFloat()
+                                    Pair(
+                                            centerX + hexRadius * cos(angle),
+                                            centerY + hexRadius * sin(angle)
+                                    )
+                                }
 
-                        // Store center for hit testing
-                        hexCenters[Pair(row, col)] = Offset(x, y)
-
-                        // Create hexagon path
                         val hexPath =
                                 Path().apply {
-                                    for (i in 0 until 6) {
-                                        val angle = Math.PI / 3 * i
-                                        val hx = x + hexSize * cos(angle.toFloat())
-                                        val hy = y + hexSize * sin(angle.toFloat())
-
-                                        if (i == 0) moveTo(hx, hy) else lineTo(hx, hy)
+                                    moveTo(hexVertices[0].first, hexVertices[0].second)
+                                    for (i in 1 until 6) {
+                                        lineTo(hexVertices[i].first, hexVertices[i].second)
                                     }
                                     close()
                                 }
 
-                        // Determine if this is a corner or edge
-                        val isCorner = Pair(q, r) in corners
-
-                        // Is it an edge but not a corner?
-                        val isEdge =
-                                (q == -range ||
-                                        q == range ||
-                                        r == -range ||
-                                        r == range ||
-                                        s == -range ||
-                                        s == range) && !isCorner
-
-                        // Fill color based on cell type
-                        val fillColor =
-                                when {
-                                    isCorner -> cornerColor
-                                    isEdge -> edgeColor
-                                    else -> centerColor
-                                }
-
-                        // Draw hex cell
+                        // Alternate fill colors
+                        val fillColor = if ((row + col) % 2 == 0) hexColor1 else hexColor2
                         drawPath(hexPath, color = fillColor, style = Fill)
+
+                        // Draw grid lines
                         drawPath(
                                 hexPath,
                                 color = gridLineColor,
                                 style = Stroke(width = strokeWidth)
                         )
-
+                        
                         // Draw game pieces if present
                         if (gameState.board[row][col] != GameState.EMPTY) {
-                            val pieceColor =
-                                    if (gameState.board[row][col] == GameState.PLAYER_ONE)
-                                            playerOneColor
-                                    else playerTwoColor
-
-                            // Draw main piece
+                            val pieceColor = if (gameState.board[row][col] == GameState.PLAYER_ONE)
+                                playerOneColor else playerTwoColor
+                            
+                            // Draw piece with highlight
                             drawCircle(
                                     color = pieceColor,
-                                    radius = hexSize * 0.4f,
-                                    center = Offset(x, y)
+                                    radius = hexRadius * 0.42f,
+                                    center = Offset(centerX, centerY)
                             )
 
-                            // Draw highlight effect
+                            // Add a subtle highlight to the top-left of the piece for 3D effect
                             drawCircle(
                                     color = pieceColor.copy(alpha = 0.7f),
-                                    radius = hexSize * 0.3f,
-                                    center = Offset(x - hexSize * 0.08f, y - hexSize * 0.08f)
+                                    radius = hexRadius * 0.32f,
+                                    center =
+                                            Offset(
+                                                    centerX - hexRadius * 0.1f,
+                                                    centerY - hexRadius * 0.1f
+                                            )
                             )
 
-                            // Highlight last placed piece if it's not part of a winning path
+                            // Highlight the last placed piece if not part of the winning path
                             if (lastPlacedPosition?.row == row &&
                                             lastPlacedPosition.col == col &&
                                             winningPath.isEmpty()
                             ) {
                                 drawCircle(
-                                        color = highlightColor,
-                                        radius = hexSize * 0.5f,
-                                        center = Offset(x, y),
+                                        color = tertiaryColor,
+                                        radius = hexRadius * 0.5f,
+                                        center = Offset(centerX, centerY),
                                         style = Stroke(width = strokeWidth * 1.5f)
                                 )
                             }
                         }
                     }
                 }
-
-                // Draw winning path if game is over
+                
+                // Highlight the winning path cells if there is a winner
                 if (winningPath.isNotEmpty()) {
-                    val winType = gameState.getWinningType()
-                    val pathList = winningPath.toList()
-
-                    // Color based on win type
-                    val winColor =
-                            when (winType) {
-                                1 -> RingColor // Purple for ring
-                                2 -> BridgeColor // Blue for bridge
-                                3 -> ForkColor // Green for fork
-                                else -> highlightColor
-                            }
-
-                    // Highlight winning cells
+                    // Draw a glow under the winning path pieces
                     for (pos in winningPath) {
                         val center = hexCenters[pos] ?: continue
                         drawCircle(
-                                color = winColor,
-                                radius = hexSize * 0.6f,
+                                color = winningPathColor,
+                                radius = hexRadius * 0.7f,
                                 center = center,
-                                alpha = 0.4f
+                                alpha = 0.5f
                         )
                     }
 
-                    // Connect path with lines
+                    // Draw connectors between adjacent pieces in the winning path
+                    val pathList = winningPath.toList()
                     for (i in 0 until pathList.size - 1) {
                         val center1 = hexCenters[pathList[i]] ?: continue
-                        val center2 = hexCenters[pathList[i + 1]] ?: continue
-
+                        val center2 = hexCenters[pathList[i+1]] ?: continue
+                        
                         drawLine(
-                                color = winColor,
-                                start = center1,
-                                end = center2,
-                                strokeWidth = strokeWidth * 2.5f
+                            color = winningPathColor,
+                            start = center1,
+                            end = center2,
+                            strokeWidth = strokeWidth * 3f
                         )
                     }
-
-                    // For ring wins, connect first and last cell
-                    if (winType == 1 && pathList.size > 2) {
+                    
+                    // For ring wins, connect first and last piece
+                    if (gameState.getWinningType() == 1 && pathList.size > 2) {
                         val firstCenter = hexCenters[pathList.first()]
                         val lastCenter = hexCenters[pathList.last()]
-
+                        
                         if (firstCenter != null && lastCenter != null) {
                             drawLine(
-                                    color = winColor,
-                                    start = firstCenter,
-                                    end = lastCenter,
-                                    strokeWidth = strokeWidth * 2.5f
+                                color = winningPathColor,
+                                start = firstCenter,
+                                end = lastCenter,
+                                strokeWidth = strokeWidth * 3f
                             )
                         }
                     }
