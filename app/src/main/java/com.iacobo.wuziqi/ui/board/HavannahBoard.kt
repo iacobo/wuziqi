@@ -9,10 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -26,15 +23,13 @@ import com.iacobo.wuziqi.data.GameState
 import com.iacobo.wuziqi.ui.theme.HexPieceBlue
 import com.iacobo.wuziqi.ui.theme.HexPieceRed
 import com.iacobo.wuziqi.viewmodel.Position
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Implementation of a Havannah game board.
- *
- * A proper Havannah board is a hexagon with side length n (configurable, typically 10). It has 6
- * corners and 6 edges of length n (excluding corners).
+ * Havannah board implementation with correct hexagonal layout and consistent coordinate mapping.
  */
 class HavannahBoard : GameBoard {
 
@@ -46,8 +41,7 @@ class HavannahBoard : GameBoard {
             isGameFrozen: Boolean,
             onMoveSelected: (Int, Int) -> Unit
     ) {
-        // Get the edge length from the board size
-        // For Havannah, boardSize represents the edge length
+        // The edge length of the hexagonal board
         val edgeLength = gameState.boardSize
 
         // Colors
@@ -60,16 +54,15 @@ class HavannahBoard : GameBoard {
         val playerTwoColor = HexPieceBlue
         val highlightColor = MaterialTheme.colorScheme.tertiary
 
-        // Line width for the grid
+        // Line width
         val density = LocalDensity.current
         val strokeWidth = with(density) { 1.5.dp.toPx() }
 
-        // Cache for hex coordinates and cell mapping
-        val hexCenters = remember { mutableMapOf<Pair<Int, Int>, Offset>() }
-        var hexSize by remember { mutableStateOf(0f) }
-
-        // Winning path for highlighting
+        // Winning path
         val winningPath = if (isGameFrozen) gameState.getWinningPath() else emptySet()
+
+        // For tracking hexagon centers and positions
+        val hexCenters = remember { mutableMapOf<Pair<Int, Int>, Offset>() }
 
         Box(modifier = Modifier.aspectRatio(1f).padding(4.dp).background(backgroundColor)) {
             Canvas(
@@ -77,10 +70,14 @@ class HavannahBoard : GameBoard {
                             Modifier.fillMaxSize().pointerInput(isGameFrozen) {
                                 if (!isGameFrozen) {
                                     detectTapGestures { tap ->
+                                        // Find closest hex center
                                         var bestDist = Float.MAX_VALUE
                                         var bestPos: Pair<Int, Int>? = null
 
-                                        hexCenters.forEach { (pos, center) ->
+                                        for ((pos, center) in hexCenters) {
+                                            val (row, col) = pos
+
+                                            // Calculate distance to center
                                             val dist =
                                                     sqrt(
                                                             (tap.x - center.x) *
@@ -89,9 +86,7 @@ class HavannahBoard : GameBoard {
                                                                             (tap.y - center.y)
                                                     )
 
-                                            // Check if this position is within the array bounds and
-                                            // empty
-                                            val (row, col) = pos
+                                            // Check if position is valid and empty
                                             if (row >= 0 &&
                                                             row < gameState.boardSize &&
                                                             col >= 0 &&
@@ -107,10 +102,9 @@ class HavannahBoard : GameBoard {
                                             }
                                         }
 
-                                        // If we found a close empty cell, select it
+                                        // Use the closest valid position if close enough
                                         bestPos?.let { (row, col) ->
-                                            // Use a more generous hit radius
-                                            if (bestDist < hexSize * 1.2f) {
+                                            if (bestDist < size.minDimension * 0.05f) {
                                                 onMoveSelected(row, col)
                                             }
                                         }
@@ -118,36 +112,53 @@ class HavannahBoard : GameBoard {
                                 }
                             }
             ) {
-                // Clear the centers cache on each render
+                // Clear previous mapping
                 hexCenters.clear()
 
-                // Calculate size with margin
+                // Calculate available drawing area with margin
                 val margin = size.minDimension * 0.03f
-                val usableWidth = size.width - (2 * margin)
-                val usableHeight = size.height - (2 * margin)
+                val availableWidth = size.width - 2 * margin
+                val availableHeight = size.height - 2 * margin
 
-                // Calculate board dimensions - a hexagon with edge length 'edgeLength'
-                // has width and height of 2*edgeLength-1 in hexagonal coordinates
+                // For a hexagonal board with edge length N, the logical width
+                // is 2*N-1 hexagons at the widest point
                 val boardDiameter = 2 * edgeLength - 1
 
-                // Calculate hex size to fit the entire board
-                val hexWidth = usableWidth / boardDiameter
-                val hexHeight = usableHeight / boardDiameter
-                hexSize = minOf(hexWidth, hexHeight / sqrt(3f) * 2f) * 0.95f
+                // Base hexagon size (will be scaled to fit)
+                // Start with a size that would fill the canvas if hexagons were squares
+                var hexSize = minOf(availableWidth / boardDiameter, availableHeight / boardDiameter)
+
+                // For flat-topped hexagons, the actual width needed is about 3/4 * width
+                // This is because hexagons overlap horizontally when tiled
+                val actualWidthNeeded = boardDiameter * hexSize * 0.75f
+
+                // Height calculation for flat-topped hexagons
+                val actualHeightNeeded = boardDiameter * hexSize * 0.866f // sqrt(3)/2
+
+                // Calculate scale factor to fit properly
+                val scaleX = availableWidth / actualWidthNeeded
+                val scaleY = availableHeight / actualHeightNeeded
+                val scale = minOf(scaleX, scaleY) * 0.95f // Add 5% margin
+
+                // Apply scale
+                hexSize *= scale
 
                 // Center of the canvas
                 val centerX = size.width / 2
                 val centerY = size.height / 2
 
-                // Draw the board using cube coordinates (q,r,s where q+r+s=0)
-                // For a hexagon with edge length N, the range is -N+1 to N-1
+                // Initialize the axial coordinate system
+                // In axial coordinates, a hexagon with edge length N has coordinates:
+                // q from -N+1 to N-1
+                // r from -N+1 to N-1
+                // with the constraint that -N+1 <= q + r <= N-1
+
                 val range = edgeLength - 1
 
-                // Track corners and edges for special coloring
+                // Identify corners and edges
                 val corners = mutableSetOf<Pair<Int, Int>>()
-                val edges = mutableSetOf<Pair<Int, Int>>()
 
-                // Define the 6 corners in cube coordinates
+                // Define the 6 corners in axial coordinates (q,r)
                 corners.add(Pair(-range, range)) // top-left
                 corners.add(Pair(0, range)) // top
                 corners.add(Pair(range, 0)) // top-right
@@ -155,50 +166,35 @@ class HavannahBoard : GameBoard {
                 corners.add(Pair(0, -range)) // bottom
                 corners.add(Pair(-range, 0)) // bottom-left
 
-                // Pre-calculate edge positions (non-corner cells along the outer boundary)
+                // Render the hexagonal grid
                 for (q in -range..range) {
-                    for (r in -range..range) {
-                        val s = -q - r
-                        if (kotlin.math.abs(q) == range ||
-                                        kotlin.math.abs(r) == range ||
-                                        kotlin.math.abs(s) == range
-                        ) {
-                            val pos = Pair(q, r)
-                            if (pos !in corners) {
-                                edges.add(pos)
-                            }
-                        }
-                    }
-                }
-
-                // Draw all hexagons in the grid
-                for (q in -range..range) {
-                    // r range depends on q to form a hexagon
+                    // r range depends on q to maintain the hexagonal shape
                     val rMin = maxOf(-range, -q - range)
                     val rMax = minOf(range, -q + range)
 
                     for (r in rMin..rMax) {
-                        val s = -q - r // Cube coordinate constraint: q + r + s = 0
+                        // Skip if outside the hexagonal board
+                        if (abs(q) + abs(r) + abs(-q - r) > 2 * range) continue
 
-                        // Convert cube coordinates to array indices consistently
-                        val arrayRow = r + range
-                        val arrayCol = q + range
+                        // Convert axial coordinates to array indices
+                        val row = r + range
+                        val col = q + range
 
-                        // Calculate pixel position for hex center
-                        val x = centerX + (q * 1.5f * hexSize)
-                        val y = centerY + (r + q / 2f) * hexSize * sqrt(3f)
+                        // Calculate pixel coordinates for this hexagon's center
+                        // For flat-topped hexagons:
+                        val x = centerX + hexSize * 1.5f * q
+                        val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
 
-                        // Store all valid positions in the hexCenters map
-                        // This is critically important for hit testing
-                        hexCenters[Pair(arrayRow, arrayCol)] = Offset(x, y)
+                        // Store the center position for hit testing
+                        hexCenters[Pair(row, col)] = Offset(x, y)
 
-                        // Create hexagon path
+                        // Create the hexagon path
                         val hexPath =
                                 Path().apply {
                                     for (i in 0 until 6) {
-                                        val angle = Math.toRadians((60 * i).toDouble()).toFloat()
-                                        val hx = x + hexSize * cos(angle)
-                                        val hy = y + hexSize * sin(angle)
+                                        val angle = Math.PI / 3 * i
+                                        val hx = x + hexSize * cos(angle.toFloat())
+                                        val hy = y + hexSize * sin(angle.toFloat())
 
                                         if (i == 0) {
                                             moveTo(hx, hy)
@@ -209,11 +205,13 @@ class HavannahBoard : GameBoard {
                                     close()
                                 }
 
-                        // Determine if this is a corner, edge, or inner cell
+                        // Determine hexagon type
                         val isCorner = Pair(q, r) in corners
-                        val isEdge = Pair(q, r) in edges
+                        val isEdge =
+                                (abs(q) == range || abs(r) == range || abs(-q - r) == range) &&
+                                        !isCorner
 
-                        // Select fill color based on position type
+                        // Fill color based on position type
                         val fillColor =
                                 when {
                                     isCorner -> cornerColor
@@ -221,33 +219,33 @@ class HavannahBoard : GameBoard {
                                     else -> centerColor
                                 }
 
-                        // Draw hexagon fill and border
-                        drawPath(path = hexPath, color = fillColor, style = Fill)
+                        // Draw hexagon
+                        drawPath(hexPath, color = fillColor, style = Fill)
                         drawPath(
-                                path = hexPath,
+                                hexPath,
                                 color = gridLineColor,
                                 style = Stroke(width = strokeWidth)
                         )
 
                         // Draw game piece if present
-                        if (arrayRow in 0 until gameState.boardSize &&
-                                        arrayCol in 0 until gameState.boardSize &&
-                                        gameState.board[arrayRow][arrayCol] != GameState.EMPTY
+                        if (row in 0 until gameState.boardSize &&
+                                        col in 0 until gameState.boardSize &&
+                                        gameState.board[row][col] != GameState.EMPTY
                         ) {
 
                             val pieceColor =
-                                    if (gameState.board[arrayRow][arrayCol] == GameState.PLAYER_ONE)
+                                    if (gameState.board[row][col] == GameState.PLAYER_ONE)
                                             playerOneColor
                                     else playerTwoColor
 
-                            // Draw piece
+                            // Draw piece with 3D effect
                             drawCircle(
                                     color = pieceColor,
                                     radius = hexSize * 0.4f,
                                     center = Offset(x, y)
                             )
 
-                            // Add subtle highlight
+                            // Highlight
                             drawCircle(
                                     color = pieceColor.copy(alpha = 0.7f),
                                     radius = hexSize * 0.3f,
@@ -255,8 +253,8 @@ class HavannahBoard : GameBoard {
                             )
 
                             // Highlight last placed piece
-                            if (lastPlacedPosition?.row == arrayRow &&
-                                            lastPlacedPosition.col == arrayCol &&
+                            if (lastPlacedPosition?.row == row &&
+                                            lastPlacedPosition.col == col &&
                                             winningPath.isEmpty()
                             ) {
 
@@ -271,12 +269,12 @@ class HavannahBoard : GameBoard {
                     }
                 }
 
-                // Highlight winning path
+                // Draw winning path
                 if (winningPath.isNotEmpty()) {
-                    val pathList = winningPath.toList()
                     val winType = gameState.getWinningType()
+                    val pathList = winningPath.toList()
 
-                    // Choose color based on win type
+                    // Color based on win type
                     val winColor =
                             when (winType) {
                                 1 -> Color(0xFF9C27B0) // Purple for ring
@@ -285,20 +283,19 @@ class HavannahBoard : GameBoard {
                                 else -> highlightColor
                             }
 
-                    // Highlight all winning cells
+                    // Highlight winning cells
                     for (pos in winningPath) {
                         val center = hexCenters[pos] ?: continue
 
-                        // Draw a glow
                         drawCircle(
                                 color = winColor,
-                                radius = hexSize * 0.7f,
+                                radius = hexSize * 0.6f,
                                 center = center,
                                 alpha = 0.4f
                         )
                     }
 
-                    // Draw connectors between cells in the path
+                    // Connect winning path
                     for (i in 0 until pathList.size - 1) {
                         val center1 = hexCenters[pathList[i]] ?: continue
                         val center2 = hexCenters[pathList[i + 1]] ?: continue
@@ -311,7 +308,7 @@ class HavannahBoard : GameBoard {
                         )
                     }
 
-                    // For rings, connect the first and last piece
+                    // For rings, connect first and last
                     if (winType == 1 && pathList.size > 2) {
                         val firstCenter = hexCenters[pathList.first()]
                         val lastCenter = hexCenters[pathList.last()]
