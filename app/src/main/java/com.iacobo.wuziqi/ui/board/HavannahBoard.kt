@@ -164,9 +164,8 @@ class HavannahBoard : GameBoard {
                     for (r in rMin..rMax) {
                         val s = -q - r // Third coordinate for cube representation
 
-                        // Skip hexes that are outside the valid hexagonal board according to game
-                        // rules
-                        if (abs(q) + abs(r) + abs(s) > 2 * gameState.boardSize - 1) continue
+                        // Skip hexes that are outside the valid hexagonal board according to game rules
+                        if (abs(q) + abs(r) + abs(s) > 2 * (gameState.boardSize - 1)) continue
 
                         // Convert to array indices (for game state access)
                         // FIXED: Center the origin in the array properly
