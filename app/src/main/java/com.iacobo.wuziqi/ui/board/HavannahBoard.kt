@@ -168,8 +168,9 @@ class HavannahBoard : GameBoard {
                         if (abs(q) + abs(r) + abs(s) > range * 2) continue
 
                         // Convert to array indices (for game state access)
-                        val row = r + range
-                        val col = q + range
+                        // FIXED: Center the origin in the array properly
+                        val row = r + (gameState.boardSize - 1) / 2
+                        val col = q + (gameState.boardSize - 1) / 2
 
                         // Calculate pixel position
                         val x = centerX + hexSize * 1.5f * q
