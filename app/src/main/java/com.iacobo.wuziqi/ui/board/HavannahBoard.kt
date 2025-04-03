@@ -20,8 +20,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
+import com.iacobo.wuziqi.ui.theme.BridgeColor
+import com.iacobo.wuziqi.ui.theme.ForkColor
 import com.iacobo.wuziqi.ui.theme.HexPieceBlue
 import com.iacobo.wuziqi.ui.theme.HexPieceRed
+import com.iacobo.wuziqi.ui.theme.RingColor
 import com.iacobo.wuziqi.viewmodel.Position
 import kotlin.math.cos
 import kotlin.math.max
