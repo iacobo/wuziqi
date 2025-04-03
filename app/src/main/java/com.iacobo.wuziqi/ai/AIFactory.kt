@@ -22,7 +22,7 @@ object AIFactory {
             GameType.TicTacToe -> wuziqiAI // Wuziqi AI works for TicTacToe
             GameType.Connect4 -> wuziqiAI // Wuziqi AI handles Connect4 special case
             GameType.Hex -> hexAI
-            GameType.Havannah -> havannahAI
+            GameType.Havannah, GameType.HavannahSmall -> havannahAI
         }
     }
 }

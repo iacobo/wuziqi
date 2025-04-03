@@ -123,7 +123,7 @@ fun getStatusText(gameState: GameState, gameType: GameType, winner: Int?): Strin
                                                 stringResource(R.string.player_red)
                                         else stringResource(R.string.player_blue)
                                 )
-                        GameType.Havannah ->
+                        GameType.Havannah, GameType.HavannahSmall ->
                                 stringResource(
                                         R.string.winner_format,
                                         if (winner == GameState.PLAYER_ONE)
@@ -170,7 +170,7 @@ fun getStatusText(gameState: GameState, gameType: GameType, winner: Int?): Strin
                                         stringResource(R.string.player_red)
                                 else stringResource(R.string.player_blue)
                         )
-                GameType.Havannah ->
+                GameType.Havannah, GameType.HavannahSmall ->
                         stringResource(
                                 R.string.player_turn_format,
                                 if (gameState.currentPlayer == GameState.PLAYER_ONE)

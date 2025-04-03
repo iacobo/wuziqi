@@ -84,6 +84,9 @@
     <string name="win_length">Win Length: %d in a row</string>
     <string name="win_length_warning">A large win length may make the game more difficult to finish.</string>
     <string name="special_game_hint">You\'ve discovered a special game mode!</string>
+    <string name="choose_board_size">Choose board size</string>
+    <string name="standard_size">Standard (%d)</string>
+    <string name="beginner_size">Beginner (%d)</string>
 
     <!-- How to Play -->
     <string name="how_to_play">How to Play</string>

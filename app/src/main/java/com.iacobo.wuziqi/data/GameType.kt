@@ -22,7 +22,8 @@ sealed class GameType(@StringRes val titleResId: Int, val boardSize: Int, val wi
             GameType(R.string.havannah_title, 10, 9) // Using 9 as a special code for Havannah rules
 
     /** Havannah game with smaller hexagonal board (size 8) for beginners */
-    object HavannahSmall : GameType(R.string.havannah_small_title, 8, 9) // Small Havannah board
+    object HavannahSmall :
+            GameType(R.string.havannah_title, 8, 9) // Using same title as regular Havannah
 
     companion object {
         /** Determine the game type from a game state */

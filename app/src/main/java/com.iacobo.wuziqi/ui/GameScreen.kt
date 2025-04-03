@@ -168,7 +168,8 @@ fun GameRulesDialog(gameType: GameType, onDismiss: () -> Unit) {
                         GameType.TicTacToe -> stringResource(R.string.tictactoe_rules)
                         GameType.Connect4 -> stringResource(R.string.connect4_rules)
                         GameType.Hex -> stringResource(R.string.hex_rules)
-                        GameType.Havannah -> stringResource(R.string.havannah_rules)
+                        GameType.Havannah, GameType.HavannahSmall ->
+                                stringResource(R.string.havannah_rules)
                 }
 
         val titleText =

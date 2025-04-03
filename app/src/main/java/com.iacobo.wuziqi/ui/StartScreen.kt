@@ -62,6 +62,7 @@ fun StartScreen(
 
         var showOpponentDialog by remember { mutableStateOf(false) }
         var showCustomDialog by remember { mutableStateOf(false) }
+        var showHavannahSizeDialog by remember { mutableStateOf(false) }
         var currentMode by remember { mutableStateOf("standard") }
         var boardSize by remember { mutableIntStateOf(15) }
         var winLength by remember { mutableIntStateOf(5) }
@@ -208,8 +209,8 @@ fun StartScreen(
                                         description = stringResource(R.string.havannah_description),
                                         icon = Icons.Default.Hive,
                                         onClick = {
-                                                currentMode = "havannah"
-                                                showOpponentDialog = true
+                                                // Show a dialog to choose Havannah board size
+                                                showHavannahSizeDialog = true
                                         },
                                         modifier = Modifier.weight(1f).padding(start = 8.dp)
                                 )
@@ -230,6 +231,7 @@ fun StartScreen(
                                         "connect4" -> onNavigateToCustomGame(7, 4, opponent)
                                         "hex" -> onNavigateToCustomGame(11, 8, opponent)
                                         "havannah" -> onNavigateToCustomGame(10, 9, opponent)
+                                        "havannah_small" -> onNavigateToCustomGame(8, 9, opponent)
                                         "custom" ->
                                                 onNavigateToCustomGame(
                                                         boardSize,
@@ -269,6 +271,45 @@ fun StartScreen(
                                                 currentMode = "custom"
                                                 showOpponentDialog = true
                                         }
+                                }
+                        }
+                )
+        }
+
+        if (showHavannahSizeDialog) {
+                AlertDialog(
+                        onDismissRequest = { showHavannahSizeDialog = false },
+                        title = { Text(stringResource(R.string.havannah_title)) },
+                        text = {
+                                Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                        Text(stringResource(R.string.choose_board_size))
+
+                                        Button(
+                                                onClick = {
+                                                        currentMode = "havannah"
+                                                        showHavannahSizeDialog = false
+                                                        showOpponentDialog = true
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                        ) { Text(stringResource(R.string.standard_size, 10)) }
+
+                                        Button(
+                                                onClick = {
+                                                        currentMode = "havannah_small"
+                                                        showHavannahSizeDialog = false
+                                                        showOpponentDialog = true
+                                                },
+                                                modifier = Modifier.fillMaxWidth()
+                                        ) { Text(stringResource(R.string.beginner_size, 8)) }
+                                }
+                        },
+                        confirmButton = {},
+                        dismissButton = {
+                                TextButton(onClick = { showHavannahSizeDialog = false }) {
+                                        Text(stringResource(R.string.cancel))
                                 }
                         }
                 )
