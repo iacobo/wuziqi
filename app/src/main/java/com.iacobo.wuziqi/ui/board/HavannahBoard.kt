@@ -36,6 +36,11 @@ import kotlin.math.sqrt
  */
 class HavannahBoard : GameBoard {
 
+    // Check if a position is within the valid hexagonal board shape
+    private fun isValidHexPosition(q: Int, r: Int, s: Int, edgeLength: Int): Boolean {
+        return abs(q) + abs(r) + abs(s) <= 2 * (edgeLength - 1)
+    }
+
     @Composable
     override fun Render(
             gameState: GameState,
@@ -84,8 +89,6 @@ class HavannahBoard : GameBoard {
                                         var bestDistance = Float.MAX_VALUE
 
                                         for ((pos, center) in hexCenters) {
-                                            val (row, col) = pos
-
                                             // Calculate Euclidean distance from tap to center
                                             val dist =
                                                     sqrt(
@@ -95,16 +98,9 @@ class HavannahBoard : GameBoard {
                                                                             (tap.y - center.y)
                                                     )
 
-                                            // Check if this cell is valid and empty
-                                            if (row in 0 until gameState.boardSize &&
-                                                            col in 0 until gameState.boardSize &&
-                                                            gameState.board[row][col] ==
-                                                                    GameState.EMPTY
-                                            ) {
-                                                if (dist < bestDistance) {
-                                                    bestDistance = dist
-                                                    bestMatch = pos
-                                                }
+                                            if (dist < bestDistance) {
+                                                bestDistance = dist
+                                                bestMatch = pos
                                             }
                                         }
 
@@ -164,18 +160,17 @@ class HavannahBoard : GameBoard {
                     for (r in rMin..rMax) {
                         val s = -q - r // Third coordinate for cube representation
 
-                        // Skip hexes that are outside the valid hexagonal board according to game rules
-                        if (abs(q) + abs(r) + abs(s) > 2 * (gameState.boardSize - 1)) continue
-
-                        // Convert to array indices (for game state access)
-                        // FIXED: Center the origin in the array properly
-                        val row = r + (gameState.boardSize - 1) / 2
-                        val col = q + (gameState.boardSize - 1) / 2
+                        // Skip hexes that are outside the valid hexagonal board
+                        if (!isValidHexPosition(q, r, s, edgeLength)) continue
 
                         // Calculate pixel position
                         val x = centerX + hexSize * 1.5f * q
                         val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
 
+                        // Convert to array indices (for game state access)
+                        val row = r + edgeLength - 1
+                        val col = q + edgeLength - 1
+                        
                         // Store center for hit testing
                         hexCenters[Pair(row, col)] = Offset(x, y)
 
@@ -213,11 +208,10 @@ class HavannahBoard : GameBoard {
                                 style = Stroke(width = strokeWidth)
                         )
 
-                        // Draw game pieces if present
-                        if (row in 0 until gameState.boardSize &&
-                                        col in 0 until gameState.boardSize &&
-                                        gameState.board[row][col] != GameState.EMPTY
-                        ) {
+                        // Draw game pieces if present (without bounds checking)
+                        if (gameState.board.getOrNull(row)?.getOrNull(col) != null && 
+                            gameState.board[row][col] != GameState.EMPTY) {
+                                
                             val pieceColor =
                                     if (gameState.board[row][col] == GameState.PLAYER_ONE)
                                             playerOneColor
