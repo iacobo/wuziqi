@@ -81,7 +81,7 @@ fun getPlayerColor(gameState: GameState, gameType: GameType, winner: Int?): Colo
                         if (currentPlayer == GameState.PLAYER_ONE) Connect4PieceRed
                         else Connect4PieceYellow
                 }
-                GameType.Hex -> {
+                GameType.Hex, GameType.Havannah, GameType.HavannahSmall -> {
                         if (currentPlayer == GameState.PLAYER_ONE) HexPieceRed else HexPieceBlue
                 }
                 else -> {
@@ -116,14 +116,7 @@ fun getStatusText(gameState: GameState, gameType: GameType, winner: Int?): Strin
                                                 stringResource(R.string.player_red)
                                         else stringResource(R.string.player_yellow)
                                 )
-                        GameType.Hex ->
-                                stringResource(
-                                        R.string.winner_format,
-                                        if (winner == GameState.PLAYER_ONE)
-                                                stringResource(R.string.player_red)
-                                        else stringResource(R.string.player_blue)
-                                )
-                        GameType.Havannah, GameType.HavannahSmall ->
+                        GameType.Hex, GameType.Havannah, GameType.HavannahSmall ->
                                 stringResource(
                                         R.string.winner_format,
                                         if (winner == GameState.PLAYER_ONE)
@@ -163,14 +156,7 @@ fun getStatusText(gameState: GameState, gameType: GameType, winner: Int?): Strin
                                         stringResource(R.string.player_red)
                                 else stringResource(R.string.player_yellow)
                         )
-                GameType.Hex ->
-                        stringResource(
-                                R.string.player_turn_format,
-                                if (gameState.currentPlayer == GameState.PLAYER_ONE)
-                                        stringResource(R.string.player_red)
-                                else stringResource(R.string.player_blue)
-                        )
-                GameType.Havannah, GameType.HavannahSmall ->
+                GameType.Hex, GameType.Havannah, GameType.HavannahSmall ->
                         stringResource(
                                 R.string.player_turn_format,
                                 if (gameState.currentPlayer == GameState.PLAYER_ONE)
