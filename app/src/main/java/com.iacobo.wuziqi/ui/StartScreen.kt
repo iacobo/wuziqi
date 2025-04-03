@@ -162,7 +162,7 @@ fun StartScreen(
                                                 currentMode = "connect4"
                                                 showOpponentDialog = true
                                         },
-                                        modifier = Modifier.weight(1f).padding(start = 8.dp)
+                                        modifier = Modifier.weight(1f).padding(end = 8.dp)
                                 )
 
                                 // TicTacToe
@@ -175,7 +175,7 @@ fun StartScreen(
                                                 currentMode = "tictactoe"
                                                 showOpponentDialog = true
                                         },
-                                        modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                        modifier = Modifier.weight(1f).padding(start = 8.dp)
                                 )
                         }
 

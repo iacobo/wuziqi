@@ -45,7 +45,12 @@ class GameState // Constructor with custom board size and win condition
             _boardState.value = value
         }
 
-    var currentPlayer: Int = PLAYER_ONE
+    private val _currentPlayerState = mutableStateOf(PLAYER_ONE)
+    var currentPlayer: Int
+        get() = _currentPlayerState.value
+        set(value) {
+            _currentPlayerState.value = value
+        }
 
     fun getWinningPath(): Set<Pair<Int, Int>> = winningPath
 
