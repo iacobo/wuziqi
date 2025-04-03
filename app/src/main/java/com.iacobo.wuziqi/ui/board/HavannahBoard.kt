@@ -71,7 +71,7 @@ class HavannahBoard : GameBoard {
 
         val winningPath = if (isGameFrozen) gameState.getWinningPath() else emptySet()
 
-        // Create persistent map to store hexagon centers
+        // Create persistent map to store hexagon centers and map of valid positions
         val hexCenters = remember { mutableMapOf<Pair<Int, Int>, Offset>() }
         
         Box(
@@ -99,7 +99,7 @@ class HavannahBoard : GameBoard {
                                         (tap.y - center.y) * (tap.y - center.y)
                                     )
                                     
-                                    // Check if this cell is valid and empty
+                                    // Check if this cell is empty
                                     if (row in 0 until boardSize && 
                                         col in 0 until boardSize &&
                                         gameState.board[row][col] == GameState.EMPTY) {
@@ -111,8 +111,8 @@ class HavannahBoard : GameBoard {
                                     }
                                 }
                                 
-                                // More generous click threshold - 12% of the smaller dimension
-                                val clickThreshold = min(size.width, size.height) * 0.12f
+                                // More generous click threshold - 15% of the smaller dimension
+                                val clickThreshold = min(size.width, size.height) * 0.15f
                                 
                                 // If we found a valid match within reasonable distance
                                 bestMatch?.let { (row, col) ->
@@ -127,51 +127,69 @@ class HavannahBoard : GameBoard {
                 // Clear the centers map at the start of each drawing
                 hexCenters.clear()
                 
-                // Calculate board dimensions for drawing
+                // Calculate board dimensions
                 val edgeLength = boardSize
-                val maxRadius = edgeLength - 1
                 val padding = size.width * 0.05f // 5% padding
                 val availableWidth = size.width - 2 * padding
                 val availableHeight = size.height - 2 * padding
                 
                 // Calculate hex size to fit within available space
                 val hexSize = min(
-                    availableWidth / (maxRadius * 2 + edgeLength) * 0.95f,
-                    availableHeight / (maxRadius * 2 + edgeLength) * 0.95f
+                    availableWidth / (edgeLength * 2) * 0.95f,
+                    availableHeight / (edgeLength * 1.8f) * 0.95f
                 )
                 
                 // Center position
                 val centerX = size.width / 2
                 val centerY = size.height / 2
                 
-                // Define corners for special highlighting
+                // In a Havannah game with board size N:
+                // - The board is a hexagon with N cells on each edge
+                // - The distance from center to any corner is N-1
+                val maxDistance = edgeLength - 1
+                
+                // Draw a hexagonal board using axial coordinates (q,r)
+                // We'll iterate through a rectangular area and filter valid hexagons
+                val axialRange = maxDistance * 2 
+                
+                // Create a list of the 6 corner positions in axial coordinates
                 val corners = listOf(
-                    Triple(-maxRadius, maxRadius, 0),    // top-left
-                    Triple(0, maxRadius, -maxRadius),    // top
-                    Triple(maxRadius, 0, -maxRadius),    // top-right
-                    Triple(maxRadius, -maxRadius, 0),    // bottom-right
-                    Triple(0, -maxRadius, maxRadius),    // bottom
-                    Triple(-maxRadius, 0, maxRadius)     // bottom-left
+                    Pair(-maxDistance, 0),               // west
+                    Pair(-maxDistance/2, -maxDistance),  // northwest
+                    Pair(maxDistance/2, -maxDistance),   // northeast  
+                    Pair(maxDistance, 0),                // east
+                    Pair(maxDistance/2, maxDistance),    // southeast
+                    Pair(-maxDistance/2, maxDistance)    // southwest
                 )
                 
-                // Go through all possible cubic coordinates and draw valid hexagons
-                for (q in -maxRadius..maxRadius) {
-                    for (r in -maxRadius..maxRadius) {
-                        val s = -q - r  // Third coordinate for cube representation
+                // Iterate through all potential positions in a rectangular region
+                for (q in -axialRange..axialRange) {
+                    for (r in -axialRange..axialRange) {
+                        // Calculate third cubic coordinate
+                        val s = -q - r
                         
-                        // Skip hexes that are outside the valid hexagonal board
-                        if (abs(q) + abs(r) + abs(s) > maxRadius * 2) continue
+                        // Check if this position is within the hexagonal board boundary
+                        // For a hexagon with distance N from center to corner:
+                        // max(abs(q), abs(r), abs(s)) <= N
+                        if (maxOf(abs(q), abs(r), abs(s)) > maxDistance) continue
                         
-                        // Convert to array indices (for game state access)
-                        val row = r + maxRadius
-                        val col = q + maxRadius
+                        // Convert axial coordinates to array indices for storage
+                        // For a hexagonal board stored in a rectangular array:
+                        // row = r + maxDistance
+                        // col = q + maxDistance + (r / 2)
+                        // This mapping ensures proper storage and overlap
+                        val row = r + maxDistance
+                        val col = q + maxDistance
                         
-                        // Skip positions that fall outside the array bounds
-                        if (row !in 0 until boardSize || col !in 0 until boardSize) continue
+                        // Skip positions outside array bounds
+                        if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) continue
                         
-                        // Calculate pixel position
+                        // Calculate the center position of this hexagon
+                        // For flat-topped hexagons in axial coordinates:
+                        // x = centerX + hexSize * 3/2 * q
+                        // y = centerY + hexSize * sqrt(3) * (r + q/2)
                         val x = centerX + hexSize * 1.5f * q
-                        val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
+                        val y = centerY + hexSize * sqrt(3f) * (r + q/2f)
                         
                         // Store center for hit testing
                         hexCenters[Pair(row, col)] = Offset(x, y)
@@ -189,8 +207,15 @@ class HavannahBoard : GameBoard {
                         }
                         
                         // Determine cell type (corner, edge, or center)
-                        val isCorner = Triple(q, r, s) in corners
-                        val isEdge = (abs(q) == maxRadius || abs(r) == maxRadius || abs(s) == maxRadius) && !isCorner
+                        val isCorner = false
+                        for (corner in corners) {
+                            if (q == corner.first && r == corner.second) {
+                                isCorner = true
+                                break
+                            }
+                        }
+                        
+                        val isEdge = (abs(q) == maxDistance || abs(r) == maxDistance || abs(s) == maxDistance) && !isCorner
                         
                         // Fill color based on cell type
                         val fillColor = when {
