@@ -94,12 +94,12 @@ fun getPlayerColor(gameState: GameState, gameType: GameType, winner: Int?): Colo
 /** Creates the status text based on the game state. */
 @Composable
 fun getStatusText(gameState: GameState, gameType: GameType, winner: Int?): String {
-        // Handle draw
+        // Handle draw case first
         if (winner == DRAW) {
                 return stringResource(R.string.draw)
         }
 
-        // Handle winner
+        // Handle winner case
         if (winner != null) {
                 return when (gameType) {
                         GameType.TicTacToe ->
@@ -147,7 +147,7 @@ fun getStatusText(gameState: GameState, gameType: GameType, winner: Int?): Strin
                 }
         }
 
-        // Handle current player turn
+        // Handle current player turn case (only reached when winner is null)
         return when (gameType) {
                 GameType.TicTacToe ->
                         stringResource(

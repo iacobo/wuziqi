@@ -77,7 +77,6 @@ class HavannahBoard : GameBoard {
                             Modifier.fillMaxSize().pointerInput(isGameFrozen) {
                                 if (!isGameFrozen) {
                                     detectTapGestures { tap ->
-                                        // Find closest hex
                                         var bestDist = Float.MAX_VALUE
                                         var bestPos: Pair<Int, Int>? = null
 
@@ -90,6 +89,8 @@ class HavannahBoard : GameBoard {
                                                                             (tap.y - center.y)
                                                     )
 
+                                            // Check if this position is within the array bounds and
+                                            // empty
                                             val (row, col) = pos
                                             if (row >= 0 &&
                                                             row < gameState.boardSize &&
@@ -108,8 +109,8 @@ class HavannahBoard : GameBoard {
 
                                         // If we found a close empty cell, select it
                                         bestPos?.let { (row, col) ->
-                                            // Check if the tap is close enough
-                                            if (bestDist < hexSize * 0.8f) {
+                                            // Use a more generous hit radius
+                                            if (bestDist < hexSize * 1.2f) {
                                                 onMoveSelected(row, col)
                                             }
                                         }
@@ -177,22 +178,18 @@ class HavannahBoard : GameBoard {
                     val rMax = minOf(range, -q + range)
 
                     for (r in rMin..rMax) {
-                        val s = -q - r
+                        val s = -q - r // Cube coordinate constraint: q + r + s = 0
 
-                        // Skip if this isn't a valid hex coordinate
-                        if (q + r + s != 0) continue
-
-                        // Convert cube coordinates to array indices for storage
-                        // We use a mapping where (0,0,0) in cube space maps to
-                        // the center of our array
+                        // Convert cube coordinates to array indices consistently
                         val arrayRow = r + range
                         val arrayCol = q + range
 
-                        // Calculate pixel position for hex center (flat-top orientation)
-                        val x = centerX + hexSize * 1.5f * q
-                        val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
+                        // Calculate pixel position for hex center
+                        val x = centerX + (q * 1.5f * hexSize)
+                        val y = centerY + (r + q / 2f) * hexSize * sqrt(3f)
 
-                        // Store for hit testing
+                        // Store all valid positions in the hexCenters map
+                        // This is critically important for hit testing
                         hexCenters[Pair(arrayRow, arrayCol)] = Offset(x, y)
 
                         // Create hexagon path
