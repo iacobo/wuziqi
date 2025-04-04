@@ -98,10 +98,7 @@ class HavannahBoard : GameBoard {
                                                     )
 
                                             // Check if this cell is valid and empty
-                                            if (gameType.isValidHexPosition(row, col) &&
-                                                            gameState.board[row][col] ==
-                                                                    GameState.EMPTY
-                                            ) {
+                                            if (gameState.board[row][col] == GameState.EMPTY) {
                                                 if (dist < bestDistance) {
                                                     bestDistance = dist
                                                     bestMatch = pos
@@ -173,8 +170,8 @@ class HavannahBoard : GameBoard {
                             val col = q + boardCenter
 
                             // Calculate pixel position
-                            val y = centerX + hexSize * 1.5f * q
-                            val x = centerY + hexSize * sqrt(3f) * (r + q / 2f)
+                            val x = centerX + hexSize * 1.5f * q
+                            val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
 
                             // Store center for hit testing
                             hexCenters[Pair(row, col)] = Offset(x, y)
