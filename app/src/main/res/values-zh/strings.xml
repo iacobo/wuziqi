@@ -82,4 +82,20 @@
     <string name="win_length">获胜条件: %d 子连珠</string>
     <string name="win_length_warning">较大的获胜长度可能使游戏难以完成</string>
     <string name="special_game_hint">你发现了一个特殊的游戏模式！</string>
+
+    <!-- How to Play (Chinese) -->
+    <string name="how_to_play">游戏规则</string>
+    <string name="how_to_play_title_format">%s 规则</string>
+
+    <!-- Game Rules (Chinese) -->
+    <string name="wuziqi_rules">五子棋是在15×15的棋盘上进行的经典棋类游戏。\n\n规则：\n\n• 玩家轮流在棋盘交叉点上放置棋子。\n\n• 黑方先行，然后是白方。\n\n• 目标是在横向、纵向或对角线上形成连续的五个棋子。\n\n• 首先形成五子连珠的玩家获胜。\n\n• 如果棋盘被填满但没有玩家获胜，则游戏为平局。</string>
+    <string name="tictactoe_rules">井字棋是在3×3网格上进行的简单游戏。\n\n规则：\n\n• 玩家轮流在空格中放置自己的标记（X或O）。\n\n• X先行，然后是O。\n\n• 目标是在横向、纵向或对角线上形成三个连续的标记。\n\n• 首先获得三连的玩家获胜。\n\n• 如果所有方格都被填满但没有玩家获得三连，则游戏为平局。</string>
+    <string name="connect4_rules">四子连线是一种棋子垂直下落的游戏。\n\n规则：\n\n• 玩家轮流将彩色棋子放入7×6的网格中。\n\n• 棋子会直接下落到所选列的最低可用位置。\n\n• 红方先行，然后是黄方。\n\n• 目标是在横向、纵向或对角线上连接四个相同颜色的棋子。\n\n• 首先连接四个棋子的玩家获胜。\n\n• 如果网格被填满但没有玩家获胜，则游戏为平局。</string>
+    <string name="hex_rules">六边形棋是在六边形网格上进行的战略连接游戏。\n\n规则：\n\n• 玩家轮流在棋盘上放置自己颜色的棋子。\n\n• 红方连接上下边缘，蓝方连接左右边缘。\n\n• 目标是创建一条连接您两个边缘的连续路径。\n\n• 红方先行，然后是蓝方。\n\n• 首先在自己的边缘之间完成路径的玩家获胜。\n\n• 六边形棋中没有平局 - 总有一方会获胜！</string>
+
+    <!-- Havannah game (Chinese) -->
+    <string name="havannah_title">哈瓦那棋</string>
+    <string name="havannah_description">六边形连接游戏，有三种获胜方式</string>
+    <string name="havannah_rules">哈瓦那棋是一种在六边形棋盘上进行的复杂连接游戏。玩家轮流在六边形网格上放置棋子。\n\n规则：\n\n• 游戏在每边有10个格子的六边形棋盘上进行。\n\n• 红方先行，然后是蓝方。\n\n• 棋子一旦放置，就不能移动或移除。\n\n• 目标是创建以下三种获胜结构之一：\n\n1. 环：围绕至少一个格子（无论是否有棋子）的环形连接。\n\n2. 桥：连接棋盘任意两个角的路径。\n\n3. 叉：连接棋盘任意三条边的路径（角不算作边）。\n\n• 第一个创建这些结构之一的玩家获胜。</string>
+
 </resources>

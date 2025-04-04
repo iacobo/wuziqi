@@ -111,9 +111,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             boardSize == 7 && winLength == 4 -> {
                 gameStateRepository.addDiscoveredEasterEgg("connect4")
             }
-            boardSize == 11 && winLength == 8 -> {
-                gameStateRepository.addDiscoveredEasterEgg("hex")
-            }
+        // Removed Hex easter egg since it's now directly accessible from the main menu
         }
         discoveredEasterEggs = gameStateRepository.getDiscoveredEasterEggs()
 
@@ -162,6 +160,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             GameType.Hex -> {
                 // For Hex game, use its special win condition
                 if (gameState.checkHexWin(currentPlayer)) {
+                    handleWin(currentPlayer)
+                    return
+                }
+            }
+            GameType.Havannah -> {
+                // For Havannah game, use its special win conditions
+                if (gameState.checkHavannahWin(currentPlayer)) {
                     handleWin(currentPlayer)
                     return
                 }

@@ -33,15 +33,22 @@
 
 ## About
 
-A simple Wuziqi game for android (aka [Gomoku / Connect 5](https://en.wikipedia.org/wiki/Gomoku)).
+A collection of abstract strategy games for android. Includes:
+
+- Wuziqi (aka [Gomoku / Connect 5](https://en.wikipedia.org/wiki/Gomoku))
+- Connect 4
+- X's & O's
+- Hex
+- Havannah
+
+Features:
 
 - play with a friend or challenge the computer
-- design your own custom games
-- discover an \~easter egg\~ or two 🥚🐇
+- design your own custom games!
 
 Completely FOSS - no ads, no trackers, nothing unnecessary. Just a clean, offline, 2-player boardgame app.
 
-## How to play
+## How to play Wuziqi
 
 Players take turns placing their stones on the grid. The first player to place 5 of their colour in a row (vertically, horizontally, or diagonally) wins.
 

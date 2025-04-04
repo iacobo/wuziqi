@@ -30,3 +30,8 @@ val Connect4PieceYellowBright = Color(0xFFFFD600)
 // Hex colours
 val HexPieceRed = Color(0xFFB71C1C) // Muted red
 val HexPieceBlue = Color(0xFF1565C0) // Muted blue
+
+// Havannah win colours
+val RingColor = Color(0xFF9C27B0) // Purple for ring
+val BridgeColor = Color(0xFF2196F3) // Blue for bridge
+val ForkColor = Color(0xFF4CAF50) // Green for fork

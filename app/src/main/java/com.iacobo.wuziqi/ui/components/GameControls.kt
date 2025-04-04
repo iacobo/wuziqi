@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
@@ -20,8 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.R
 
 /**
- * A reusable component for game controls (home, undo, reset, settings) that can be used in both
- * portrait and landscape orientations.
+ * A reusable component for game controls (home, undo, reset, how to play, settings) that can be
+ * used in both portrait and landscape orientations.
  */
 @Composable
 fun GameControls(
@@ -30,6 +31,7 @@ fun GameControls(
         onHome: () -> Unit,
         onUndo: () -> Unit,
         onReset: () -> Unit,
+        onHowToPlay: () -> Unit,
         onSettings: () -> Unit,
         canUndo: Boolean = true,
         isLoading: Boolean = false
@@ -40,6 +42,7 @@ fun GameControls(
                 onHome = onHome,
                 onUndo = onUndo,
                 onReset = onReset,
+                onHowToPlay = onHowToPlay,
                 onSettings = onSettings,
                 canUndo = canUndo,
                 isLoading = isLoading
@@ -50,6 +53,7 @@ fun GameControls(
                 onHome = onHome,
                 onUndo = onUndo,
                 onReset = onReset,
+                onHowToPlay = onHowToPlay,
                 onSettings = onSettings,
                 canUndo = canUndo,
                 isLoading = isLoading
@@ -60,6 +64,7 @@ fun GameControls(
                 onHome = onHome,
                 onUndo = onUndo,
                 onReset = onReset,
+                onHowToPlay = onHowToPlay,
                 onSettings = onSettings,
                 canUndo = canUndo,
                 isLoading = isLoading
@@ -73,6 +78,7 @@ fun GameControlsHorizontal(
         onHome: () -> Unit,
         onUndo: () -> Unit,
         onReset: () -> Unit,
+        onHowToPlay: () -> Unit,
         onSettings: () -> Unit,
         canUndo: Boolean = true,
         isLoading: Boolean = false
@@ -106,6 +112,14 @@ fun GameControlsHorizontal(
             )
         }
 
+        // How to Play button
+        IconButton(onClick = onHowToPlay) {
+            Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Help,
+                    contentDescription = stringResource(R.string.how_to_play)
+            )
+        }
+
         // Settings button
         IconButton(onClick = onSettings) {
             Icon(
@@ -122,6 +136,7 @@ fun GameControlsVertical(
         onHome: () -> Unit,
         onUndo: () -> Unit,
         onReset: () -> Unit,
+        onHowToPlay: () -> Unit,
         onSettings: () -> Unit,
         canUndo: Boolean = true,
         isLoading: Boolean = false
@@ -153,6 +168,16 @@ fun GameControlsVertical(
 
     Spacer(modifier = Modifier.width(16.dp))
 
+    // How to Play button
+    IconButton(onClick = onHowToPlay) {
+        Icon(
+                imageVector = Icons.AutoMirrored.Filled.Help,
+                contentDescription = stringResource(R.string.how_to_play)
+        )
+    }
+
+    Spacer(modifier = Modifier.width(16.dp))
+
     // Settings button
     IconButton(onClick = onSettings) {
         Icon(
@@ -168,16 +193,26 @@ fun GameControlsVerticalInverted(
         onHome: () -> Unit,
         onUndo: () -> Unit,
         onReset: () -> Unit,
+        onHowToPlay: () -> Unit,
         onSettings: () -> Unit,
         canUndo: Boolean = true,
         isLoading: Boolean = false
 ) {
-
     // Settings button
     IconButton(onClick = onSettings) {
         Icon(
                 imageVector = Icons.Default.Menu,
                 contentDescription = stringResource(R.string.settings)
+        )
+    }
+
+    Spacer(modifier = Modifier.width(16.dp))
+
+    // How to Play button
+    IconButton(onClick = onHowToPlay) {
+        Icon(
+                imageVector = Icons.AutoMirrored.Filled.Help,
+                contentDescription = stringResource(R.string.how_to_play)
         )
     }
 
