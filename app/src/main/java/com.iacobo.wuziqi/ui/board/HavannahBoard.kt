@@ -162,14 +162,11 @@ class HavannahBoard : GameBoard {
 
                 // Draw hexagonal grid using axial coordinates
                 for (q in -range..range) {
-                    val rMin = maxOf(-range, -q - range)
-                    val rMax = minOf(range, -q + range)
-
-                    for (r in rMin..rMax) {
-                        val s = -q - r // Third coordinate for cube representation
-
-                        // Skip hexes that are outside the valid hexagonal board
-                        if (abs(q) + abs(r) + abs(s) > range * 2) continue
+                    for (r in -range..range) {
+                        val s = -q - r
+                        
+                        // Use EXACTLY the same constraint as our validation
+                        if (abs(q) + abs(r) + abs(s) <= 2 * range) {
 
                         // Convert to array indices (for game state access)
                         val row = r + boardCenter
