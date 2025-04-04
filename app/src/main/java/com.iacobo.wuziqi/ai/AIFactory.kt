@@ -7,6 +7,8 @@ import java.util.Random
 object AIFactory {
     private val random = Random()
     private val wuziqiAI by lazy { WuziqiAIEngine(random) }
+    private val tictactoeAI by lazy { TicTacToeAIEngine(random) }
+    private val connect4AI by lazy { Connect4AIEngine(random) }
     private val hexAI by lazy { HexAlphaBetaEngine(random) }
     private val havannahAI by lazy { HavannahAIEngine(random) }
 
@@ -19,8 +21,8 @@ object AIFactory {
     fun createAI(gameType: GameType): GameAI {
         return when (gameType) {
             GameType.Standard -> wuziqiAI
-            GameType.TicTacToe -> wuziqiAI // Wuziqi AI works for TicTacToe
-            GameType.Connect4 -> wuziqiAI // Wuziqi AI handles Connect4 special case
+            GameType.TicTacToe -> tictactoeAI
+            GameType.Connect4 -> connect4AI
             GameType.Hex -> hexAI
             GameType.Havannah, GameType.HavannahSmall -> havannahAI
         }

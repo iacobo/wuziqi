@@ -9,6 +9,5 @@ import android.app.Application
 class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        // Initialize anything needed at application level here
     }
 }
