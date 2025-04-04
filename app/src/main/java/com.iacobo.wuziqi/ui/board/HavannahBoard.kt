@@ -164,90 +164,92 @@ class HavannahBoard : GameBoard {
                 for (q in -range..range) {
                     for (r in -range..range) {
                         val s = -q - r
-                        
+
                         // Use EXACTLY the same constraint as our validation
                         if (abs(q) + abs(r) + abs(s) <= 2 * range) {
 
-                        // Convert to array indices (for game state access)
-                        val row = r + boardCenter
-                        val col = q + boardCenter
+                            // Convert to array indices (for game state access)
+                            val row = r + boardCenter
+                            val col = q + boardCenter
 
-                        // Calculate pixel position
-                        val x = centerX + hexSize * 1.5f * q
-                        val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
+                            // Calculate pixel position
+                            val x = centerX + hexSize * 1.5f * q
+                            val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
 
-                        // Store center for hit testing
-                        hexCenters[Pair(row, col)] = Offset(x, y)
+                            // Store center for hit testing
+                            hexCenters[Pair(row, col)] = Offset(x, y)
 
-                        // Create hexagon path
-                        val hexPath =
-                                Path().apply {
-                                    for (i in 0 until 6) {
-                                        val angle = Math.PI / 3 * i
-                                        val hx = x + hexSize * cos(angle.toFloat())
-                                        val hy = y + hexSize * sin(angle.toFloat())
+                            // Create hexagon path
+                            val hexPath =
+                                    Path().apply {
+                                        for (i in 0 until 6) {
+                                            val angle = Math.PI / 3 * i
+                                            val hx = x + hexSize * cos(angle.toFloat())
+                                            val hy = y + hexSize * sin(angle.toFloat())
 
-                                        if (i == 0) moveTo(hx, hy) else lineTo(hx, hy)
+                                            if (i == 0) moveTo(hx, hy) else lineTo(hx, hy)
+                                        }
+                                        close()
                                     }
-                                    close()
-                                }
 
-                        // Determine cell type (corner, edge, or center)
-                        val isCorner = Triple(q, r, s) in corners
-                        val isEdge =
-                                (abs(q) == range || abs(r) == range || abs(s) == range) && !isCorner
+                            // Determine cell type (corner, edge, or center)
+                            val isCorner = Triple(q, r, s) in corners
+                            val isEdge =
+                                    (abs(q) == range || abs(r) == range || abs(s) == range) &&
+                                            !isCorner
 
-                        // Fill color based on cell type
-                        val fillColor =
-                                when {
-                                    isCorner -> cornerColor
-                                    isEdge -> edgeColor
-                                    else -> centerColor
-                                }
+                            // Fill color based on cell type
+                            val fillColor =
+                                    when {
+                                        isCorner -> cornerColor
+                                        isEdge -> edgeColor
+                                        else -> centerColor
+                                    }
 
-                        // Draw hex cell
-                        drawPath(hexPath, color = fillColor, style = Fill)
-                        drawPath(
-                                hexPath,
-                                color = gridLineColor,
-                                style = Stroke(width = strokeWidth)
-                        )
-
-                        // Draw game pieces if present
-                        if (row in 0 until gameState.boardSize &&
-                                        col in 0 until gameState.boardSize &&
-                                        gameState.board[row][col] != GameState.EMPTY
-                        ) {
-                            val pieceColor =
-                                    if (gameState.board[row][col] == GameState.PLAYER_ONE)
-                                            playerOneColor
-                                    else playerTwoColor
-
-                            // Draw main piece
-                            drawCircle(
-                                    color = pieceColor,
-                                    radius = hexSize * 0.4f,
-                                    center = Offset(x, y)
+                            // Draw hex cell
+                            drawPath(hexPath, color = fillColor, style = Fill)
+                            drawPath(
+                                    hexPath,
+                                    color = gridLineColor,
+                                    style = Stroke(width = strokeWidth)
                             )
 
-                            // Draw highlight effect
-                            drawCircle(
-                                    color = pieceColor.copy(alpha = 0.7f),
-                                    radius = hexSize * 0.3f,
-                                    center = Offset(x - hexSize * 0.08f, y - hexSize * 0.08f)
-                            )
-
-                            // Highlight last placed piece if it's not part of a winning path
-                            if (lastPlacedPosition?.row == row &&
-                                            lastPlacedPosition.col == col &&
-                                            winningPath.isEmpty()
+                            // Draw game pieces if present
+                            if (row in 0 until gameState.boardSize &&
+                                            col in 0 until gameState.boardSize &&
+                                            gameState.board[row][col] != GameState.EMPTY
                             ) {
+                                val pieceColor =
+                                        if (gameState.board[row][col] == GameState.PLAYER_ONE)
+                                                playerOneColor
+                                        else playerTwoColor
+
+                                // Draw main piece
                                 drawCircle(
-                                        color = highlightColor,
-                                        radius = hexSize * 0.5f,
-                                        center = Offset(x, y),
-                                        style = Stroke(width = strokeWidth * 1.5f)
+                                        color = pieceColor,
+                                        radius = hexSize * 0.4f,
+                                        center = Offset(x, y)
                                 )
+
+                                // Draw highlight effect
+                                drawCircle(
+                                        color = pieceColor.copy(alpha = 0.7f),
+                                        radius = hexSize * 0.3f,
+                                        center = Offset(x - hexSize * 0.08f, y - hexSize * 0.08f)
+                                )
+
+                                // Highlight last placed piece if it's not part of a winning path
+                                if (lastPlacedPosition?.row == row &&
+                                                lastPlacedPosition.col == col &&
+                                                winningPath.isEmpty()
+                                ) {
+                                    drawCircle(
+                                            color = highlightColor,
+                                            radius = hexSize * 0.5f,
+                                            center = Offset(x, y),
+                                            style = Stroke(width = strokeWidth * 1.5f)
+                                    )
+                                }
                             }
                         }
                     }
