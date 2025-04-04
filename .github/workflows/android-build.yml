@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - dev  # Added dev branch
     tags:
       - 'v*'
   pull_request:
@@ -35,6 +36,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
+
+      # Get timestamp for nightly build version
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
           
       # Debug build for regular pushes and PRs
       - name: Build Debug APK
@@ -57,8 +63,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease
         
-      # Upload debug APK as artifact for non-release builds
-      - name: Upload Debug APK
+      # Upload debug APK as artifact for non-release builds (still useful for PR checks)
+      - name: Upload Debug APK as Artifact
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         uses: actions/upload-artifact@v4
         with:
@@ -66,14 +72,32 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           
       # Upload release APK as artifact for tagged builds
-      - name: Upload Release APK
+      - name: Upload Release APK as Artifact
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: wuziqi-release-apk
           path: app/build/outputs/apk/release/app-release.apk
           
-      # Create GitHub release for tagged builds
+      # Create a nightly release for non-tagged pushes to main
+      - name: Create Nightly Release
+        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/v') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/updates')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: app/build/outputs/apk/debug/app-debug.apk
+          name: Nightly Build ${{ steps.date.outputs.date }}
+          tag_name: nightly-${{ steps.date.outputs.date }}
+          body: |
+            🌙 Nightly build from ${{ github.ref_name }} branch
+            
+            Commit: ${{ github.sha }}
+            Date: ${{ steps.date.outputs.date }}
+            
+            This is an automated nightly build. Use for testing purposes only.
+          draft: false
+          prerelease: true
+          
+      # Create regular GitHub release for tagged builds
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1

@@ -51,6 +51,7 @@ sealed class GameType(@StringRes val titleResId: Int, val boardSize: Int, val wi
 
         // For hex games, convert to hex coordinates and check if within the hexagon
         val edgeLength = getEdgeLength()
+        val range = edgeLength - 1
 
         // Convert from array indices to hexagonal coordinates
         val center = boardSize / 2
@@ -59,7 +60,7 @@ sealed class GameType(@StringRes val titleResId: Int, val boardSize: Int, val wi
         val s = -q - r
 
         // Check if the position is within the hexagonal board
-        return abs(q) + abs(r) + abs(s) <= edgeLength - 1
+        return abs(q) + abs(r) + abs(s) <= 2 * range
     }
 
     companion object {
