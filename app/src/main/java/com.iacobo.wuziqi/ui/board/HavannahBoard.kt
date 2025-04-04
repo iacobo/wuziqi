@@ -173,8 +173,8 @@ class HavannahBoard : GameBoard {
                             val col = q + boardCenter
 
                             // Calculate pixel position
-                            val x = centerX + hexSize * 1.5f * q
-                            val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
+                            val y = centerX + hexSize * 1.5f * q
+                            val x = centerY + hexSize * sqrt(3f) * (r + q / 2f)
 
                             // Store center for hit testing
                             hexCenters[Pair(row, col)] = Offset(x, y)
