@@ -108,7 +108,7 @@ class HavannahBoard : GameBoard {
 
                                         // Using a more generous click threshold - 10% of the
                                         // smaller dimension
-                                        val clickThreshold = min(size.width, size.height) * 0.5f
+                                        val clickThreshold = min(size.width, size.height) * 0.1f
 
                                         // If we found a valid match within reasonable distance
                                         bestMatch?.let { (row, col) ->
@@ -172,10 +172,9 @@ class HavannahBoard : GameBoard {
                             // Calculate pixel position
                             val x = centerX + hexSize * 1.5f * q
                             val y = centerY + hexSize * sqrt(3f) * (r + q / 2f)
-                            val y_hitbox = centerY + hexSize * sqrt(3f) * r
 
                             // Store center for hit testing
-                            hexCenters[Pair(row, col)] = Offset(x, y_hitbox)
+                            hexCenters[Pair(row, col)] = Offset(x, y)
 
                             // Create hexagon path
                             val hexPath =
