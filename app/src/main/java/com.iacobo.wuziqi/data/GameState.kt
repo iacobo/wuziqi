@@ -167,7 +167,8 @@ class GameState // Constructor with custom board size and win condition
 
     /** Checks if a position is valid on the board */
     fun isValidPosition(row: Int, col: Int): Boolean {
-        return row in 0 until boardSize && col in 0 until boardSize
+        val gameType = GameType.fromGameState(this)
+        return gameType.isValidHexPosition(row, col)
     }
 
     /**
@@ -426,9 +427,12 @@ class GameState // Constructor with custom board size and win condition
      * 3. Fork: A connection between any three sides (not including corners)
      */
     fun checkHavannahWin(playerValue: Int): Boolean {
-        // Only run for Havannah game
-        // boardSize in this case represents the edge length of the hexagon
-        val edgeLength = boardSize
+        // Get the game type
+        val gameType = GameType.fromGameState(this)
+
+        // Get the edge length
+        val edgeLength = gameType.getEdgeLength()
+
         if (edgeLength <= 0 || winCondition != 9) {
             return false
         }
@@ -676,9 +680,7 @@ class GameState // Constructor with custom board size and win condition
         // Get all corners occupied by the player
         val playerCorners =
                 corners.filter { (row, col) ->
-                    row in 0 until boardSize &&
-                            col in 0 until boardSize &&
-                            board[row][col] == playerValue
+                    gameType.isValidHexPosition(row, col) && board[row][col] == playerValue
                 }
 
         // We need at least 2 corners for a bridge
@@ -707,17 +709,20 @@ class GameState // Constructor with custom board size and win condition
     }
 
     /** Gets the 6 corner positions of the hexagonal board. */
+    // Method to get corner positions of the hexagonal board
     private fun getCornerPositions(): List<Pair<Int, Int>> {
-        val range = boardSize - 1
+        val gameType = GameType.fromGameState(this)
+        val edgeLength = gameType.getEdgeLength()
+        val boardCenter = boardSize / 2
+        val range = edgeLength - 1
 
-        // Convert from cube to array coordinates
         return listOf(
-                Pair(0, 0), // top-left
-                Pair(0, boardSize - 1), // top-right
-                Pair(boardSize / 2, boardSize - 1), // right
-                Pair(boardSize - 1, boardSize / 2), // bottom-right
-                Pair(boardSize - 1, 0), // bottom-left
-                Pair(boardSize / 2, 0) // left
+                Pair(boardCenter - range, boardCenter - range), // top-left
+                Pair(boardCenter - range, boardCenter + range), // top-right
+                Pair(boardCenter, boardCenter + range), // right
+                Pair(boardCenter + range, boardCenter + range), // bottom-right
+                Pair(boardCenter + range, boardCenter - range), // bottom-left
+                Pair(boardCenter, boardCenter - range) // left
         )
     }
 
@@ -765,25 +770,35 @@ class GameState // Constructor with custom board size and win condition
     private fun checkForFork(playerValue: Int): Boolean {
         // Get all edges of the hexagonal board (excluding corners)
         val edgeCells = getEdgeCells()
+        val gameType = GameType.fromGameState(this)
 
         // Group edge cells by which edge they belong to
         val edges = Array(6) { mutableListOf<Pair<Int, Int>>() }
 
+        // Determine which edge each cell belongs to
+        val corners = getCornerPositions()
+        val boardCenter = boardSize / 2
+        val edgeLength = gameType.getEdgeLength()
+        val range = edgeLength - 1
+
         // Populate edge groups
         for ((row, col) in edgeCells) {
-            if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) continue
-
+            if (!gameType.isValidHexPosition(row, col)) continue
             if (board[row][col] != playerValue) continue
+
+            // Convert to hex coordinates
+            val q = col - boardCenter
+            val r = row - boardCenter
 
             // Determine which edge this cell belongs to
             val edgeIndex =
                     when {
-                        row == 0 -> 0 // Top edge
-                        col == boardSize - 1 && row < boardSize / 2 -> 1 // Top-right edge
-                        col == boardSize - 1 && row > boardSize / 2 -> 2 // Bottom-right edge
-                        row == boardSize - 1 -> 3 // Bottom edge
-                        col == 0 && row > boardSize / 2 -> 4 // Bottom-left edge
-                        col == 0 && row < boardSize / 2 -> 5 // Top-left edge
+                        r == -range -> 0 // Top edge
+                        q == range -> 1 // Top-right edge
+                        r + q == range -> 2 // Bottom-right edge
+                        r == range -> 3 // Bottom edge
+                        q == -range -> 4 // Bottom-left edge
+                        r + q == -range -> 5 // Top-left edge
                         else -> -1 // Not an edge
                     }
 
@@ -822,30 +837,47 @@ class GameState // Constructor with custom board size and win condition
 
     /** Gets all edge cells of the hexagonal board (excluding corners). */
     private fun getEdgeCells(): List<Pair<Int, Int>> {
-        val edgeCells = mutableListOf<Pair<Int, Int>>()
+        val gameType = GameType.fromGameState(this)
+        val edgeLength = gameType.getEdgeLength()
+        val boardCenter = boardSize / 2
+        val range = edgeLength - 1
         val corners = getCornerPositions().toSet()
+        val edgeCells = mutableListOf<Pair<Int, Int>>()
 
-        // Top edge: row 0, excluding corners
-        for (col in 1 until boardSize - 1) {
-            val pos = Pair(0, col)
+        // For each of the 6 edges, calculate the positions
+        // Edge 1: top-left to top
+        for (i in 1 until range) {
+            val pos = Pair(boardCenter - range, boardCenter - range + i)
             if (pos !in corners) edgeCells.add(pos)
         }
 
-        // Right edge: col = boardSize - 1, excluding corners
-        for (row in 1 until boardSize - 1) {
-            val pos = Pair(row, boardSize - 1)
+        // Edge 2: top to top-right
+        for (i in 1 until range) {
+            val pos = Pair(boardCenter - range + i, boardCenter + range)
             if (pos !in corners) edgeCells.add(pos)
         }
 
-        // Bottom edge: row = boardSize - 1, excluding corners
-        for (col in 1 until boardSize - 1) {
-            val pos = Pair(boardSize - 1, col)
+        // Edge 3: top-right to right
+        for (i in 1 until range) {
+            val pos = Pair(boardCenter - range + i, boardCenter + range - i)
             if (pos !in corners) edgeCells.add(pos)
         }
 
-        // Left edge: col = 0, excluding corners
-        for (row in 1 until boardSize - 1) {
-            val pos = Pair(row, 0)
+        // Edge 4: right to bottom-right
+        for (i in 1 until range) {
+            val pos = Pair(boardCenter + i, boardCenter + range - i)
+            if (pos !in corners) edgeCells.add(pos)
+        }
+
+        // Edge 5: bottom-right to bottom-left
+        for (i in 1 until range) {
+            val pos = Pair(boardCenter + range, boardCenter - range + i)
+            if (pos !in corners) edgeCells.add(pos)
+        }
+
+        // Edge 6: bottom-left to left
+        for (i in 1 until range) {
+            val pos = Pair(boardCenter + range - i, boardCenter - range)
             if (pos !in corners) edgeCells.add(pos)
         }
 

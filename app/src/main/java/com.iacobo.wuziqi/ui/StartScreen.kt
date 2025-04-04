@@ -230,8 +230,8 @@ fun StartScreen(
                                         "tictactoe" -> onNavigateToCustomGame(3, 3, opponent)
                                         "connect4" -> onNavigateToCustomGame(7, 4, opponent)
                                         "hex" -> onNavigateToCustomGame(11, 8, opponent)
-                                        "havannah" -> onNavigateToCustomGame(10, 9, opponent)
-                                        "havannah_small" -> onNavigateToCustomGame(8, 9, opponent)
+                                        "havannah" -> onNavigateToCustomGame(19, 9, opponent)
+                                        "havannah_small" -> onNavigateToCustomGame(15, 9, opponent)
                                         "custom" ->
                                                 onNavigateToCustomGame(
                                                         boardSize,

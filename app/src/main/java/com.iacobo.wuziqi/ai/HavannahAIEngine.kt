@@ -1,6 +1,7 @@
 package com.iacobo.wuziqi.ai
 
 import com.iacobo.wuziqi.data.GameState
+import com.iacobo.wuziqi.data.GameType
 import java.util.Random
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -26,44 +27,21 @@ class HavannahAIEngine(private val random: Random) : GameAI {
             Pair(1, -1), // Bottom-left
             Pair(1, 0)   // Bottom-right
         )
-        
-        // Special positions with high strategic value for the 10x10 board
-        val CORNER_POSITIONS = listOf(
-            Pair(0, 0),                  // Top-left corner
-            Pair(0, 9),                  // Top-right corner
-            Pair(5, 9),                  // Right corner
-            Pair(9, 5),                  // Bottom-right corner
-            Pair(9, 0),                  // Bottom-left corner
-            Pair(5, 0)                   // Left corner
-        )
-        
-        // Edge positions (excluding corners) for the 10x10 board
-        val EDGE_POSITIONS = listOf(
-            // Top edge: row 0, cols 1-8
-            (1..8).map { Pair(0, it) },
-            // Top-right edge: cols 9, rows 1-4
-            (1..4).map { Pair(it, 9) },
-            // Bottom-right edge: cols 9, rows 6-8
-            (6..8).map { Pair(it, 9) },
-            // Bottom edge: row 9, cols 1-8
-            (1..8).map { Pair(9, it) },
-            // Bottom-left edge: col 0, rows 6-8
-            (6..8).map { Pair(it, 0) },
-            // Top-left edge: col 0, rows 1-4
-            (1..4).map { Pair(it, 0) }
-        ).flatten()
     }
     
     /**
      * Implementation of the GameAI interface method to find the best move.
      */
     override fun findBestMove(gameState: GameState): Pair<Int, Int>? {
+        // Get game type and edge length for the hexagonal board
+        val gameType = GameType.fromGameState(gameState)
+        val edgeLength = gameType.getEdgeLength()
+        val boardCenter = gameState.boardSize / 2
+        
         // If this is the first move, place near center
         if (isBoardEmpty(gameState)) {
-            val center = gameState.boardSize / 2
-            // Slightly randomize the first move
-            val offset = random.nextInt(2) - 1
-            return Pair(center + offset, center)
+            // Return the center position in array coordinates
+            return Pair(boardCenter, boardCenter)
         }
         
         // Check for immediate winning move
@@ -86,9 +64,13 @@ class HavannahAIEngine(private val random: Random) : GameAI {
      * Checks if the board is empty.
      */
     private fun isBoardEmpty(gameState: GameState): Boolean {
+        val gameType = GameType.fromGameState(gameState)
+        
         for (row in 0 until gameState.boardSize) {
             for (col in 0 until gameState.boardSize) {
-                if (gameState.board[row][col] != EMPTY) {
+                // Only check valid hexagonal positions
+                if (gameType.isValidHexPosition(row, col) && 
+                    gameState.board[row][col] != EMPTY) {
                     return false
                 }
             }
@@ -149,13 +131,13 @@ class HavannahAIEngine(private val random: Random) : GameAI {
      */
     private fun findValidMoves(gameState: GameState): List<Pair<Int, Int>> {
         val moves = mutableListOf<Pair<Int, Int>>()
-        val boardSize = gameState.boardSize
+        val gameType = GameType.fromGameState(gameState)
         
-        // Only consider cells that are within the hexagonal shape of the Havannah board
-        for (row in 0 until boardSize) {
-            for (col in 0 until boardSize) {
-                // Skip positions that aren't part of the hexagonal board
-                if (!isValidHavannahPosition(row, col, boardSize)) {
+        // Consider all cells that are within the hexagonal shape
+        for (row in 0 until gameState.boardSize) {
+            for (col in 0 until gameState.boardSize) {
+                // Skip positions that aren't valid hexagonal positions
+                if (!gameType.isValidHexPosition(row, col)) {
                     continue
                 }
                 
@@ -169,34 +151,27 @@ class HavannahAIEngine(private val random: Random) : GameAI {
     }
     
     /**
-     * Checks if a given position is valid on the hexagonal Havannah board.
-     * FIXED: Align with rendering validation logic
-     */
-    private fun isValidHavannahPosition(row: Int, col: Int, boardSize: Int): Boolean {
-        // Convert from array indices to hexagonal coordinates
-        val q = col - (boardSize - 1) / 2
-        val r = row - (boardSize - 1) / 2
-        val s = -q - r
-        
-        // Check if the position is within the hexagonal board
-        // Match the same criteria used in the rendering code
-        return abs(q) + abs(r) + abs(s) <= boardSize - 1
-    }
-    
-    /**
      * Evaluates a move based on various strategic criteria.
      */
     private fun evaluateMove(gameState: GameState, move: Pair<Int, Int>): Double {
         var score = 0.0
         val (row, col) = move
+        val gameType = GameType.fromGameState(gameState)
+        val edgeLength = gameType.getEdgeLength()
+        val boardCenter = gameState.boardSize / 2
+        
+        // Calculate relative position in hex coordinates
+        val q = col - boardCenter
+        val r = row - boardCenter
+        val s = -q - r
         
         // Bonus for corner positions (important for bridge win)
-        if (CORNER_POSITIONS.contains(move)) {
+        if (isCornerPosition(q, r, s, edgeLength)) {
             score += 10.0
         }
         
         // Bonus for edge positions (important for fork win)
-        if (EDGE_POSITIONS.contains(move)) {
+        if (isEdgePosition(q, r, s, edgeLength) && !isCornerPosition(q, r, s, edgeLength)) {
             score += 5.0
         }
         
@@ -209,10 +184,9 @@ class HavannahAIEngine(private val random: Random) : GameAI {
         // Penalize moves that are too far from the center early in the game
         val pieceCount = countPieces(gameState)
         if (pieceCount < 10) {
-            val center = gameState.boardSize / 2
-            val distanceFromCenter = sqrt((row - center).toDouble().pow(2) + 
-                                          (col - center).toDouble().pow(2))
-            score -= distanceFromCenter * 0.5
+            // Distance to center in hex coordinates
+            val distanceToCenter = (abs(q) + abs(r) + abs(s)) / 2
+            score -= distanceToCenter * 0.5
         }
         
         // Add a small random component to prevent deterministic play
@@ -222,18 +196,43 @@ class HavannahAIEngine(private val random: Random) : GameAI {
     }
     
     /**
+     * Checks if a position is a corner in the hexagonal board.
+     */
+    private fun isCornerPosition(q: Int, r: Int, s: Int, edgeLength: Int): Boolean {
+        val range = edgeLength - 1
+        val corners = setOf(
+            Triple(-range, range, 0),    // top-left
+            Triple(0, range, -range),    // top
+            Triple(range, 0, -range),    // top-right
+            Triple(range, -range, 0),    // bottom-right
+            Triple(0, -range, range),    // bottom
+            Triple(-range, 0, range)     // bottom-left
+        )
+        
+        return Triple(q, r, s) in corners
+    }
+    
+    /**
+     * Checks if a position is on the edge of the hexagonal board.
+     */
+    private fun isEdgePosition(q: Int, r: Int, s: Int, edgeLength: Int): Boolean {
+        val range = edgeLength - 1
+        return abs(q) == range || abs(r) == range || abs(s) == range
+    }
+    
+    /**
      * Evaluates the connectivity value of a move.
      */
     private fun evaluateConnectivity(gameState: GameState, row: Int, col: Int, player: Int): Double {
         var score = 0.0
+        val gameType = GameType.fromGameState(gameState)
         
         // Check all neighbors
         for ((dr, dc) in DIRECTIONS) {
             val newRow = row + dr
             val newCol = col + dc
             
-            if (newRow in 0 until gameState.boardSize && 
-                newCol in 0 until gameState.boardSize && 
+            if (gameType.isValidHexPosition(newRow, newCol) && 
                 gameState.board[newRow][newCol] == player) {
                 
                 // Score higher if the neighbor has other connected pieces
@@ -242,8 +241,7 @@ class HavannahAIEngine(private val random: Random) : GameAI {
                     val r2 = newRow + dr2
                     val c2 = newCol + dc2
                     
-                    if (r2 in 0 until gameState.boardSize && 
-                        c2 in 0 until gameState.boardSize && 
+                    if (gameType.isValidHexPosition(r2, c2) && 
                         gameState.board[r2][c2] == player) {
                         connectedNeighbors++
                     }
@@ -261,10 +259,12 @@ class HavannahAIEngine(private val random: Random) : GameAI {
      */
     private fun countPieces(gameState: GameState): Int {
         var count = 0
+        val gameType = GameType.fromGameState(gameState)
         
         for (row in 0 until gameState.boardSize) {
             for (col in 0 until gameState.boardSize) {
-                if (gameState.board[row][col] != EMPTY) {
+                if (gameType.isValidHexPosition(row, col) && 
+                    gameState.board[row][col] != EMPTY) {
                     count++
                 }
             }

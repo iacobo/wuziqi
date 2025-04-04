@@ -2,6 +2,7 @@ package com.iacobo.wuziqi.data
 
 import androidx.annotation.StringRes
 import com.iacobo.wuziqi.R
+import kotlin.math.abs
 
 /** Represents the different game types supported by the application. */
 sealed class GameType(@StringRes val titleResId: Int, val boardSize: Int, val winCondition: Int) {
@@ -17,13 +18,49 @@ sealed class GameType(@StringRes val titleResId: Int, val boardSize: Int, val wi
     /** Hex game with 11x11 board and 8-in-a-row win condition */
     object Hex : GameType(R.string.hex_title, 11, 8)
 
-    /** Havannah game with hexagonal board (size 10) */
-    object Havannah :
-            GameType(R.string.havannah_title, 10, 9) // Using 9 as a special code for Havannah rules
+    /**
+     * Havannah game with hexagonal board (edge length 10) Using 19x19 array to represent the board
+     * (2*edgeLength - 1)
+     */
+    object Havannah : GameType(R.string.havannah_title, 19, 9)
 
-    /** Havannah game with smaller hexagonal board (size 8) for beginners */
-    object HavannahSmall :
-            GameType(R.string.havannah_title, 8, 9) // Using same title as regular Havannah
+    /**
+     * Havannah game with smaller hexagonal board (edge length 8) for beginners Using 15x15 array to
+     * represent the board (2*edgeLength - 1)
+     */
+    object HavannahSmall : GameType(R.string.havannah_title, 15, 9)
+
+    /** Gets the edge length for hexagonal games, or the board size for other games */
+    fun getEdgeLength(): Int {
+        return when (this) {
+            is Havannah -> 10
+            is HavannahSmall -> 8
+            else -> boardSize
+        }
+    }
+
+    /**
+     * Checks if a given position is valid for this game type. For Havannah, this involves checking
+     * if the position is within the hexagon.
+     */
+    fun isValidHexPosition(row: Int, col: Int): Boolean {
+        if (this !is Havannah && this !is HavannahSmall) {
+            // For non-hex games, just do a simple bounds check
+            return row in 0 until boardSize && col in 0 until boardSize
+        }
+
+        // For hex games, convert to hex coordinates and check if within the hexagon
+        val edgeLength = getEdgeLength()
+
+        // Convert from array indices to hexagonal coordinates
+        val center = boardSize / 2
+        val q = col - center
+        val r = row - center
+        val s = -q - r
+
+        // Check if the position is within the hexagonal board
+        return abs(q) + abs(r) + abs(s) <= edgeLength - 1
+    }
 
     companion object {
         /** Determine the game type from a game state */
@@ -32,8 +69,8 @@ sealed class GameType(@StringRes val titleResId: Int, val boardSize: Int, val wi
                 gameState.boardSize == 3 && gameState.winCondition == 3 -> TicTacToe
                 gameState.boardSize == 7 && gameState.winCondition == 4 -> Connect4
                 gameState.boardSize == 11 && gameState.winCondition == 8 -> Hex
-                gameState.boardSize == 8 && gameState.winCondition == 9 -> HavannahSmall
-                gameState.boardSize == 10 && gameState.winCondition == 9 -> Havannah
+                gameState.boardSize == 15 && gameState.winCondition == 9 -> HavannahSmall
+                gameState.boardSize == 19 && gameState.winCondition == 9 -> Havannah
                 else -> Standard
             }
         }

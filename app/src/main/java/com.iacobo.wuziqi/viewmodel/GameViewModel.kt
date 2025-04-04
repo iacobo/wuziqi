@@ -111,9 +111,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             boardSize == 7 && winLength == 4 -> {
                 gameStateRepository.addDiscoveredEasterEgg("connect4")
             }
-            boardSize == 11 && winLength == 8 -> {
-                gameStateRepository.addDiscoveredEasterEgg("hex")
-            }
+        // Removed Hex easter egg since it's now directly accessible from the main menu
         }
         discoveredEasterEggs = gameStateRepository.getDiscoveredEasterEggs()
 
