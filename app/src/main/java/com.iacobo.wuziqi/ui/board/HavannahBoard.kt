@@ -19,18 +19,21 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.iacobo.wuziqi.data.GameState
+import com.iacobo.wuziqi.data.GameType
+import com.iacobo.wuziqi.ui.theme.BridgeColor
+import com.iacobo.wuziqi.ui.theme.ForkColor
 import com.iacobo.wuziqi.ui.theme.HexPieceBlue
 import com.iacobo.wuziqi.ui.theme.HexPieceRed
+import com.iacobo.wuziqi.ui.theme.RingColor
 import com.iacobo.wuziqi.viewmodel.Position
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-/**
- * Implementation of the Havannah game board with proper hexagonal grid and proper clickable areas.
- */
+/** Implementation of the Havannah game board with proper hexagonal grid. */
 class HavannahBoard : GameBoard {
 
     @Composable
@@ -41,7 +44,7 @@ class HavannahBoard : GameBoard {
             isGameFrozen: Boolean,
             onMoveSelected: (Int, Int) -> Unit
     ) {
-        // Get the game type
+        // Get the game type from the game state
         val gameType = GameType.fromGameState(gameState)
 
         // Get the edge length for the hexagonal board
@@ -66,7 +69,7 @@ class HavannahBoard : GameBoard {
 
         val winningPath = if (isGameFrozen) gameState.getWinningPath() else emptySet()
 
-        // Store hexagon centers for hit testing - using remember to preserve across recompositions
+        // Store hexagon centers for hit testing
         val hexCenters = remember { mutableMapOf<Pair<Int, Int>, Offset>() }
 
         Box(
@@ -90,10 +93,8 @@ class HavannahBoard : GameBoard {
                                             // Calculate Euclidean distance from tap to center
                                             val dist =
                                                     sqrt(
-                                                            (tap.x - center.x) *
-                                                                    (tap.x - center.x) +
-                                                                    (tap.y - center.y) *
-                                                                            (tap.y - center.y)
+                                                            (tap.x - center.x).pow(2) +
+                                                                    (tap.y - center.y).pow(2)
                                                     )
 
                                             // Check if this cell is valid and empty
@@ -257,8 +258,56 @@ class HavannahBoard : GameBoard {
 
                 // Draw winning path if game is over
                 if (winningPath.isNotEmpty()) {
-                    // Rest of winning path drawing logic remains the same
-                    // ...
+                    val winType = gameState.getWinningType()
+                    val pathList = winningPath.toList()
+
+                    // Color based on win type
+                    val winColor =
+                            when (winType) {
+                                1 -> RingColor // Purple for ring
+                                2 -> BridgeColor // Blue for bridge
+                                3 -> ForkColor // Green for fork
+                                else -> highlightColor
+                            }
+
+                    // Highlight winning cells
+                    for (pos in winningPath) {
+                        val center = hexCenters[pos] ?: continue
+                        drawCircle(
+                                color = winColor,
+                                radius = hexSize * 0.6f,
+                                center = center,
+                                alpha = 0.4f
+                        )
+                    }
+
+                    // Connect path with lines
+                    for (i in 0 until pathList.size - 1) {
+                        val center1 = hexCenters[pathList[i]] ?: continue
+                        val center2 = hexCenters[pathList[i + 1]] ?: continue
+
+                        drawLine(
+                                color = winColor,
+                                start = center1,
+                                end = center2,
+                                strokeWidth = strokeWidth * 2.5f
+                        )
+                    }
+
+                    // For ring wins, connect first and last cell
+                    if (winType == 1 && pathList.size > 2) {
+                        val firstCenter = hexCenters[pathList.first()]
+                        val lastCenter = hexCenters[pathList.last()]
+
+                        if (firstCenter != null && lastCenter != null) {
+                            drawLine(
+                                    color = winColor,
+                                    start = firstCenter,
+                                    end = lastCenter,
+                                    strokeWidth = strokeWidth * 2.5f
+                            )
+                        }
+                    }
                 }
             }
         }
